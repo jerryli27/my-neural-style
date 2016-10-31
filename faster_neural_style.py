@@ -1,6 +1,11 @@
+"""
+This file uses the texture nets technique to generate an image by combining style of an input and the content of
+another input.
+"""
+
 import os
 
-from stylize import stylize
+import texture_nets
 from general_util import *
 
 import numpy as np
@@ -15,7 +20,8 @@ STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
-ITERATIONS = 1000
+ITERATIONS = 1000  # 2000 in the paper
+BATCH_SIZE = 1  # 16 in the paper
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 
@@ -37,6 +43,9 @@ def build_parser():
     parser.add_argument('--iterations', type=int,
             dest='iterations', help='iterations (default %(default)s)',
             metavar='ITERATIONS', default=ITERATIONS)
+    parser.add_argument('--batch_size', type=int,
+            dest='batch_size', help='batch size (default %(default)s)',
+            metavar='BATCH_SIZE', default=BATCH_SIZE)
     parser.add_argument('--width', type=int,
             dest='width', help='output width',
             metavar='WIDTH')
@@ -114,12 +123,12 @@ def main():
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
 
-    for iteration, image in stylize(
-        network=options.network,
-        initial=initial,
+    for iteration, image in texture_nets.style_synthesis_net(
+        path_to_network=options.network,
         content=content_image,
         styles=style_images,
         iterations=options.iterations,
+        batch_size=options.batch_size,
         content_weight=options.content_weight,
         style_weight=options.style_weight,
         style_blend_weights=style_blend_weights,

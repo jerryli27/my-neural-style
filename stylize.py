@@ -5,15 +5,14 @@ import numpy as np
 
 from sys import stderr
 
-CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
-
 
 try:
     reduce
 except NameError:
     from functools import reduce
 
+CONTENT_LAYER = 'relu4_2'
+STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
 def stylize(network, initial, content, styles, iterations,
         content_weight, style_weight, style_blend_weights, tv_weight,
