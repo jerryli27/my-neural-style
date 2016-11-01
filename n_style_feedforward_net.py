@@ -65,7 +65,10 @@ def style_synthesis_net(path_to_network, content, styles, iterations, batch_size
     with tf.Graph().as_default():
 
         noise_inputs = input_pyramid("noise", m, batch_size, with_content_image=True)
-        image = generator_net(noise_inputs)
+        # input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of different
+        # style images.
+        input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)], name='input_style_placeholder')
+        image = generator_net_n_styles(noise_inputs, input_style_placeholder)
         net, _ = vgg.net(path_to_network, image)
 
         # content loss
@@ -125,6 +128,7 @@ def style_synthesis_net(path_to_network, content, styles, iterations, batch_size
                 noise = noise_pyramid_w_content_img(m, batch_size, content_image_pyramid)
                 for index, noise_frame in enumerate(noise_inputs):
                     feed_dict[noise_frame] = noise[index]
+                feed_dict[input_style_placeholder] = np.array([[1.0 for _ in range(len(styles))]])
 
                 print_progress(i, feed_dict=feed_dict, last=last_step)
                 train_step.run(feed_dict=feed_dict)
@@ -140,7 +144,7 @@ def style_synthesis_net(path_to_network, content, styles, iterations, batch_size
                     )  # Because we now have batch, choose the first one in the batch as our sample image.
 
 
-def generator_net(input_noise_z):
+def generator_net_n_styles(input_noise_z, input_style_placeholder):
     """
     This function takes a list of tensors as input, and outputs a tensor with a given width and height. The output
     should be similar in style to the target image.
@@ -156,15 +160,15 @@ def generator_net(input_noise_z):
         current_channels = 8
         channel_step_size = 8
         for noise_layer in input_noise_z[1:]:
-            low_res = conv_block('block_low_%d' % current_channels, noise_joined, current_channels)
-            high_res = conv_block('block_high', noise_layer, channel_step_size)
+            low_res = conv_block('block_low_%d' % current_channels, noise_joined, input_style_placeholder, current_channels)
+            high_res = conv_block('block_high', noise_layer, input_style_placeholder, channel_step_size)
             current_channels += channel_step_size
             noise_joined = join_block('join_%d' % current_channels, low_res, high_res)
-        final_chain = conv_block("output_chain", noise_joined, current_channels)
-        return conv_relu_layers("output", final_chain, kernel_size=1, out_channels=3)
+        final_chain = conv_block("output_chain", noise_joined, input_style_placeholder, current_channels)
+        return conv_relu_layers("output", final_chain, input_style_placeholder, kernel_size=1, out_channels=3)
 
 
-def conv_block(name, input_layer, out_channels):
+def conv_block(name, input_layer, input_style_placeholder, out_channels):
     """
     Each convolution block in Figure 2 contains three convo-
     lutional layers, each of which is followed by a ReLU acti-
@@ -178,13 +182,13 @@ def conv_block(name, input_layer, out_channels):
     :return:
     """
     with tf.get_default_graph().name_scope(name):
-        block1 = conv_relu_layers("layer1", input_layer, kernel_size=3, out_channels=out_channels)
-        block2 = conv_relu_layers("layer1", block1, kernel_size=3, out_channels=out_channels)
-        block3 = conv_relu_layers("layer1", block2, kernel_size=1, out_channels=out_channels)
+        block1 = conv_relu_layers("layer1", input_layer, input_style_placeholder, kernel_size=3, out_channels=out_channels)
+        block2 = conv_relu_layers("layer1", block1, input_style_placeholder, kernel_size=3, out_channels=out_channels)
+        block3 = conv_relu_layers("layer1", block2, input_style_placeholder, kernel_size=1, out_channels=out_channels)
     return block3
 
 
-def conv_relu_layers(name, input_layer, kernel_size, out_channels, relu_leak=0.01):
+def conv_relu_layers(name, input_layer, input_style_placeholder,  kernel_size, out_channels, relu_leak=0.01):
     """
     This code is mostly taken from github.com/ProofByConstruction/texture-networks/blob/master/texture_network.py
     Per Ulyanov et el, this is a convolution layer followed by a ReLU layer consisting of
@@ -204,7 +208,7 @@ def conv_relu_layers(name, input_layer, kernel_size, out_channels, relu_leak=0.0
         biases = tf.Variable(tf.random_normal([out_channels], mean=0.0, stddev=0.01, name='biases'))
         # Do mirror padding in the future.
         conv = neural_util.conv2d(input_layer, weights, biases)
-        batch_norm = instance_norm(conv)
+        batch_norm = conditional_instance_norm(conv, input_style_placeholder)
         relu = neural_util.leaky_relu(batch_norm, relu_leak)
         return relu
 
@@ -218,3 +222,4 @@ def join_block(name, lower_res_layer, higher_res_layer):
         upsampled = tf.image.resize_nearest_neighbor(lower_res_layer, higher_res_layer.get_shape().as_list()[1:3])
         # No need to normalize here. According to https://arxiv.org/abs/1610.07629  normalize only after convolution.
     return tf.concat(3, [upsampled, higher_res_layer])
+

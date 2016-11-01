@@ -6,6 +6,7 @@ another input.
 import os
 
 import texture_nets
+import n_style_feedforward_net
 from general_util import *
 
 import numpy as np
@@ -80,6 +81,10 @@ def build_parser():
     parser.add_argument('--checkpoint-iterations', type=int,
             dest='checkpoint_iterations', help='checkpoint frequency',
             metavar='CHECKPOINT_ITERATIONS')
+    parser.add_argument('--use_n_style',
+            dest='use_n_style',
+            nargs='+', help='use n style model from https://arxiv.org/abs/1610.07629',
+            metavar='USE_N_STYLE', default=True)
     return parser
 
 
@@ -123,7 +128,13 @@ def main():
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
 
-    for iteration, image in texture_nets.style_synthesis_net(
+    if options.use_n_style:
+        style_synthesis_net = n_style_feedforward_net.style_synthesis_net
+    else:
+        style_synthesis_net = texture_nets.style_synthesis_net
+
+
+    for iteration, image in style_synthesis_net(
         path_to_network=options.network,
         content=content_image,
         styles=style_images,
