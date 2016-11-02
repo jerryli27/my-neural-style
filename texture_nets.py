@@ -19,7 +19,8 @@ STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')
 
 def style_synthesis_net(path_to_network, content, styles, iterations, batch_size,
                         content_weight, style_weight, style_blend_weights, tv_weight,
-                        learning_rate, print_iterations=None, checkpoint_iterations=None):
+                        learning_rate, print_iterations=None, checkpoint_iterations=None,
+                        save_dir = "models/", do_restore_and_generate = False):
     """
     Stylize images.
 
@@ -115,29 +116,49 @@ def style_synthesis_net(path_to_network, content, styles, iterations, batch_size
         # Optimization
         best_loss = float('inf')
         best = None
+        saver = tf.train.Saver()
         with tf.Session() as sess:
-            sess.run(tf.initialize_all_variables())
-            content_image_pyramid = content_img_pyramid(m, batch_size, content_pre)
+            if do_restore_and_generate:
+                ckpt = tf.train.get_checkpoint_state(save_dir)
+                if ckpt and ckpt.model_checkpoint_path:
+                    saver.restore(sess, ckpt.model_checkpoint_path)
+                else:
+                    stderr("No checkpoint found. Exiting program")
+                    return
 
-            for i in range(iterations):
-                last_step = (i == iterations - 1)
+
+                # Now generate an image using the style_blend_weights given.
+                content_image_pyramid = content_img_pyramid(m, batch_size, content_pre)
                 feed_dict = {}
                 noise = noise_pyramid_w_content_img(m, batch_size, content_image_pyramid)
                 for index, noise_frame in enumerate(noise_inputs):
                     feed_dict[noise_frame] = noise[index]
+                generated_image = image.eval(feed_dict=feed_dict)
+                yield (None, vgg.unprocess(generated_image[0, :, :, :].reshape(shape[1:]), mean_pixel))  # Can't return because we are in a generator.
+            else:
+                sess.run(tf.initialize_all_variables())
+                content_image_pyramid = content_img_pyramid(m, batch_size, content_pre)
 
-                print_progress(i, feed_dict=feed_dict, last=last_step)
-                train_step.run(feed_dict=feed_dict)
+                for i in range(iterations):
+                    last_step = (i == iterations - 1)
+                    feed_dict = {}
+                    noise = noise_pyramid_w_content_img(m, batch_size, content_image_pyramid)
+                    for index, noise_frame in enumerate(noise_inputs):
+                        feed_dict[noise_frame] = noise[index]
 
-                if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
-                    this_loss = loss.eval(feed_dict=feed_dict)
-                    if this_loss < best_loss:
-                        best_loss = this_loss
-                        best = image.eval(feed_dict=feed_dict)
-                    yield (
-                        (None if last_step else i),
-                        vgg.unprocess(best[0, :, :, :].reshape(shape[1:]), mean_pixel)
-                    )  # Because we now have batch, choose the first one in the batch as our sample image.
+                    print_progress(i, feed_dict=feed_dict, last=last_step)
+                    train_step.run(feed_dict=feed_dict)
+
+                    if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
+                        this_loss = loss.eval(feed_dict=feed_dict)
+                        if this_loss < best_loss:
+                            best_loss = this_loss
+                            best = image.eval(feed_dict=feed_dict)
+                        saver.save(sess, save_dir + 'model.ckpt', global_step=i)
+                        yield (
+                            (None if last_step else i),
+                            vgg.unprocess(best[0, :, :, :].reshape(shape[1:]), mean_pixel)
+                        )  # Because we now have batch, choose the first one in the batch as our sample image.
 
 
 def generator_net(input_noise_z):

@@ -81,10 +81,16 @@ def build_parser():
     parser.add_argument('--checkpoint-iterations', type=int,
             dest='checkpoint_iterations', help='checkpoint frequency',
             metavar='CHECKPOINT_ITERATIONS')
-    parser.add_argument('--use_n_style',
-            dest='use_n_style',
-            nargs='+', help='use n style model from https://arxiv.org/abs/1610.07629',
+    parser.add_argument('--use_n_style', type=bool,
+            dest='use_n_style', help='If true, it uses n style model from https://arxiv.org/abs/1610.07629',
             metavar='USE_N_STYLE', default=True)
+    parser.add_argument('--model_save_dir',
+            dest='model_save_dir', help='The directory to save trained model and its checkpoints.',
+            metavar='MODEL_SAVE_DIR', default='models/')
+    parser.add_argument('--do_restore_and_generate', type=bool,
+            dest='do_restore_and_generate', help='If true, it generates an image from a previously trained model. '
+                            'Otherwise it does training and generate a model.',
+            metavar='DO_RESTORE_AND_GENERATE', default=False)
     return parser
 
 
@@ -146,18 +152,47 @@ def main():
         tv_weight=options.tv_weight,
         learning_rate=options.learning_rate,
         print_iterations=options.print_iterations,
-        checkpoint_iterations=options.checkpoint_iterations
+        checkpoint_iterations=options.checkpoint_iterations,
+        save_dir=options.model_save_dir,
+        do_restore_and_generate=options.do_restore_and_generate,
     ):
-        output_file = None
-        if iteration is not None:
-            if options.checkpoint_output:
-                output_file = options.checkpoint_output % iteration
+        if options.do_restore_and_generate:
+            imsave(options.output, image)
+        elif options.use_n_style:
+            for i, _ in enumerate(options.styles):
+                output_file = None
+                if iteration is not None:
+                    output_file = options.checkpoint_output % (i, iteration)
+                else:
+                    output_file = options.output
+                if output_file:
+                    imsave(output_file, image[i])
         else:
-            output_file = options.output
-        if output_file:
-            imsave(output_file, image)
+            output_file = None
+            if iteration is not None:
+                output_file = options.checkpoint_output % iteration
+            else:
+                output_file = options.output
+            if output_file:
+                imsave(output_file, image)
+
+# TODO: Make the model also take a loss from fitting the style image. I found that after applying the style to the
+# style image itself, the style image changed a lot. That should not happen.
+
+# TODO: Still some improvements to make: Resize images automatically.
+# TODO: Make the model work on images of all size.
+# we should also be able to train only the scale and offset variables without training the whole net for additional
+# style inputs.
 
 
 
 if __name__ == '__main__':
     main()
+    # following are some lists of possible commands.
+    """
+    --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/256/4.jpg-256.jpg style_compressed/256/red-peppers256.o.jpg --output=output/19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1500 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=50
+    --content=source_compressed/256/19.jpg-256.jpg --styles=style_compressed/256/4.jpg-256.jpg  --output=output/19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1500 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5_%s.jpg" --checkpoint-iterations=50
+    --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/256/4.jpg-256.jpg style_compressed/256/red-peppers256.o.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1000 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=50 --do_restore_and_generate=True
+    --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/claude_monet/256/1.jpg style_compressed/claude_monet/256/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1000 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=100 --do_restore_and_generate=True --from_screenshot=True
+
+    """

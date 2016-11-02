@@ -130,3 +130,16 @@ def gramian(layer):
         feats = tf.reshape(single_layer, (-1, number))
         grams.append(tf.matmul(tf.transpose(feats), feats) / size)
     return tf.pack(grams)
+
+def get_scale_offset_var():
+    scale_offset_variables = []
+    for d in range(8,48,8):
+        for layer in range(1,4):
+            scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES, scope='texture_nets/block_low_%d/layer%d/scale' % (d, layer))
+            scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES, scope='texture_nets/block_high_%d/layer%d/scale' % (d, layer))
+
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES, scope='texture_nets/output_chain/layer1/scale')
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES, scope='texture_nets/output_chain/layer2/scale')
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES, scope='texture_nets/output_chain/layer3/scale')
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES, scope='texture_nets/output/scale')
+    return scale_offset_variables
