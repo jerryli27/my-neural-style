@@ -122,9 +122,9 @@ def main():
     fig, ax = plt.subplots()
     plt.subplots_adjust(left=0.25, bottom=0.25)
     ax.set_title("Real Time Neural Style")
-    im = ax.imshow(np.zeros((256, 256, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
+    im = ax.imshow(np.zeros((options.height, options.width, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
     axcolor = 'lightgoldenrodyellow'
-    slider_axes = [plt.axes([0.25, 0.24 - i * 0.03, 0.65, 0.02], axisbg=axcolor) for i, style in enumerate(options.styles)]
+    slider_axes = [plt.axes([0.25, 0.21 - i * 0.03, 0.65, 0.02], axisbg=axcolor) for i, style in enumerate(options.styles)]
     sliders = [Slider(slider_axes[i], style, 0.0, 1.0, valinit=style_blend_weights[i]) for i, style in enumerate(options.styles)]
     fig.show()
     im.axes.figure.canvas.draw()
@@ -141,7 +141,7 @@ def main():
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
-            content=dummy_content,
+            contents=dummy_content,
             styles=style_images,
             iterations=None,
             batch_size=options.batch_size,
@@ -172,5 +172,6 @@ if __name__ == '__main__':
     main()
     # following are some lists of possible commands.
     """
-    --styles style_compressed/claude_monet/256/1.jpg style_compressed/claude_monet/256/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --style-weight=50 --content-weight=5 --from_screenshot=True
+    --styles style_compressed/claude_monet/256/1.jpg style_compressed/claude_monet/256/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --style-weight=50 --content-weight=5 --from_screenshot=True --height=512 --width=512
+    --styles style_compressed/claude_monet/512/1.jpg style_compressed/claude_monet/512/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg style_compressed/claude_monet/512/3.jpg style_compressed/claude_monet/512/4.jpg --style-weight=100 --content-weight=5 --from_screenshot=True --height=512 --width=512
     """

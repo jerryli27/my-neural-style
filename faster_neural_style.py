@@ -22,14 +22,15 @@ TV_WEIGHT = 1e2
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000  # 2000 in the paper
-BATCH_SIZE = 4  # 16 in the paper
+BATCH_SIZE = 1  # 16 in the paper
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 
 def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content',
-            dest='content', help='content image',
+            dest='content',
+            nargs='+', help='one or more content image',
             metavar='CONTENT', required=True)
     parser.add_argument('--styles',
             dest='styles',
@@ -47,9 +48,12 @@ def build_parser():
     parser.add_argument('--batch_size', type=int,
             dest='batch_size', help='batch size (default %(default)s)',
             metavar='BATCH_SIZE', default=BATCH_SIZE)
+    parser.add_argument('--height', type=int,
+            dest='height', help='input and output height',
+            metavar='HEIGHT', default=256)
     parser.add_argument('--width', type=int,
-            dest='width', help='output width',
-            metavar='WIDTH')
+            dest='width', help='input and output width',
+            metavar='WIDTH', default=256)
     parser.add_argument('--style-scales', type=float,
             dest='style_scales',
             nargs='+', help='one or more style scales',
@@ -72,9 +76,6 @@ def build_parser():
     parser.add_argument('--learning-rate', type=float,
             dest='learning_rate', help='learning rate (default %(default)s)',
             metavar='LEARNING_RATE', default=LEARNING_RATE)
-    parser.add_argument('--initial',
-            dest='initial', help='initial image',
-            metavar='INITIAL')
     parser.add_argument('--print-iterations', type=int,
             dest='print_iterations', help='statistics printing frequency',
             metavar='PRINT_ITERATIONS')
@@ -101,34 +102,46 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_image = imread(options.content)
+    content_images = [imread(content) for content in options.content]
     style_images = [imread(style) for style in options.styles]
 
     width = options.width
+    height = options.height
+    # If there is no width and height, we automatically take the first image's width and height and apply to all the
+    # other ones.
     if width is not None:
-        new_shape = (int(math.floor(float(content_image.shape[0]) /
-                content_image.shape[1] * width)), width)
-        content_image = scipy.misc.imresize(content_image, new_shape)
-    target_shape = content_image.shape
+        if height is not None:
+            target_shape = (height, width)
+        else:
+            target_shape = (int(math.floor(float(content_images[0].shape[0]) /
+                    content_images[0].shape[1] * width)), width)
+    else:
+        if height is not None:
+            target_shape = (height, int(math.floor(float(content_images[0].shape[1]) /
+                                        content_images[0].shape[0] * height)))
+        else:
+            target_shape = (content_images[0].shape[0], content_images[0].shape[1])
+
+
+    for i in range(len(content_images)):
+        if content_images[i].shape != target_shape:
+            content_images[i] = scipy.misc.imresize(content_images[i], target_shape)
     for i in range(len(style_images)):
         style_scale = STYLE_SCALE
         if options.style_scales is not None:
             style_scale = options.style_scales[i]
-        style_images[i] = scipy.misc.imresize(style_images[i], style_scale *
-                target_shape[1] / style_images[i].shape[1])
+        style_images[i] = scipy.misc.imresize(style_images[i], (int(style_scale * target_shape[0]),int(style_scale * target_shape[1])))
 
     style_blend_weights = options.style_blend_weights
     if style_blend_weights is None:
-        # default is equal weights
-        style_blend_weights = [1.0/len(style_images) for _ in style_images]
+        # Default is equal weights. There is no need to divide weight by number of styles, because at training time,
+        # for each style, we do one content loss training and one style loss training. If we do the division, then
+        # it favors the content loss by a factor of number of styles.
+        style_blend_weights = [1.0 for _ in style_images]
     else:
         total_blend_weight = sum(style_blend_weights)
-        style_blend_weights = [weight/total_blend_weight
+        style_blend_weights = [weight/total_blend_weight * len(style_blend_weights)
                                for weight in style_blend_weights]
-
-    initial = options.initial
-    if initial is not None:
-        initial = scipy.misc.imresize(imread(initial), content_image.shape[:2])
 
     if options.checkpoint_output and "%s" not in options.checkpoint_output:
         parser.error("To save intermediate images, the checkpoint output "
@@ -142,7 +155,7 @@ def main():
 
     for iteration, image in style_synthesis_net(
         path_to_network=options.network,
-        content=content_image,
+        content=content_images,
         styles=style_images,
         iterations=options.iterations,
         batch_size=options.batch_size,
@@ -164,7 +177,7 @@ def main():
                 if iteration is not None:
                     output_file = options.checkpoint_output % (i, iteration)
                 else:
-                    output_file = options.output
+                    output_file = options.output % i  # TODO: add test for legal output.
                 if output_file:
                     imsave(output_file, image[i])
         else:
@@ -176,14 +189,10 @@ def main():
             if output_file:
                 imsave(output_file, image)
 
-# TODO: Make the model also take a loss from fitting the style image. I found that after applying the style to the
-# style image itself, the style image changed a lot. That should not happen.
-
-# TODO: Still some improvements to make: Resize images automatically.
-# TODO: Make the model work on images of all size.
-# we should also be able to train only the scale and offset variables without training the whole net for additional
-# style inputs.
-
+# TODO: There are some serious problems. The result is not nearly comparable with the results from Gatyls.
+# It's not batch, it's not norm. not relu5_1, not total variation.
+# I know why. The network is supposed to take in more than 1 content image.
+# TODO: Check why we need to feed in different sizes of original image to the generation layer.
 
 
 if __name__ == '__main__':
@@ -193,6 +202,8 @@ if __name__ == '__main__':
     --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/256/4.jpg-256.jpg style_compressed/256/red-peppers256.o.jpg --output=output/19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1500 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=50
     --content=source_compressed/256/19.jpg-256.jpg --styles=style_compressed/256/4.jpg-256.jpg  --output=output/19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1500 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-instancenorm-iter-1500-lr-10-style-50-content-5_%s.jpg" --checkpoint-iterations=50
     --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/256/4.jpg-256.jpg style_compressed/256/red-peppers256.o.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1000 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=50 --do_restore_and_generate=True
-    --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/claude_monet/256/1.jpg style_compressed/claude_monet/256/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1000 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=100 --do_restore_and_generate=True --from_screenshot=True
+    --content=source_compressed/256/19.jpg-256.jpg --styles style_compressed/claude_monet/256/1.jpg style_compressed/claude_monet/256/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --learning-rate=10 --iterations=1500 --style-weight=50 --content-weight=5 --checkpoint-output="output_checkpoint/checkpoint_19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=300
+    --content=source_compressed/512/sea_512.jpg --styles style_compressed/claude_monet/512/1.jpg style_compressed/claude_monet/512/2.jpg style_compressed/claude_monet/512/3.jpg style_compressed/claude_monet/512/4.jpg --output=output/sea-512-nstyle-iter-1500-lr-10-style-100-content-5.jpg --learning-rate=10 --iterations=1500 --style-weight=100 --content-weight=5 --checkpoint-output="output_checkpoint/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=300
+    --content=source_compressed/512/sea_512.jpg --styles style_compressed/claude_monet/512/1.jpg style_compressed/claude_monet/512/2.jpg style_compressed/claude_monet/512/3.jpg style_compressed/claude_monet/512/4.jpg --output=output/sea-512-nstyle-iter-1500-lr-10-style-100-content-5.jpg --learning-rate=10 --iterations=150000 --style-weight=100 --content-weight=5 --checkpoint-output="output_checkpoint/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-stylenum-%s_%s.jpg" --checkpoint-iterations=300
 
     """

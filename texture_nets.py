@@ -128,7 +128,7 @@ def style_synthesis_net(path_to_network, content, styles, iterations, batch_size
 
 
                 # Now generate an image using the style_blend_weights given.
-                content_image_pyramid = content_img_pyramid(m, batch_size, content_pre)
+                content_image_pyramid = generate_image_pyramid(m, batch_size, content_pre)
                 feed_dict = {}
                 noise = noise_pyramid_w_content_img(m, batch_size, content_image_pyramid)
                 for index, noise_frame in enumerate(noise_inputs):
@@ -137,7 +137,7 @@ def style_synthesis_net(path_to_network, content, styles, iterations, batch_size
                 yield (None, vgg.unprocess(generated_image[0, :, :, :].reshape(shape[1:]), mean_pixel))  # Can't return because we are in a generator.
             else:
                 sess.run(tf.initialize_all_variables())
-                content_image_pyramid = content_img_pyramid(m, batch_size, content_pre)
+                content_image_pyramid = generate_image_pyramid(m, batch_size, content_pre)
 
                 for i in range(iterations):
                     last_step = (i == iterations - 1)
