@@ -8,6 +8,7 @@ import numpy as np
 from sys import stderr
 import scipy.misc
 import gtk.gdk
+from tensorflow.python.ops import math_ops
 
 import neural_util
 import vgg
@@ -236,7 +237,13 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         #                for current_style_i in range(len(styles))]])
                         generated_image = image.eval(feed_dict=feed_dict)
                         # for generator_layer_name, generator_layer in generator_layers.iteritems():
-                        #     print('%s: %s' %(generator_layer_name,str(generator_layer.eval(feed_dict=feed_dict))))
+                        #
+                        #     try:
+                        #         generator_layer_eval = generator_layer.eval(feed_dict=feed_dict)
+                        #     except:
+                        #         generator_layer_eval = generator_layer.eval()
+                        #     generator_layer_contains_nan = np.isnan(np.sum(generator_layer_eval))
+                        #     print('%s - %s: %s' % (generator_layer_name, str(generator_layer_contains_nan), str(generator_layer_eval)))
                         # raw_input()
                         iterator += 1
                         yield (iterator, vgg.unprocess(generated_image[0, :, :, :].reshape(input_shape[1:]), mean_pixel))  # Can't return because we are in a generator.
@@ -377,8 +384,8 @@ def conv_relu_layers(name, input_layer, input_style_placeholder,  kernel_size, o
         biases = tf.get_variable('biases', [out_channels], tf.float32, tf.random_normal_initializer(mean=0.0, stddev=0.01, dtype=tf.float32))
         conv = neural_util.conv2d_mirror_padding(input_layer, weights, biases, kernel_size)
         # conv = neural_util.conv2d(input_layer, weights, biases)
-        # norm = conditional_instance_norm(conv, input_style_placeholder, reuse = reuse)
-        norm = spatial_batch_norm(conv, input_style_placeholder, reuse = reuse)
+        norm = conditional_instance_norm(conv, input_style_placeholder, reuse = reuse)
+        # norm = spatial_batch_norm(conv, input_style_placeholder, reuse = reuse)
         # relu = neural_util.leaky_relu(norm, relu_leak)
         # relu = tf.nn.relu(norm)
         relu = tf.nn.elu(norm, 'elu')
@@ -495,9 +502,18 @@ def get_all_layers_conv_relu_layers(name, input_layer, input_style_placeholder, 
         biases = tf.get_variable('biases', [out_channels], tf.float32, tf.random_normal_initializer(mean=0.0, stddev=0.01, dtype=tf.float32))
         conv = neural_util.conv2d_mirror_padding(input_layer, weights, biases, kernel_size)
         # conv = neural_util.conv2d(input_layer, weights, biases)
-        # norm = conditional_instance_norm(conv, input_style_placeholder, reuse = reuse)
-        norm = spatial_batch_norm(conv, input_style_placeholder, reuse = reuse)
+        norm = conditional_instance_norm(conv, input_style_placeholder, reuse = reuse)
+        # norm = spatial_batch_norm(conv, input_style_placeholder, reuse = reuse)
         # relu = neural_util.leaky_relu(norm, relu_leak)
         # relu = tf.nn.relu(norm)
         relu = tf.nn.elu(norm, 'elu')
-        return {'conv': conv, 'norm': norm, 'relu':relu}
+
+        num_channels = conv.get_shape().as_list()[3]
+        scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
+
+        mean, variance = tf.nn.moments(conv, [0, 1, 2])
+        variance = tf.abs(variance)
+        variance_epsilon = 0.001
+        inv = math_ops.rsqrt(variance + variance_epsilon)
+        return {'conv': conv, 'norm': norm, 'relu':relu, 'scale':scale, 'offset':offset, 'mean':mean, 'variance':variance, 'inv':inv}

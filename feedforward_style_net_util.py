@@ -73,12 +73,15 @@ def spatial_batch_norm(input_layer, input_style_placeholder, name='spatial_batch
     Batch-normalizes the layer as in http://arxiv.org/abs/1502.03167
     This is important since it allows the different scales to talk to each other when they get joined.
     """
+    # NOTE: the variance calculated may be a small negative value due to numeric imprecision.
+    # The variance epsilon should be larger than 0.001 to overcome this issue.
     mean, variance = tf.nn.moments(input_layer, [0, 1, 2])
-    variance_epsilon = 0.00001
+    variance = tf.abs(variance)
+    variance_epsilon = 0.001
     inv = tf.rsqrt(variance + variance_epsilon)
     num_channels = input_layer.get_shape().as_list()[3]
-    scale = tf.Variable(tf.random_uniform([num_channels]), name='scale')
-    offset = tf.Variable(tf.random_uniform([num_channels]), name='offset')
+    scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
+    offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
     # return_val = tf.sub(tf.mul(tf.mul(scale, inv), tf.sub(input_layer, mean)), offset, name=name)
     # return return_val
     return_val = tf.nn.batch_normalization(input_layer, mean, variance, offset, scale, variance_epsilon, name=name)
@@ -103,8 +106,11 @@ def instance_norm(input_layer, name='instance_norm', reuse = False):
         # # A potential problem with doing so: the scale and offset variable is different for every batch.
         # return_val.append(tf.squeeze(spatial_batch_norm(tf.expand_dims(l, 0)), [0]))
         l = tf.expand_dims(l, 0)
+        # NOTE: the variance calculated may be a small negative value due to numeric imprecision.
+        # The variance epsilon should be larger than 0.001 to overcome this issue.
         mean, variance = tf.nn.moments(l, [0, 1, 2])
-        variance_epsilon = 0.00001
+        variance = tf.abs(variance)
+        variance_epsilon = 0.001
         inv = tf.rsqrt(variance + variance_epsilon)
         # return_val = tf.sub(tf.mul(tf.mul(scale, inv), tf.sub(input_layer, mean)), offset, name=name)
         # return return_val
@@ -136,7 +142,10 @@ def conditional_instance_norm(input_layer, input_style_placeholder, name='condit
             # # A potential problem with doing so: the scale and offset variable is different for every batch.
             # return_val.append(tf.squeeze(spatial_batch_norm(tf.expand_dims(l, 0)), [0]))
             l = tf.expand_dims(l, 0)
+            # NOTE: the variance calculated may be a small negative value due to numeric imprecision.
+            # The variance epsilon should be larger than 0.001 to overcome this issue.
             mean, variance = tf.nn.moments(l, [0, 1, 2])
+            variance = tf.abs(variance)
             variance_epsilon = 0.001
             inv = tf.rsqrt(variance + variance_epsilon)
             # return_val = tf.sub(tf.mul(tf.mul(scale, inv), tf.sub(input_layer, mean)), offset, name=name)

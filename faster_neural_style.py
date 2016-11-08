@@ -19,12 +19,12 @@ from general_util import *
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
-LEARNING_RATE = 1e1
+LEARNING_RATE = 0.001  # 0.001 in https://arxiv.org/abs/1610.07629
 STYLE_SCALE = 1.0
-ITERATIONS = 1000  # 40000 in https://arxiv.org/abs/1610.07629
-BATCH_SIZE = 1  # 16 in https://arxiv.org/abs/1610.07629
+ITERATIONS = 160000  # 40000 in https://arxiv.org/abs/1610.07629
+BATCH_SIZE = 4  # 16 in https://arxiv.org/abs/1610.07629
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
-PRINT_ITERATIONS = 10
+PRINT_ITERATIONS = 100
 
 
 def build_parser():
@@ -194,6 +194,17 @@ def main():
 # Yeah now I'm pretty sure leaky relu is causing some issues. The patterns generated is just not the right quality.
 # Trying elu instead of leaky relu. It should not cause a problem because it's an official tensorflow function.
 
+
+# I made two changes. First is I set lr to 5 and batch_size to 1. Second is I used batch normalization instead of instance normalization. One of them is causing the problem...
+# Batch norm is not causing a problem when batch_size is 1, so the problem is probably on learning rate.
+
+# Nope. The problem is also on norm. It turns out that the tensorflow variance calculation has some serious bugs.
+# Variance should be positive but due to float inaccuracy, it can get up to -0.5.
+# So I just applied an abs operation on it and it became fine.
+
+
+# Summary: learning rate should be at least 0.01, or 0.001 as suggested in the paper. Tensorflow norm has some issues
+# and I have to apply abs on it.
 
 if __name__ == '__main__':
     main()
