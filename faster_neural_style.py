@@ -178,33 +178,9 @@ def main():
                     if output_file:
                         imsave(output_file, image[style_i][content_i])
 
-
-# TODO: There are some serious problems. The result is not nearly comparable with the results from Gatyls.
-# It's not batch, it's not norm. not relu5_1, not total variation.
-# I know why. The network is supposed to take in more than 1 content image.
-# That is not improving it either...
-# Content loss is ok. I checked.
-# Added mirror padding, fixed some issue but not all of them... The graph still looks wierd.
-# TODO: use ablation to generate images for each layer of the multi-scale architecture. Not working. black image.
-# TODO: Check why we need to feed in different sizes of original image to the generation layer.
-
-# TODO: leaky relu was causing a trouble. norm is causing a trouble as well.
-# Now mirror padding and leaky relu is off. Don't forget to turn them back on.
-
-# Yeah now I'm pretty sure leaky relu is causing some issues. The patterns generated is just not the right quality.
-# Trying elu instead of leaky relu. It should not cause a problem because it's an official tensorflow function.
-
-
-# I made two changes. First is I set lr to 5 and batch_size to 1. Second is I used batch normalization instead of instance normalization. One of them is causing the problem...
-# Batch norm is not causing a problem when batch_size is 1, so the problem is probably on learning rate.
-
-# Nope. The problem is also on norm. It turns out that the tensorflow variance calculation has some serious bugs.
-# Variance should be positive but due to float inaccuracy, it can get up to -0.5.
-# So I just applied an abs operation on it and it became fine.
-
-
 # Summary: learning rate should be at least 0.01, or 0.001 as suggested in the paper. Tensorflow norm has some issues
 # and I have to apply abs on it.
+# TODO: Check why we need to feed in different sizes of original image to the generation layer.
 
 if __name__ == '__main__':
     main()
