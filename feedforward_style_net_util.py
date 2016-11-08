@@ -4,11 +4,13 @@ from sys import stderr
 
 from general_util import *
 
+# TODO: Needs reformatting.
+
 def input_pyramid(name, height, width, batch_size, k=5, with_content_image=False):
     """
-    Generates k inputs at different scales, with MxM being the largest.
-    If with_content_image is true, add 3 to the last rgb dim because we are appending the content image to the noise
-    generated.
+    Generates k inputs at different scales, with height x width being the largest.
+    If with_content_image is true, add 3 to the last rgb dim because we are appending the resized content image to the
+    noise generated.
     """
     if height % (2 ** (k-1)) != 0 or width % (2 ** (k-1)) != 0:
         stderr('Warning: Input width or height cannot be divided by 2^(k-1). This might cause problems when generating '
@@ -20,15 +22,40 @@ def input_pyramid(name, height, width, batch_size, k=5, with_content_image=False
     return return_val
 
 
-def noise_pyramid(height, width, batch_size, k=5):
+def noise_pyramid(height, width, batch_size, k=5, ablation_layer = None):
+    """
+    :param height: Height of the largest noise image.
+    :param width: Width of the largest noise image.
+    :param batch_size: Number of images we generate per batch.
+    :param k: Number of inputs generated at different scales. If k = 3 for example, it will generate images with
+    h x w, h/2 x w/2, h/4 x w/4.
+    :param ablation_layer: If not none, every layer except for this one will be zeros. 0 <= ablation_layer < k-1.
+    :return: A list of numpy arrays with size (batch_size, h/2^?, w/2^?, 3)
+    """
     if height % (2 ** (k-1)) != 0 or width % (2 ** (k-1)) != 0:
         stderr('Warning: Input width or height cannot be divided by 2^(k-1). This might cause problems when generating '
                'images.')
+    # return [np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
+    #         if (ablation_layer is None or ablation_layer < 0 or (k-1-ablation_layer) != x) else
+    #         np.zeros((batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3), dtype=np.float64) + 0.5
+    #         for x in range(k)][::-1]
+
     return [np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
+            if (ablation_layer is None or ablation_layer < 0 or (k - 1 - ablation_layer) == x) else
+            np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3) * 0.0
             for x in range(k)][::-1]
 
-
+# TODO: went till here. Continue from here.
 def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid, k=5):
+    """
+    :param height: Height of the largest noise image.
+    :param width: Width of the largest noise image.
+    :param batch_size: Number of images we generate per batch.
+    :param k: Number of inputs generated at different scales. If k = 3 for example, it will generate images with
+    h x w, h/2 x w/2, h/4 x w/4.
+    :param ablation_layer: If not none, every layer except for this one will be zeros. 0 <= ablation_layer < k-1.
+    :return: A list of numpy arrays with size (batch_size, h/2^?, w/2^?, 3)
+    """
     """If an additional input tensor, the content image tensor, is
     provided, then we concatenate the downgraded versions of that tensor to the noise tensors."""
     return [np.concatenate((np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3),
@@ -103,17 +130,17 @@ def conditional_instance_norm(input_layer, input_style_placeholder, name='condit
         # offset = tf.Variable(tf.random_uniform([num_styles, num_channels]), name='offset')
         scale = tf.get_variable('scale', [num_styles, num_channels], tf.float32, tf.random_uniform_initializer())
         offset = tf.get_variable('offset', [num_styles, num_channels], tf.float32, tf.random_uniform_initializer())
+        scale_for_current_style = tf.matmul(input_style_placeholder, scale)
+        offset_for_current_style = tf.matmul(input_style_placeholder, offset)
         for l in input_layers:
             # # A potential problem with doing so: the scale and offset variable is different for every batch.
             # return_val.append(tf.squeeze(spatial_batch_norm(tf.expand_dims(l, 0)), [0]))
             l = tf.expand_dims(l, 0)
             mean, variance = tf.nn.moments(l, [0, 1, 2])
-            variance_epsilon = 0.00001
+            variance_epsilon = 0.001
             inv = tf.rsqrt(variance + variance_epsilon)
             # return_val = tf.sub(tf.mul(tf.mul(scale, inv), tf.sub(input_layer, mean)), offset, name=name)
             # return return_val
-            scale_for_current_style = tf.matmul(input_style_placeholder, scale)
-            offset_for_current_style = tf.matmul(input_style_placeholder, offset)
             return_val.append(tf.squeeze(tf.nn.batch_normalization(
                 l, mean, variance, offset_for_current_style, scale_for_current_style, variance_epsilon, name=name), [0]))
         return_val = tf.pack(return_val)
@@ -121,7 +148,7 @@ def conditional_instance_norm(input_layer, input_style_placeholder, name='condit
 
 
 def gramian(layer):
-    # Takes (batches, width, height, channels) and computes gramians of dimension (batches, channels, channels)
+    # Takes (batches, height, width, channels) and computes gramians of dimension (batches, channels, channels)
     # activations_shape = activations.get_shape().as_list()
     # """
     # Instead of iterating over #channels width by height matrices and computing similarity, we vectorize and compute
@@ -187,3 +214,4 @@ def total_variation(image_batch, divide_by_num_pixels = False):
         total_variation = tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) + tf.sqrt(tf.reduce_sum(tf.square(vertical_diff)))
 
     return total_variation
+

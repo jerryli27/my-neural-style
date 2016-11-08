@@ -18,6 +18,8 @@ import scipy.misc
 import math
 from argparse import ArgumentParser
 
+# TODO: Needs reformatting.
+
 # default arguments
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
@@ -72,6 +74,9 @@ def build_parser():
     parser.add_argument('--from_screenshot', type=bool,
             dest='from_screenshot', help='If true, the content image is the screen shot',
             metavar='FROM_SCREENSHOT', default=False)
+    parser.add_argument('--ablation_layer', type=int,
+            dest='ablation_layer', help='If not none, all noise layer except for the given ablation layer will be zero.',
+            metavar='ABLATION_LAYER', default=None)
     return parser
 
 
@@ -82,7 +87,7 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    dummy_content = np.zeros((options.height, options.width, 3))
+    dummy_content = [np.zeros((options.height, options.width, 3))]
 
     # Todo: use camera.
     # cap = cv2.VideoCapture(0)
@@ -125,7 +130,7 @@ def main():
     im = ax.imshow(np.zeros((options.height, options.width, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
     axcolor = 'lightgoldenrodyellow'
     slider_axes = [plt.axes([0.25, 0.21 - i * 0.03, 0.65, 0.02], axisbg=axcolor) for i, style in enumerate(options.styles)]
-    sliders = [Slider(slider_axes[i], style, 0.0, 1.0, valinit=style_blend_weights[i]) for i, style in enumerate(options.styles)]
+    sliders = [Slider(slider_axes[i], style, 0.0, 100.0, valinit=style_blend_weights[i]) for i, style in enumerate(options.styles)]
     fig.show()
     im.axes.figure.canvas.draw()
     plt.pause(0.001)
@@ -154,7 +159,8 @@ def main():
             checkpoint_iterations=None,
             save_dir=options.model_save_dir,
             do_restore_and_generate=True,
-            from_screenshot = options.from_screenshot
+            from_screenshot = options.from_screenshot,
+            ablation_layer=options.ablation_layer
         ):
         # We must do this clip step before we display the image. Otherwise the color will be off.
         image = np.clip(image, 0, 255).astype(np.uint8)
