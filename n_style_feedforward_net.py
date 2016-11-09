@@ -14,6 +14,7 @@ import neural_util
 import vgg
 from general_util import *
 from feedforward_style_net_util import *
+from mrf_util import mrf_loss
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
@@ -21,8 +22,11 @@ STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 # TODO: Needs reformatting.
 def style_synthesis_net(path_to_network, contents, styles, iterations, batch_size,
                         content_weight, style_weight, style_blend_weights, tv_weight,
-                        learning_rate, style_only = True, style_as_content = False, multiple_styles_train_scale_offset_only = False, print_iterations=None, checkpoint_iterations=None,
-                        save_dir = "models/", do_restore_and_generate = False, from_screenshot = False, ablation_layer = None):
+                        learning_rate, style_only = True, style_as_content = False,
+                        multiple_styles_train_scale_offset_only = False, use_mrf = False,
+                        print_iterations=None,
+                        checkpoint_iterations=None, save_dir = "models/", do_restore_and_generate = False,
+                        from_screenshot = False, ablation_layer = None):
     """
     Stylize images.
 
@@ -45,6 +49,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
 
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
+    print('Finished loading VGG and passing content and style image to it.')
 
     # compute content features in feedforward mode
     content_pre_list = []
@@ -57,6 +62,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
             content_pre_list.append(np.array([vgg.preprocess(contents[i], mean_pixel)]))
             content_features[i][CONTENT_LAYER] = net[CONTENT_LAYER].eval(
                 feed_dict={image: content_pre_list[-1]})
+    print('Finished loading passing content image to it.')
 
     # compute style features in feedforward mode
     style_pre_list = []
@@ -68,14 +74,18 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
             style_pre_list.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
             for layer in STYLE_LAYERS:
                 features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
-                features = np.reshape(features, (-1, features.shape[3]))
-                gram = np.matmul(features.T, features) / features.size
-                style_features[i][layer] = gram
+                if use_mrf:
+                    style_features[i][layer] = features
+                else:
+                    # Calculate and store gramian.
+                    features = np.reshape(features, (-1, features.shape[3]))
+                    gram = np.matmul(features.T, features) / features.size
+                    style_features[i][layer] = gram
             ### TEST ###
             if style_as_content:
                 style_content_features[i][CONTENT_LAYER]= net[CONTENT_LAYER].eval(feed_dict={image: style_pre_list[-1]})
             ### TEST ENDS ###
-
+    print('Finished loading VGG and passing content and style image to it.')
     # make stylized image using backpropogation
     with tf.Graph().as_default():
         if style_only:
@@ -102,9 +112,15 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
             style_losses_for_each_style_layer = []
             for style_layer in STYLE_LAYERS:
                 layer = net[style_layer]
-                gram = gramian(layer)
-                style_gram = style_features[i][style_layer]
-                style_losses_for_each_style_layer.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
+                if use_mrf:
+                    print('mrfing %d %s' %(i, style_layer))
+                    style_losses_for_each_style_layer.append(mrf_loss(style_features[i][style_layer],layer))
+                    print('mrfed %d %s' %(i, style_layer))
+                else:
+                    # Use gramian loss.
+                    gram = gramian(layer)
+                    style_gram = style_features[i][style_layer]
+                    style_losses_for_each_style_layer.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
 
             style_loss_for_each_style.append(style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer))
 
@@ -198,7 +214,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                     input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
                                                              name='input_style_placeholder')
                     image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
-                    generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
+                    # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
 
 
                     style_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, style_pre) for style_pre in
@@ -509,8 +525,10 @@ def get_all_layers_conv_relu_layers(name, input_layer, input_style_placeholder, 
         relu = tf.nn.elu(norm, 'elu')
 
         num_channels = conv.get_shape().as_list()[3]
-        scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
-        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
+
+        num_styles = input_style_placeholder.get_shape().as_list()[1]
+        scale = tf.get_variable('scale', [num_styles, num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_styles, num_channels], tf.float32, tf.random_uniform_initializer())
 
         mean, variance = tf.nn.moments(conv, [0, 1, 2])
         variance = tf.abs(variance)
