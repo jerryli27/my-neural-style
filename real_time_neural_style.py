@@ -37,6 +37,11 @@ def build_parser():
             dest='styles',
             nargs='+', help='one or more style images',
             metavar='STYLE', required=True)
+    parser.add_argument('--texture_synthesis_only',
+                        dest='texture_synthesis_only', help='If true, we only generate the texture of the style images.'
+                                                            'No content image will be used.', action='store_true')
+    parser.set_defaults(texture_synthesis_only=False)
+
     parser.add_argument('--output',
             dest='output', help='output path',
             metavar='OUTPUT', required=True)
@@ -56,6 +61,10 @@ def build_parser():
     parser.add_argument('--network',
             dest='network', help='path to network parameters (default %(default)s)',
             metavar='VGG_PATH', default=VGG_PATH)
+    parser.add_argument('--use_mrf',
+                        dest='use_mrf', help='If true, we use Markov Random Fields loss instead of Gramian loss.'
+                                             ' (default %(default)s).', action='store_true')
+    parser.set_defaults(use_mrf=False)
     parser.add_argument('--content-weight', type=float,
             dest='content_weight', help='content weight (default %(default)s)',
             metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
@@ -71,9 +80,9 @@ def build_parser():
     parser.add_argument('--model_save_dir',
             dest='model_save_dir', help='The directory to save trained model and its checkpoints.',
             metavar='MODEL_SAVE_DIR', default='models/')
-    parser.add_argument('--from_screenshot', type=bool,
-            dest='from_screenshot', help='If true, the content image is the screen shot',
-            metavar='FROM_SCREENSHOT', default=False)
+    parser.add_argument('--from_screenshot',
+            dest='from_screenshot', help='If true, the content image is the screen shot', action='store_true')
+    parser.set_defaults(from_screenshot=False)
     parser.add_argument('--ablation_layer', type=int,
             dest='ablation_layer', help='If not none, all noise layer except for the given ablation layer will be zero.',
             metavar='ABLATION_LAYER', default=None)
@@ -155,6 +164,8 @@ def main():
             style_blend_weights=style_blend_weights,
             tv_weight=options.tv_weight,
             learning_rate=1,  # Dummy learning rate.
+            style_only=options.texture_synthesis_only,
+            use_mrf=options.use_mrf,
             print_iterations=None,
             checkpoint_iterations=None,
             save_dir=options.model_save_dir,

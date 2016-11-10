@@ -18,11 +18,12 @@ from mrf_util import mrf_loss
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
+STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 # TODO: Needs reformatting.
 def style_synthesis_net(path_to_network, contents, styles, iterations, batch_size,
                         content_weight, style_weight, style_blend_weights, tv_weight,
-                        learning_rate, style_only = True, style_as_content = False,
+                        learning_rate, style_only = False, style_as_content = False,
                         multiple_styles_train_scale_offset_only = False, use_mrf = False,
                         print_iterations=None,
                         checkpoint_iterations=None, save_dir = "models/", do_restore_and_generate = False,
@@ -36,6 +37,10 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
 
     :rtype: iterator[tuple[int|None,image]]
     """
+    global STYLE_LAYERS
+    if use_mrf:
+        STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
+
     input_shape = (1,) + contents[0].shape
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
@@ -49,43 +54,47 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
 
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
-    print('Finished loading VGG and passing content and style image to it.')
+    print('Finished loading VGG.')
 
-    # compute content features in feedforward mode
-    content_pre_list = []
-    for i in range(len(contents)):
-        g = tf.Graph()
-        with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
-            image = tf.placeholder('float', shape=input_shape)
-            # This mean pixel variable is unique to the input trained vgg network. It is independent of the input image.
-            net = vgg.pre_read_net(vgg_data, image)
-            content_pre_list.append(np.array([vgg.preprocess(contents[i], mean_pixel)]))
-            content_features[i][CONTENT_LAYER] = net[CONTENT_LAYER].eval(
-                feed_dict={image: content_pre_list[-1]})
-    print('Finished loading passing content image to it.')
 
-    # compute style features in feedforward mode
-    style_pre_list = []
-    for i in range(len(styles)):
-        g = tf.Graph()
-        with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
-            image = tf.placeholder('float', shape=style_shapes[i])
-            net = vgg.pre_read_net(vgg_data, image)
-            style_pre_list.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
-            for layer in STYLE_LAYERS:
-                features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
-                if use_mrf:
-                    style_features[i][layer] = features
-                else:
-                    # Calculate and store gramian.
-                    features = np.reshape(features, (-1, features.shape[3]))
-                    gram = np.matmul(features.T, features) / features.size
-                    style_features[i][layer] = gram
-            ### TEST ###
-            if style_as_content:
-                style_content_features[i][CONTENT_LAYER]= net[CONTENT_LAYER].eval(feed_dict={image: style_pre_list[-1]})
-            ### TEST ENDS ###
-    print('Finished loading VGG and passing content and style image to it.')
+    if not do_restore_and_generate:  #if not do_restore_and_generate:
+        # compute content features in feedforward mode
+        content_pre_list = []
+        for i in range(len(contents)):
+            g = tf.Graph()
+            with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
+                image = tf.placeholder('float', shape=input_shape)
+                # This mean pixel variable is unique to the input trained vgg network. It is independent of the input image.
+                net = vgg.pre_read_net(vgg_data, image)
+                content_pre_list.append(np.array([vgg.preprocess(contents[i], mean_pixel)]))
+                content_features[i][CONTENT_LAYER] = net[CONTENT_LAYER].eval(
+                    feed_dict={image: content_pre_list[-1]})
+        print('Finished loading passing content image to it.')
+
+        # compute style features in feedforward mode
+        style_pre_list = []
+        for i in range(len(styles)):
+            g = tf.Graph()
+            with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
+                image = tf.placeholder('float', shape=style_shapes[i])
+                net = vgg.pre_read_net(vgg_data, image)
+                style_pre_list.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
+                for layer in STYLE_LAYERS:
+                    features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
+                    if use_mrf:
+                        style_features[i][layer] = features
+                    else:
+                        # Calculate and store gramian.
+                        features = np.reshape(features, (-1, features.shape[3]))
+                        gram = np.matmul(features.T, features) / features.size
+                        style_features[i][layer] = gram
+                ### TEST ###
+                if style_as_content:
+                    style_content_features[i][CONTENT_LAYER]= net[CONTENT_LAYER].eval(feed_dict={image: style_pre_list[-1]})
+                ### TEST ENDS ###
+        print('Finished loading VGG and passing content and style image to it.')
+
+
     # make stylized image using backpropogation
     with tf.Graph().as_default():
         if style_only:
@@ -97,92 +106,102 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
         input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)], name='input_style_placeholder')
         image = generator_net_n_styles(noise_inputs, input_style_placeholder)
         net = vgg.pre_read_net(vgg_data, image)
+        if not do_restore_and_generate:  #if not do_restore_and_generate:
+            # content loss
+            content_loss_for_each_content = [content_weight * (2 * tf.nn.l2_loss(
+                net[CONTENT_LAYER] - content_features[i][CONTENT_LAYER]) /
+                                             content_features[i][CONTENT_LAYER].size) for i in range(len(contents))]
+            # style loss
+            style_loss_for_each_style = []
+            ### TEST ###
+            if style_as_content:
+                content_loss_for_each_style = []
+            ### TEST ENDS ###
+            for i in range(len(styles)):
+                style_losses_for_each_style_layer = []
+                for style_layer in STYLE_LAYERS:
+                    layer = net[style_layer]
+                    if use_mrf:
+                        print('mrfing %d %s' %(i, style_layer))
+                        style_losses_for_each_style_layer.append(mrf_loss(style_features[i][style_layer],layer))
+                        print('mrfed %d %s' %(i, style_layer))
+                    else:
+                        # Use gramian loss.
+                        gram = gramian(layer)
+                        style_gram = style_features[i][style_layer]
+                        style_losses_for_each_style_layer.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
 
-        # content loss
-        content_loss_for_each_content = [content_weight * (2 * tf.nn.l2_loss(
-            net[CONTENT_LAYER] - content_features[i][CONTENT_LAYER]) /
-                                         content_features[i][CONTENT_LAYER].size) for i in range(len(contents))]
-        # style loss
-        style_loss_for_each_style = []
-        ### TEST ###
-        if style_as_content:
-            content_loss_for_each_style = []
-        ### TEST ENDS ###
-        for i in range(len(styles)):
-            style_losses_for_each_style_layer = []
-            for style_layer in STYLE_LAYERS:
-                layer = net[style_layer]
-                if use_mrf:
-                    print('mrfing %d %s' %(i, style_layer))
-                    style_losses_for_each_style_layer.append(mrf_loss(style_features[i][style_layer],layer))
-                    print('mrfed %d %s' %(i, style_layer))
-                else:
-                    # Use gramian loss.
-                    gram = gramian(layer)
-                    style_gram = style_features[i][style_layer]
-                    style_losses_for_each_style_layer.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
+                style_loss_for_each_style.append(style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer))
 
-            style_loss_for_each_style.append(style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer))
+                ### TEST ###
+                if style_as_content:
+                    content_loss_for_each_style.append(content_weight * style_blend_weights[i] * (2 * tf.nn.l2_loss(
+                        net[CONTENT_LAYER] - style_content_features[i][CONTENT_LAYER]) /
+                                                                         style_content_features[i][CONTENT_LAYER].size))
+                ### TEST ENDS ###
+
+            # According to https://arxiv.org/abs/1610.07629 when "zero-padding is replaced with mirror-padding, and transposed convolutions (also sometimes called deconvolutions) are replaced with nearest-neighbor upsampling followed by a convolution.", tv is no longer needed.
+            tv_loss = 0
+            # tv_loss = tv_weight * total_variation(image)
+
+            # overall loss
+            if style_only:
+                losses_for_each_content_and_style = [[style_loss for _ in content_loss_for_each_content] for
+                                                     style_loss in style_loss_for_each_style]
+            else:
+                losses_for_each_content_and_style = [[style_loss + content_loss + tv_loss for content_loss in content_loss_for_each_content] for
+                                                     style_loss in style_loss_for_each_style]
+            overall_loss = 0
+            for i, loss_for_each_content in enumerate(losses_for_each_content_and_style):
+                for loss in loss_for_each_content:
+                    overall_loss += loss
+            # losses_for_each_style = [[content_loss + tv_loss + style_loss for content_loss in content_loss_for_each_content] for style_loss in style_loss_for_each_style]
 
             ### TEST ###
             if style_as_content:
-                content_loss_for_each_style.append(content_weight * style_blend_weights[i] * (2 * tf.nn.l2_loss(
-                    net[CONTENT_LAYER] - style_content_features[i][CONTENT_LAYER]) /
-                                                                     style_content_features[i][CONTENT_LAYER].size))
+                losses_for_each_style_when_input_is_style = [content_loss_for_each_style[i] + tv_loss + style_loss for i, style_loss in enumerate(style_loss_for_each_style)]
             ### TEST ENDS ###
 
-        # According to https://arxiv.org/abs/1610.07629 when "zero-padding is replaced with mirror-padding, and transposed convolutions (also sometimes called deconvolutions) are replaced with nearest-neighbor upsampling followed by a convolution.", tv is no longer needed.
-        tv_loss = 0
-        # tv_loss = tv_weight * total_variation(image)
-
-        # overall loss
-        # losses_for_each_style = [[content_loss + tv_loss + style_loss for content_loss in content_loss_for_each_content] for style_loss in style_loss_for_each_style]
-        losses_for_each_content_and_style = [[style_loss for content_loss in content_loss_for_each_content] for style_loss in style_loss_for_each_style]
-        ### TEST ###
-        if style_as_content:
-            losses_for_each_style_when_input_is_style = [content_loss_for_each_style[i] + tv_loss + style_loss for i, style_loss in enumerate(style_loss_for_each_style)]
-        ### TEST ENDS ###
-
-        # optimizer setup
-        # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
-        # They used learning rate = 0.001
-        # Get all variables
-        # TODO: tell which one is better, training all variables or training only scale and offset.
-        scale_offset_var = get_scale_offset_var()
-        if multiple_styles_train_scale_offset_only:
-            train_step_for_each_content_and_style = [[
-                tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
-                if i != 0 else
-                tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
-                                         for i, loss_for_each_content in enumerate(losses_for_each_content_and_style)]
-        else:
-            train_step_for_each_content_and_style = [[
-                tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
-                                         for i, loss_for_each_content in enumerate(losses_for_each_content_and_style)]
-
-        ### TEST ###
-        if style_as_content:
+            # optimizer setup
+            # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
+            # They used learning rate = 0.001
+            # Get all variables
+            # TODO: tell which one is better, training all variables or training only scale and offset.
+            scale_offset_var = get_scale_offset_var()
             if multiple_styles_train_scale_offset_only:
-                train_step_for_each_style_when_input_is_style = [
+                train_step_for_each_content_and_style = [[
                     tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
                     if i != 0 else
-                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss)
-                                             for i, loss in enumerate(losses_for_each_style_when_input_is_style)]
+                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
+                                             for i, loss_for_each_content in enumerate(losses_for_each_content_and_style)]
             else:
-                train_step_for_each_style_when_input_is_style = [
-                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss)
-                                             for i, loss in enumerate(losses_for_each_style_when_input_is_style)]
-        ### TEST ENDS ###
+                train_step_for_each_content_and_style = [[
+                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
+                                             for i, loss_for_each_content in enumerate(losses_for_each_content_and_style)]
 
-        def print_progress(i, feed_dict, last=False):
-            # stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
-            if last or (print_iterations and i % print_iterations == 0):
-                stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
-                # Assume that the feed_dict is for the last content and style.
-                #stderr.write('  content loss: %g\n' % content_loss_for_each_content[-1].eval(feed_dict=feed_dict))
-                #stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
-                # stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
-                stderr.write('    total loss: %g\n' % loss.eval(feed_dict=feed_dict))
+            ### TEST ###
+            if style_as_content:
+                if multiple_styles_train_scale_offset_only:
+                    train_step_for_each_style_when_input_is_style = [
+                        tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
+                        if i != 0 else
+                        tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss)
+                                                 for i, loss in enumerate(losses_for_each_style_when_input_is_style)]
+                else:
+                    train_step_for_each_style_when_input_is_style = [
+                        tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss)
+                                                 for i, loss in enumerate(losses_for_each_style_when_input_is_style)]
+            ### TEST ENDS ###
+
+            def print_progress(i, feed_dict, last=False):
+                # stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
+                if last or (print_iterations and i % print_iterations == 0):
+                    stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
+                    # Assume that the feed_dict is for the last content and style.
+                    #stderr.write('  content loss: %g\n' % content_loss_for_each_content[-1].eval(feed_dict=feed_dict))
+                    #stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
+                    # stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
+                    stderr.write('    total loss: %g\n' % overall_loss.eval(feed_dict=feed_dict))
 
         # Optimization
         best_loss_for_each_content_and_style = [[float('inf') for content_i in range(len(contents))]for style_i in range(len(styles))]
@@ -200,8 +219,8 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
 
                 if from_screenshot:
                     iterator = 0
-                    kScreenX = 100
-                    kScreenY = 100
+                    kScreenX = 300
+                    kScreenY = 300
                     if style_only:
                         noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
                                                      with_content_image=False)
@@ -217,8 +236,8 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                     # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
 
 
-                    style_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, style_pre) for style_pre in
-                                            style_pre_list]
+                    # style_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, style_pre) for style_pre in
+                    #                         style_pre_list]
                     while True:
                         w = gtk.gdk.get_default_root_window()
                         sz = w.get_size()

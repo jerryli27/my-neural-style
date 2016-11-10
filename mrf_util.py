@@ -5,13 +5,15 @@ import tensorflow as tf
 
 def mrf_loss(style_layer, generated_layer, patch_size = 3):
     generated_layer_patches = create_local_patches(generated_layer, patch_size)
-    print('Finished create_local_patches for generated_layer.')
     style_layer_patches = create_local_patches(style_layer, patch_size)
-    print('Finished create_local_patches for style_layer.')
     generated_layer_nn_matched_patches = patch_matching(generated_layer_patches, style_layer_patches, patch_size)
-    print('Finished patch_matching.')
-    loss = tf.reduce_sum(tf.square(tf.sub(generated_layer_patches, generated_layer_nn_matched_patches)),
-                         reduction_indices=[1,2,3])
+
+
+    _, height, width, number = map(lambda i: i.value, generated_layer.get_shape())
+    size = height * width * number
+    # Normalize by the size of the image as well as the patch area.
+    loss = tf.reduce_sum(tf.square(tf.sub(generated_layer_patches, generated_layer_nn_matched_patches))) / size / (patch_size ** 2)
+
     return loss
 
 

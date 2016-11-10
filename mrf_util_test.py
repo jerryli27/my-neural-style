@@ -125,7 +125,7 @@ class MrfUtilTest(tf.test.TestCase):
             feeddict = {generated_layer: init_generated_layer, style_layer: init_style_layer}
             # The first batch is a perfect match
             # The second batch has loss: (2^2  * 4 + 1^2  * 4+ 3^2* 4
-            expected_output = np.array([0.0, 2.0**2 * 4 + 1.0**2 * 4+ 3.0**2 * 4])
+            expected_output = 2.0**2 * 4 + 1.0**2 * 4+ 3.0**2 * 4
             np.testing.assert_array_almost_equal(actual_output.eval(feeddict), expected_output)
         
 

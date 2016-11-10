@@ -1,4 +1,5 @@
 import vgg
+from mrf_util import mrf_loss
 
 import tensorflow as tf
 import numpy as np
@@ -13,10 +14,11 @@ except NameError:
 
 CONTENT_LAYER = 'relu4_2'
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
+STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 def stylize(network, initial, content, styles, iterations,
         content_weight, style_weight, style_blend_weights, tv_weight,
-        learning_rate, print_iterations=None, checkpoint_iterations=None):
+        learning_rate, use_mrf = False, print_iterations=None, checkpoint_iterations=None):
     """
     Stylize images.
 
@@ -26,6 +28,9 @@ def stylize(network, initial, content, styles, iterations,
 
     :rtype: iterator[tuple[int|None,image]]
     """
+    global STYLE_LAYERS
+    if use_mrf:
+        STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
     shape = (1,) + content.shape
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
@@ -51,9 +56,12 @@ def stylize(network, initial, content, styles, iterations,
             style_pre = np.array([vgg.preprocess(styles[i], mean_pixel)])
             for layer in STYLE_LAYERS:
                 features = net[layer].eval(feed_dict={image: style_pre})
-                features = np.reshape(features, (-1, features.shape[3]))
-                gram = np.matmul(features.T, features) / features.size
-                style_features[i][layer] = gram
+                if use_mrf:
+                    style_features[i][layer] = features
+                else:
+                    features = np.reshape(features, (-1, features.shape[3]))
+                    gram = np.matmul(features.T, features) / features.size
+                    style_features[i][layer] = gram
 
     # make stylized image using backpropogation
     with tf.Graph().as_default():
@@ -76,12 +84,15 @@ def stylize(network, initial, content, styles, iterations,
             style_losses = []
             for style_layer in STYLE_LAYERS:
                 layer = net[style_layer]
-                _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                size = height * width * number
-                feats = tf.reshape(layer, (-1, number))
-                gram = tf.matmul(tf.transpose(feats), feats) / size
-                style_gram = style_features[i][style_layer]
-                style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
+                if use_mrf:
+                    style_losses.append(mrf_loss(style_features[i][style_layer], layer))
+                else:
+                    _, height, width, number = map(lambda i: i.value, layer.get_shape())
+                    size = height * width * number
+                    feats = tf.reshape(layer, (-1, number))
+                    gram = tf.matmul(tf.transpose(feats), feats) / size
+                    style_gram = style_features[i][style_layer]
+                    style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising
         tv_y_size = _tensor_size(image[:,1:,:,:])

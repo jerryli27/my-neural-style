@@ -47,6 +47,10 @@ def build_parser():
     parser.add_argument('--network',
             dest='network', help='path to network parameters (default %(default)s)',
             metavar='VGG_PATH', default=VGG_PATH)
+    parser.add_argument('--use_mrf',
+                        dest='use_mrf', help='If true, we use Markov Random Fields loss instead of Gramian loss.'
+                                             ' (default %(default)s).', action='store_true')
+    parser.set_defaults(use_mrf=False)
     parser.add_argument('--content-weight', type=float,
             dest='content_weight', help='content weight (default %(default)s)',
             metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
@@ -125,6 +129,7 @@ def main():
         style_blend_weights=style_blend_weights,
         tv_weight=options.tv_weight,
         learning_rate=options.learning_rate,
+        use_mrf=options.use_mrf,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations
     ):

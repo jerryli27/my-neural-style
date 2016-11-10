@@ -37,6 +37,10 @@ def build_parser():
                         dest='styles',
                         nargs='+', help='One or more style images.',
                         metavar='STYLE', required=True)
+    parser.add_argument('--texture_synthesis_only',
+                        dest='texture_synthesis_only', help='If true, we only generate the texture of the style images.'
+                                                            'No content image will be used.', action='store_true')
+    parser.set_defaults(texture_synthesis_only=False)
     parser.add_argument('--output',
                         dest='output', help='Output path.',
                         metavar='OUTPUT', required=True)
@@ -61,10 +65,10 @@ def build_parser():
     parser.add_argument('--network',
                         dest='network', help='Path to network parameters (default %(default)s).',
                         metavar='VGG_PATH', default=VGG_PATH)
-    parser.add_argument('--use_mrf', type=bool,
+    parser.add_argument('--use_mrf',
                         dest='use_mrf', help='If true, we use Markov Random Fields loss instead of Gramian loss.'
-                                             ' (default %(default)s).',
-                        metavar='USE_MRF', default=False)
+                                             ' (default %(default)s).', action='store_true')
+    parser.set_defaults(use_mrf=False)
     # TODO: delete content weight after we make sure we do not need tv weight.
     parser.add_argument('--content_weight', type=float,
                         dest='content_weight', help='Content weight (default %(default)s).',
@@ -165,6 +169,7 @@ def main():
             style_blend_weights=style_blend_weights,
             tv_weight=options.tv_weight,
             learning_rate=options.learning_rate,
+            style_only=options.texture_synthesis_only,
             use_mrf=options.use_mrf,
             print_iterations=options.print_iterations,
             checkpoint_iterations=options.checkpoint_iterations,
@@ -186,6 +191,10 @@ def main():
 # Summary: learning rate should be at least 0.01, or 0.001 as suggested in the paper. Tensorflow norm has some issues
 # and I have to apply abs on it.
 # TODO: Check why we need to feed in different sizes of original image to the generation layer.
+
+#TODO: Check why we're getting this wierd result. Now I trained a neural net that can turn one image into another.. No use except in encryption..
+
+
 
 if __name__ == '__main__':
     main()
