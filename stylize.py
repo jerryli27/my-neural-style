@@ -1,5 +1,6 @@
 import vgg
 from mrf_util import mrf_loss
+import neural_doodle_util
 
 import tensorflow as tf
 import numpy as np
@@ -17,8 +18,9 @@ STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 def stylize(network, initial, content, styles, iterations,
-        content_weight, style_weight, style_blend_weights, tv_weight,
-        learning_rate, use_mrf = False, print_iterations=None, checkpoint_iterations=None):
+            content_weight, style_weight, style_blend_weights, tv_weight,
+            learning_rate, use_mrf = False, use_semantic_masks = False, output_semantic_mask = None,
+            style_semantic_masks = None, print_iterations=None, checkpoint_iterations=None):
     """
     Stylize images.
 
@@ -37,6 +39,9 @@ def stylize(network, initial, content, styles, iterations,
     style_shapes = [(1,) + style.shape for style in styles]
     content_features = {}
     style_features = [{} for _ in styles]
+    output_semantic_mask_features = {}
+    style_semantic_masks_features = [{} for _ in styles]
+
 
     # compute content features in feedforward mode
     g = tf.Graph()
@@ -63,6 +68,32 @@ def stylize(network, initial, content, styles, iterations,
                     gram = np.matmul(features.T, features) / features.size
                     style_features[i][layer] = gram
 
+    if use_semantic_masks:
+        with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
+            image = tf.placeholder('float', shape=shape)
+            net, mean_pixel = vgg.net(network, image)
+            output_semantic_mask_pre = np.array([vgg.preprocess(output_semantic_mask, mean_pixel)])
+            for layer in STYLE_LAYERS:
+                output_semantic_mask_features[layer] = net[layer].eval(
+                    feed_dict={image: output_semantic_mask_pre})
+
+        # compute style features in feedforward mode
+        for i in range(len(styles)):
+            g = tf.Graph()
+            with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
+                image = tf.placeholder('float', shape=style_shapes[i])
+                net, _ = vgg.net(network, image)
+                style_semantic_masks_pre = np.array([vgg.preprocess(style_semantic_masks[i], mean_pixel)])
+                for layer in STYLE_LAYERS:
+                    features = net[layer].eval(feed_dict={image: style_semantic_masks_pre})
+                    if use_mrf:
+                        style_features[i][layer] = neural_doodle_util.concatenate_mask_layer_np(features, style_features[i][layer])
+                    else:
+                        pass
+                        # features = np.reshape(features, (-1, features.shape[3]))
+                        # gram = np.matmul(features.T, features) / features.size
+                        # style_semantic_masks_features[i][layer] = gram
+
     # make stylized image using backpropogation
     with tf.Graph().as_default():
         if initial is None:
@@ -84,6 +115,10 @@ def stylize(network, initial, content, styles, iterations,
             style_losses = []
             for style_layer in STYLE_LAYERS:
                 layer = net[style_layer]
+
+                if use_semantic_masks:
+                    layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
+                    assert use_mrf
                 if use_mrf:
                     style_losses.append(mrf_loss(style_features[i][style_layer], layer))
                 else:

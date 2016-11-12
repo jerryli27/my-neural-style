@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
+SEMANTIC_MASK_WEIGHT = 1.0
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
@@ -28,6 +29,21 @@ def build_parser():
             dest='styles',
             nargs='+', help='one or more style images',
             metavar='STYLE', required=True)
+
+    parser.add_argument('--use_semantic_masks',
+                        dest='use_semantic_masks', help='If true, we accept some additional image inputs. They '
+                                                        'represent the semantic masks of the content and style images.'
+                                                        '(default %(default)s).', action='store_true')
+    parser.set_defaults(use_semantic_masks=False)
+    parser.add_argument('--semantic_mask_weight',
+                        dest='semantic_mask_weight', help='The weight we give to matching semantic masks',
+                        metavar='WIDTH', required=False, type=float, default=SEMANTIC_MASK_WEIGHT)
+    parser.add_argument('--output_semantic_mask',
+            dest='output_semantic_mask', help='one content image semantic mask', required=False)
+    parser.add_argument('--style_semantic_masks',
+            dest='style_semantic_masks',
+            nargs='+', help='one or more style image semantic masks', required=False)
+
     parser.add_argument('--output',
             dest='output', help='output path',
             metavar='OUTPUT', required=True)
@@ -114,6 +130,26 @@ def main():
     if initial is not None:
         initial = scipy.misc.imresize(imread(initial), content_image.shape[:2])
 
+    output_semantic_mask = None
+    style_semantic_masks = None
+    if options.use_semantic_masks:
+        assert (len(options.style_semantic_masks) == len(options.styles))
+        output_semantic_mask = imread(options.output_semantic_mask)
+        width = options.width
+        if width is not None:
+            new_shape = (int(math.floor(float(output_semantic_mask.shape[0]) /
+                                        output_semantic_mask.shape[1] * width)), width)
+            output_semantic_mask = scipy.misc.imresize(output_semantic_mask, new_shape)
+        style_semantic_masks = [imread(style) for style in options.style_semantic_masks]
+        for i in range(len(style_semantic_masks)):
+            style_scale = STYLE_SCALE
+            if options.style_scales is not None:
+                style_scale = options.style_scales[i]
+            style_semantic_masks[i] = scipy.misc.imresize(style_semantic_masks[i], style_scale *
+                    target_shape[1] / style_semantic_masks[i].shape[1])
+
+
+
     if options.checkpoint_output and "%s" not in options.checkpoint_output:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
@@ -130,6 +166,9 @@ def main():
         tv_weight=options.tv_weight,
         learning_rate=options.learning_rate,
         use_mrf=options.use_mrf,
+        use_semantic_masks = options.use_semantic_masks,
+        output_semantic_mask = output_semantic_mask,
+        style_semantic_masks= style_semantic_masks,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations
     ):

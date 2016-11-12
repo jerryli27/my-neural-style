@@ -193,4 +193,10 @@ if __name__ == '__main__':
     --styles style_compressed/van_gogh/starry_sky256.jpg --output=output/test.jpg --style-weight=100 --content-weight=5 --from_screenshot --height=128 --width=128 --model_save_dir=model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-True-style-5-content-5/ --ablation_layer=-1 --use_mrf
     The following is for non-mrf with content image. It definitely works better than mrf.
     --styles style_compressed/van_gogh/starry_sky256.jpg --output=output/test.jpg --style-weight=100 --content-weight=5 --from_screenshot --height=512 --width=512 --model_save_dir=model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-False-style-5-content-5/ --ablation_layer=-1 --use_mrf
+
+    The following is the output of feedforward net with no mrf trained for 15000 epochs
+    --styles style_compressed/van_gogh/starry_sky256.jpg --output=output/test.jpg --style-weight=100 --content-weight=5 --height=256 --width=256 --model_save_dir=model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-False-style-25-content-5/ --from_screenshot --ablation_layer=-1
+
+
+    --styles style_compressed/van_gogh/starry_sky256.jpg --output=output/test.jpg --style-weight=100 --content-weight=5 --height=256 --width=256 --model_save_dir=model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-False-style-25-content-5/ --from_screenshot --ablation_layer=-1
     """

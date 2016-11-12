@@ -8,6 +8,7 @@ import numpy as np
 from sys import stderr
 import scipy.misc
 import gtk.gdk
+import cv2
 from tensorflow.python.ops import math_ops
 
 import neural_util
@@ -24,7 +25,8 @@ STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/
 # TODO: Needs reformatting.
 def style_synthesis_net(path_to_network, contents, styles, iterations, batch_size,
                         content_weight, style_weight, style_blend_weights, tv_weight,
-                        learning_rate, style_only = False, style_as_content = False,
+                        learning_rate, lr_decay_steps = 200, min_lr=0.001, lr_decay_rate=0.7,
+                        style_only = False, style_as_content = False,
                         multiple_styles_train_scale_offset_only = False, use_mrf = False,
                         print_iterations=None,
                         checkpoint_iterations=None, save_dir = "models/", do_restore_and_generate = False,
@@ -109,6 +111,13 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
         image = generator_net_n_styles(noise_inputs, input_style_placeholder)
         net = vgg.pre_read_net(vgg_data, image)
         if not do_restore_and_generate:  #if not do_restore_and_generate:
+            global_step_init = tf.constant(0)
+            global_step = tf.get_variable(name='global_step', trainable=False, initializer=global_step_init)
+            learning_rate_decayed_init = tf.constant(learning_rate)
+            learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
+                                                    initializer=learning_rate_decayed_init)
+
+
             # content loss
             content_loss_for_each_content = [content_weight * (2 * tf.nn.l2_loss(
                 net[CONTENT_LAYER] - content_features[i][CONTENT_LAYER]) /
@@ -172,33 +181,33 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
             scale_offset_var = get_scale_offset_var()
             if multiple_styles_train_scale_offset_only:
                 train_step_for_each_content_and_style = [[
-                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
+                    tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
                     if i != 0 else
-                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
+                    tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
                                              for i, loss_for_each_content in enumerate(losses_for_each_content_and_style)]
             else:
                 train_step_for_each_content_and_style = [[
-                    tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
+                    tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(loss) for loss in loss_for_each_content]
                                              for i, loss_for_each_content in enumerate(losses_for_each_content_and_style)]
 
             ### TEST ###
             if style_as_content:
                 if multiple_styles_train_scale_offset_only:
                     train_step_for_each_style_when_input_is_style = [
-                        tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
+                        tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(loss, var_list = scale_offset_var)
                         if i != 0 else
-                        tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss)
+                        tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(loss)
                                                  for i, loss in enumerate(losses_for_each_style_when_input_is_style)]
                 else:
                     train_step_for_each_style_when_input_is_style = [
-                        tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999).minimize(loss)
+                        tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(loss)
                                                  for i, loss in enumerate(losses_for_each_style_when_input_is_style)]
             ### TEST ENDS ###
 
             def print_progress(i, feed_dict, last=False):
                 # stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
                 if last or (print_iterations and i % print_iterations == 0):
-                    stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
+                    stderr.write('Iteration %d/%d\tLearning rate %f\n' % (i + 1, iterations, learning_rate_decayed.eval()))
                     # Assume that the feed_dict is for the last content and style.
                     #stderr.write('  content loss: %g\n' % content_loss_for_each_content[-1].eval(feed_dict=feed_dict))
                     #stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
@@ -220,70 +229,74 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                     return
 
                 if from_screenshot:
-                    iterator = 0
                     kScreenX = 300
                     kScreenY = 300
-                    if style_only:
-                        noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
-                                                     with_content_image=False)
-                    else:
-                        noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
-                                                     with_content_image=True)
+                else:
+                    cap = cv2.VideoCapture(1)
+                    ret, frame = cap.read()
+                    print('The dimension of this camera is : %d x %d' %(frame.shape[0], frame.shape[1]))
+                if style_only:
+                    noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
+                                                 with_content_image=False)
+                else:
+                    noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
+                                                 with_content_image=True)
 
-                    # input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of different
-                    # style images.
-                    input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
-                                                             name='input_style_placeholder')
-                    image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
-                    # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
+                # input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of different
+                # style images.
+                input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
+                                                         name='input_style_placeholder')
+                image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
+                # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
+                iterator = 0
 
-
-                    # style_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, style_pre) for style_pre in
-                    #                         style_pre_list]
-                    while True:
+                while True:
+                    if from_screenshot:
                         w = gtk.gdk.get_default_root_window()
                         sz = w.get_size()
                         print "The size of the window is %d x %d" % sz
-                        # pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, sz[0], sz[1])
-                        # pb = pb.get_from_drawable(w, w.get_colormap(), 0, 0, 0, 0, sz[0], sz[1])
                         pb = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, input_shape[1], input_shape[2])
                         pb = pb.get_from_drawable(w, w.get_colormap(), kScreenX, kScreenY, 0, 0, input_shape[1], input_shape[2])
                         content_image = pb.pixel_array
-                        content_pre = np.array([vgg.preprocess(content_image, mean_pixel)])
-                        # Now generate an image using the style_blend_weights given.
-                        content_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre)
-                        feed_dict = {}
+                    else:
+                        ret, frame = cap.read()
+                        content_image = frame
 
-                        if style_only:
-                            noise = noise_pyramid(input_shape[1], input_shape[2], batch_size, ablation_layer=ablation_layer)
-                        else:
-                            noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
-                                                                content_image_pyramid)
+                    content_pre = np.array([vgg.preprocess(content_image, mean_pixel)])
+                    # Now generate an image using the style_blend_weights given.
+                    content_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre)
+                    feed_dict = {}
 
-                        for index, noise_frame in enumerate(noise_inputs):
-                            feed_dict[noise_frame] = noise[index]
-                        feed_dict[input_style_placeholder] = \
-                            np.array([[style_blend_weights[current_style_i]
-                                       for current_style_i in range(len(styles))]])
-                        # feed_dict = {}
-                        # noise = noise_pyramid_w_content_img(m, batch_size, style_image_pyramids[0])
-                        # for index, noise_frame in enumerate(noise_inputs):
-                        #     feed_dict[noise_frame] = noise[index]
-                        # feed_dict[input_style_placeholder] = \
-                        #     np.array([[style_blend_weights[current_style_i]
-                        #                for current_style_i in range(len(styles))]])
-                        generated_image = image.eval(feed_dict=feed_dict)
-                        # for generator_layer_name, generator_layer in generator_layers.iteritems():
-                        #
-                        #     try:
-                        #         generator_layer_eval = generator_layer.eval(feed_dict=feed_dict)
-                        #     except:
-                        #         generator_layer_eval = generator_layer.eval()
-                        #     generator_layer_contains_nan = np.isnan(np.sum(generator_layer_eval))
-                        #     print('%s - %s: %s' % (generator_layer_name, str(generator_layer_contains_nan), str(generator_layer_eval)))
-                        # raw_input()
-                        iterator += 1
-                        yield (iterator, vgg.unprocess(generated_image[0, :, :, :].reshape(input_shape[1:]), mean_pixel))  # Can't return because we are in a generator.
+                    if style_only:
+                        noise = noise_pyramid(input_shape[1], input_shape[2], batch_size, ablation_layer=ablation_layer)
+                    else:
+                        noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
+                                                            content_image_pyramid, ablation_layer=ablation_layer)
+
+                    for index, noise_frame in enumerate(noise_inputs):
+                        feed_dict[noise_frame] = noise[index]
+                    feed_dict[input_style_placeholder] = \
+                        np.array([[style_blend_weights[current_style_i]
+                                   for current_style_i in range(len(styles))]])
+                    # feed_dict = {}
+                    # noise = noise_pyramid_w_content_img(m, batch_size, style_image_pyramids[0])
+                    # for index, noise_frame in enumerate(noise_inputs):
+                    #     feed_dict[noise_frame] = noise[index]
+                    # feed_dict[input_style_placeholder] = \
+                    #     np.array([[style_blend_weights[current_style_i]
+                    #                for current_style_i in range(len(styles))]])
+                    generated_image = image.eval(feed_dict=feed_dict)
+                    # for generator_layer_name, generator_layer in generator_layers.iteritems():
+                    #
+                    #     try:
+                    #         generator_layer_eval = generator_layer.eval(feed_dict=feed_dict)
+                    #     except:
+                    #         generator_layer_eval = generator_layer.eval()
+                    #     generator_layer_contains_nan = np.isnan(np.sum(generator_layer_eval))
+                    #     print('%s - %s: %s' % (generator_layer_name, str(generator_layer_contains_nan), str(generator_layer_eval)))
+                    # raw_input()
+                    iterator += 1
+                    yield (iterator, vgg.unprocess(generated_image[0, :, :, :].reshape(input_shape[1:]), mean_pixel))  # Can't return because we are in a generator.
 
                 # # Now generate an image using the style_blend_weights given.
                 # content_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre)
@@ -313,6 +326,12 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                 content_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre) for content_pre in content_pre_list]
                 style_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, style_pre) for style_pre in style_pre_list]
                 for i in range(iter_start, iterations):
+
+                    # First decay the learning rate if we need to
+                    if (i % lr_decay_steps == 0):
+                        current_lr = learning_rate_decayed.eval()
+                        sess.run(learning_rate_decayed.assign(max(min_lr,current_lr * lr_decay_rate)))
+
                     for style_i in range(len(styles)):
                         for content_i in range(len(contents)):
                             last_step = (i == iterations - 1)

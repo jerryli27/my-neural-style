@@ -197,6 +197,11 @@ def main():
 # and I have to apply abs on it.
 # TODO: Check why we need to feed in different sizes of original image to the generation layer.
 
+# TODO: add diminishing lr.
+"""The ini-
+tial learning rate of 0.1 was reduced by a factor 0.7
+at iteration 1000 and then again every 200 iterations.
+The batch size was set to 16."""
 
 
 if __name__ == '__main__':

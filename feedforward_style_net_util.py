@@ -46,7 +46,7 @@ def noise_pyramid(height, width, batch_size, k=5, ablation_layer = None):
             for x in range(k)][::-1]
 
 # TODO: went till here. Continue from here.
-def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid, k=5):
+def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid, k=5, ablation_layer = None):
     """
     :param height: Height of the largest noise image.
     :param width: Width of the largest noise image.
@@ -58,7 +58,9 @@ def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid
     """
     """If an additional input tensor, the content image tensor, is
     provided, then we concatenate the downgraded versions of that tensor to the noise tensors."""
-    return [np.concatenate((np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3),
+    return [np.concatenate((np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
+            if (ablation_layer is None or ablation_layer < 0 or (k - 1 - ablation_layer) == x) else
+            np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3) * 0.0,
                             content_image_pyramid[x]), axis=3) for x in range(k)][::-1]
 
 

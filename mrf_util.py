@@ -41,38 +41,12 @@ def patch_matching(generated_layer_patches, style_layer_patches, patch_size):
     :param patch_size:Size (1, height, width, patch_size * patch_size * feature)
     :return: Best matching patch with size (batch, height, width, patch_size * patch_size * feature)
     """
+    # Every patch and every feature layer are treated as equally important after normalization.
+
+
+
     normalized_generated_layer_patches = tf.nn.l2_normalize(generated_layer_patches, dim = [3])
     normalized_style_layer_patches = tf.nn.l2_normalize(style_layer_patches, dim = [3])
-    #
-    # # For each batch
-    # normalized_generated_layer_patches_per_batch = tf.unpack(normalized_generated_layer_patches, axis=0)
-    # width = normalized_generated_layer_patches.get_shape().as_list()[2]
-    # nn_list = []
-    # debug_i = 0
-    # for batch in normalized_generated_layer_patches_per_batch:
-    #     heights = tf.unpack(batch, axis=0)  # Unpack the height axis
-    #     height_layers_nn_list = []
-    #     for height_layer in heights:
-    #         widths = tf.unpack(height_layer, axis=0)
-    #         width_layers_nn_list = []
-    #         for width_layer in widths:
-    #             normalized_cross_correlations = tf.reduce_sum(
-    #                 tf.mul(width_layer, normalized_style_layer_patches), reduction_indices=[3])
-    #             reshaped_normalized_cross_correlations = tf.reshape(normalized_cross_correlations, shape=[-1])
-    #             index = tf.argmax(reshaped_normalized_cross_correlations, dimension=0)
-    #             height_index = tf.to_int32(index / width)
-    #             width_index = tf.to_int32(index % width)
-    #             width_layers_nn_list.append(style_layer_patches[0, height_index, width_index,:])
-    #             debug_i += 1
-    #             print('%d' % debug_i)
-    #         width_layers_nn =  tf.pack(width_layers_nn_list)
-    #         height_layers_nn_list.append(width_layers_nn)
-    #     height_layers_nn = tf.pack(height_layers_nn_list)
-    #     nn_list.append(height_layers_nn)
-    # ret = tf.pack(nn_list)
-    # return ret
-
-
     # A better way to do this is to treat them as convolutions.
     # They have to be in dimension
     # (height * width, patch_size, patch_size, feature) <=> (batch, in_height, in_width, in_channels)
