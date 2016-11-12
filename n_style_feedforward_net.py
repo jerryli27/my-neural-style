@@ -15,6 +15,7 @@ import vgg
 from general_util import *
 from feedforward_style_net_util import *
 from mrf_util import mrf_loss
+import misc_util
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
@@ -27,6 +28,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         multiple_styles_train_scale_offset_only = False, use_mrf = False,
                         print_iterations=None,
                         checkpoint_iterations=None, save_dir = "models/", do_restore_and_generate = False,
+                        do_restore_and_train = False,
                         from_screenshot = False, ablation_layer = None):
     """
     Stylize images.
@@ -297,10 +299,20 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
 
             else:
                 # Do Training.
-                sess.run(tf.initialize_all_variables())
+                iter_start = 0
+                if do_restore_and_train:
+                    ckpt = tf.train.get_checkpoint_state(save_dir)
+                    if ckpt and ckpt.model_checkpoint_path:
+                        saver.restore(sess, ckpt.model_checkpoint_path)
+                        iter_start = misc_util.get_global_step_from_save_dir(ckpt.model_checkpoint_path)
+                    else:
+                        stderr("No checkpoint found. Exiting program")
+                        return
+                else:
+                    sess.run(tf.initialize_all_variables())
                 content_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre) for content_pre in content_pre_list]
                 style_image_pyramids = [generate_image_pyramid(input_shape[1], input_shape[2], batch_size, style_pre) for style_pre in style_pre_list]
-                for i in range(iterations):
+                for i in range(iter_start, iterations):
                     for style_i in range(len(styles)):
                         for content_i in range(len(contents)):
                             last_step = (i == iterations - 1)

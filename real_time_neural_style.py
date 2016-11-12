@@ -189,6 +189,8 @@ if __name__ == '__main__':
     main()
     # following are some lists of possible commands.
     """
-    --styles style_compressed/claude_monet/256/1.jpg style_compressed/claude_monet/256/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg --style-weight=50 --content-weight=5 --from_screenshot=True --height=512 --width=512
-    --styles style_compressed/claude_monet/512/1.jpg style_compressed/claude_monet/512/2.jpg --output=output/19-blended-4-nstyle-iter-1500-lr-10-style-50-content-5.jpg style_compressed/claude_monet/512/3.jpg style_compressed/claude_monet/512/4.jpg --style-weight=100 --content-weight=5 --from_screenshot=True --height=512 --width=512
+    The following is for mrf with content image. It shows that mrf does not work on current generator network
+    --styles style_compressed/van_gogh/starry_sky256.jpg --output=output/test.jpg --style-weight=100 --content-weight=5 --from_screenshot --height=128 --width=128 --model_save_dir=model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-True-style-5-content-5/ --ablation_layer=-1 --use_mrf
+    The following is for non-mrf with content image. It definitely works better than mrf.
+    --styles style_compressed/van_gogh/starry_sky256.jpg --output=output/test.jpg --style-weight=100 --content-weight=5 --from_screenshot --height=512 --width=512 --model_save_dir=model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-False-style-5-content-5/ --ablation_layer=-1 --use_mrf
     """

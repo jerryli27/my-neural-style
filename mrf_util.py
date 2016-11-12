@@ -3,6 +3,7 @@
 
 import tensorflow as tf
 
+# TODO: I should make style_layer static to improve speed.
 def mrf_loss(style_layer, generated_layer, patch_size = 3):
     generated_layer_patches = create_local_patches(generated_layer, patch_size)
     style_layer_patches = create_local_patches(style_layer, patch_size)
@@ -104,6 +105,9 @@ def patch_matching(generated_layer_patches, style_layer_patches, patch_size):
         batch = tf.reshape(batch,
                                                     [height * width, patch_size, patch_size, depth])
         # batch = tf.transpose(batch, perm=[1,2,3,0])
+        # TODO: according to images-analogies github, for cross-correlation, we should flip the kernels
+        # That is normalized_style_layer_patches should be [:, ::-1, ::-1, :]
+        # Now I didn't see that in any other source.
         convs = tf.nn.conv2d(batch, normalized_style_layer_patches, strides=[1,1,1,1], padding='VALID')
         argmax = tf.squeeze(tf.argmax(convs,dimension=3))
         best_match = tf.gather(style_layer_patches_reshaped, indices = argmax)  # [height * width, patch_size, patch_size, depth]

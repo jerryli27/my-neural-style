@@ -103,6 +103,10 @@ def build_parser():
                         help='If true, it generates an image from a previously trained model. '
                              'Otherwise it does training and generate a model.',
                         metavar='DO_RESTORE_AND_GENERATE', default=False)
+    parser.add_argument('--do_restore_and_train', dest='do_restore_and_train',
+                        help='If set, we read the model at model_save_dir and start training from there. '
+                             'The overall setting and structure must be the same.', action='store_true')
+    parser.set_defaults(do_restore_and_train=False)
     return parser
 
 
@@ -175,6 +179,7 @@ def main():
             checkpoint_iterations=options.checkpoint_iterations,
             save_dir=options.model_save_dir,
             do_restore_and_generate=options.do_restore_and_generate,
+            do_restore_and_train=options.do_restore_and_train
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)
@@ -191,8 +196,6 @@ def main():
 # Summary: learning rate should be at least 0.01, or 0.001 as suggested in the paper. Tensorflow norm has some issues
 # and I have to apply abs on it.
 # TODO: Check why we need to feed in different sizes of original image to the generation layer.
-
-#TODO: Check why we're getting this wierd result. Now I trained a neural net that can turn one image into another.. No use except in encryption..
 
 
 
