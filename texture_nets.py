@@ -1,6 +1,7 @@
 """
 This file implements the feed-forward texture networks as described in http://arxiv.org/abs/1603.03417.
 (For more background, see http://arxiv.org/abs/1508.06576)
+ The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 """
 
 import tensorflow as tf

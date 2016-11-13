@@ -1,3 +1,4 @@
+# The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 import tensorflow as tf
 import numpy as np
 import scipy.io

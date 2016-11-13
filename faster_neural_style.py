@@ -5,6 +5,9 @@ Citations:
 A Learned Representation For Artistic Style https://arxiv.org/abs/1610.07629
 Texture Networks: Feed-forward Synthesis of Textures and Stylized Images https://arxiv.org/abs/1603.03417
 Instance Normalization: The Missing Ingredient for Fast Stylization https://arxiv.org/abs/1607.08022
+Combining Markov Random Fields and Convolutional Neural Networks for Image Synthesis: https://arxiv.org/abs/1601.04589
+Perceptual Losses for Real-Time Style Transfer and Super-Resolution: https://arxiv.org/abs/1603.08155
+Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks: https://arxiv.org/abs/1603.01768
 """
 
 import math
@@ -19,7 +22,9 @@ from general_util import *
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
-LEARNING_RATE = 0.001  # 0.001 in https://arxiv.org/abs/1610.07629
+# lr = 0.001 in https://arxiv.org/abs/1610.07629.
+# Higher learning rate than 0.01 may sacrifice the quality of the network.
+LEARNING_RATE = 0.001
 STYLE_SCALE = 1.0
 ITERATIONS = 160000  # 40000 in https://arxiv.org/abs/1610.07629
 BATCH_SIZE = 4  # 16 in https://arxiv.org/abs/1610.07629
@@ -29,83 +34,86 @@ PRINT_ITERATIONS = 100
 
 def build_parser():
     parser = ArgumentParser()
-    parser.add_argument('--content',
-                        dest='content',
-                        nargs='+', help='One or more content images.',
+    parser.add_argument('--content', dest='content', nargs='+',
+                        help='One or more content images.',
                         metavar='CONTENT', required=True)
-    parser.add_argument('--styles',
-                        dest='styles',
-                        nargs='+', help='One or more style images.',
+    parser.add_argument('--styles',dest='styles', nargs='+',
+                        help='One or more style images.',
                         metavar='STYLE', required=True)
-    parser.add_argument('--texture_synthesis_only',
-                        dest='texture_synthesis_only', help='If true, we only generate the texture of the style images.'
-                                                            'No content image will be used.', action='store_true')
+    parser.add_argument('--texture_synthesis_only', dest='texture_synthesis_only',
+                        help='If true, we only generate the texture of the style images.'
+                             ' No content image will be used.',
+                        action='store_true')
     parser.set_defaults(texture_synthesis_only=False)
-    parser.add_argument('--output',
-                        dest='output', help='Output path.',
+    parser.add_argument('--output', dest='output',
+                        help='Output path.',
                         metavar='OUTPUT', required=True)
-    parser.add_argument('--checkpoint_output',
-                        dest='checkpoint_output', help='The checkpoint output format. It must contain 2 %s, the first '
-                                                       'one for content index and the second one for style index.',
+    parser.add_argument('--checkpoint_output', dest='checkpoint_output',
+                        help='The checkpoint output format. It must contain 2 %s, the first one for content index '
+                             'and the second one for style index.',
                         metavar='OUTPUT')
-    parser.add_argument('--iterations', type=int,
-                        dest='iterations', help='Iterations (default %(default)s).',
+    parser.add_argument('--iterations', type=int, dest='iterations',
+                        help='Iterations (default %(default)s).',
                         metavar='ITERATIONS', default=ITERATIONS)
-    parser.add_argument('--batch_size', type=int,
-                        dest='batch_size', help='Batch size (default %(default)s).',
+    parser.add_argument('--batch_size', type=int, dest='batch_size',
+                        help='Batch size (default %(default)s).',
                         metavar='BATCH_SIZE', default=BATCH_SIZE)
-    parser.add_argument('--height', type=int,
-                        dest='height', help='Input and output height. All content images and style images should be '
-                                            'automatically scaled accordingly.',
+    parser.add_argument('--height', type=int, dest='height',
+                        help='Input and output height. All content images and style images should be automatically '
+                             'scaled accordingly.',
                         metavar='HEIGHT', default=256)
-    parser.add_argument('--width', type=int,
-                        dest='width', help='Input and output width. All content images and style images should be '
-                                           'automatically scaled accordingly.',
+    parser.add_argument('--width', type=int, dest='width',
+                        help='Input and output width. All content images and style images should be automatically '
+                             'scaled accordingly.',
                         metavar='WIDTH', default=256)
-    parser.add_argument('--network',
-                        dest='network', help='Path to network parameters (default %(default)s).',
+    parser.add_argument('--network', dest='network',
+                        help='Path to network parameters (default %(default)s).',
                         metavar='VGG_PATH', default=VGG_PATH)
-    parser.add_argument('--use_mrf',
-                        dest='use_mrf', help='If true, we use Markov Random Fields loss instead of Gramian loss.'
-                                             ' (default %(default)s).', action='store_true')
+    parser.add_argument('--use_mrf', dest='use_mrf',
+                        help='If true, we use Markov Random Fields loss instead of Gramian loss.'
+                             ' (default %(default)s).',
+                        action='store_true')
     parser.set_defaults(use_mrf=False)
+    parser.add_argument('--use_johnson', dest='use_johnson',
+                        help='If true, we use the johnson generator net instead of pyramid net (default %(default)s).',
+                        action='store_true')
+    parser.set_defaults(use_johnson=False)
     # TODO: delete content weight after we make sure we do not need tv weight.
-    parser.add_argument('--content_weight', type=float,
-                        dest='content_weight', help='Content weight (default %(default)s).',
+    parser.add_argument('--content_weight', type=float, dest='content_weight',
+                        help='Content weight (default %(default)s).',
                         metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
-    parser.add_argument('--style_weight', type=float,
-                        dest='style_weight', help='Style weight (default %(default)s).',
+    parser.add_argument('--style_weight', type=float, dest='style_weight',
+                        help='Style weight (default %(default)s).',
                         metavar='STYLE_WEIGHT', default=STYLE_WEIGHT)
-    parser.add_argument('--style_blend_weights', type=float,
-                        dest='style_blend_weights', help='How much we weigh each style during the training. The more '
-                                                         'we weigh one style, the more loss will come from that style '
-                                                         'and the more the output image will look like that style. '
-                                                         'During training it should not be set because the network '
-                                                         'automatically deals with multiple styles.',
+    parser.add_argument('--style_blend_weights', type=float, dest='style_blend_weights',
+                        help='How much we weigh each style during the training. The more we weigh one style, the more '
+                             'loss will come from that style and the more the output image will look like that style. '
+                             'During training it should not be set because the network automatically deals with '
+                             'multiple styles.',
                         nargs='+', metavar='STYLE_BLEND_WEIGHT')
-    parser.add_argument('--tv_weight', type=float,
-                        dest='tv_weight', help='Total variation regularization weight (default %(default)s).',
+    parser.add_argument('--tv_weight', type=float, dest='tv_weight',
+                        help='Total variation regularization weight (default %(default)s).',
                         metavar='TV_WEIGHT', default=TV_WEIGHT)
-    parser.add_argument('--learning_rate', type=float,
-                        dest='learning_rate', help='Learning rate (default %(default)s).',
+    parser.add_argument('--learning_rate', type=float, dest='learning_rate',
+                        help='Learning rate (default %(default)s).',
                         metavar='LEARNING_RATE', default=LEARNING_RATE)
-    parser.add_argument('--print_iterations', type=int,
-                        dest='print_iterations', help='Statistics printing frequency.',
+    parser.add_argument('--print_iterations', type=int, dest='print_iterations',
+                        help='Statistics printing frequency.',
                         metavar='PRINT_ITERATIONS', default=PRINT_ITERATIONS)
-    parser.add_argument('--checkpoint_iterations', type=int,
-                        dest='checkpoint_iterations', help='Checkpoint frequency.',
+    parser.add_argument('--checkpoint_iterations', type=int, dest='checkpoint_iterations',
+                        help='Checkpoint frequency.',
                         metavar='CHECKPOINT_ITERATIONS')
-    parser.add_argument('--model_save_dir',
-                        dest='model_save_dir', help='The directory to save trained model and its checkpoints.',
+    parser.add_argument('--model_save_dir', dest='model_save_dir',
+                        help='The directory to save trained model and its checkpoints.',
                         metavar='MODEL_SAVE_DIR', default='models/')
-    parser.add_argument('--do_restore_and_generate', type=bool,
-                        dest='do_restore_and_generate',
+    parser.add_argument('--do_restore_and_generate', type=bool, dest='do_restore_and_generate',
                         help='If true, it generates an image from a previously trained model. '
                              'Otherwise it does training and generate a model.',
                         metavar='DO_RESTORE_AND_GENERATE', default=False)
     parser.add_argument('--do_restore_and_train', dest='do_restore_and_train',
                         help='If set, we read the model at model_save_dir and start training from there. '
-                             'The overall setting and structure must be the same.', action='store_true')
+                             'The overall setting and structure must be the same.',
+                        action='store_true')
     parser.set_defaults(do_restore_and_train=False)
     return parser
 
@@ -117,32 +125,7 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_images = [imread(content) for content in options.content]
-    style_images = [imread(style) for style in options.styles]
-
-    width = options.width
-    height = options.height
-    # If there is no width and height, we automatically take the first image's width and height and apply to all the
-    # other ones.
-    if width is not None:
-        if height is not None:
-            target_shape = (height, width)
-        else:
-            target_shape = (int(math.floor(float(content_images[0].shape[0]) /
-                                           content_images[0].shape[1] * width)), width)
-    else:
-        if height is not None:
-            target_shape = (height, int(math.floor(float(content_images[0].shape[1]) /
-                                                   content_images[0].shape[0] * height)))
-        else:
-            target_shape = (content_images[0].shape[0], content_images[0].shape[1])
-
-    for style_i in range(len(content_images)):
-        if content_images[style_i].shape != target_shape:
-            content_images[style_i] = scipy.misc.imresize(content_images[style_i], target_shape)
-    for style_i in range(len(style_images)):
-        style_images[style_i] = scipy.misc.imresize(style_images[style_i], (
-        target_shape[0], target_shape[1]))
+    content_images, style_images = read_and_resize_images(options.content, options.styles, options.height, options.width)
 
     style_blend_weights = options.style_blend_weights
     if style_blend_weights is None:
@@ -175,6 +158,7 @@ def main():
             learning_rate=options.learning_rate,
             style_only=options.texture_synthesis_only,
             use_mrf=options.use_mrf,
+            use_johnson=options.use_johnson,
             print_iterations=options.print_iterations,
             checkpoint_iterations=options.checkpoint_iterations,
             save_dir=options.model_save_dir,
@@ -192,17 +176,6 @@ def main():
                         output_file = options.output % (content_i, style_i)  # TODO: add test for legal output.
                     if output_file:
                         imsave(output_file, image[style_i][content_i])
-
-# Summary: learning rate should be at least 0.01, or 0.001 as suggested in the paper. Tensorflow norm has some issues
-# and I have to apply abs on it.
-# TODO: Check why we need to feed in different sizes of original image to the generation layer.
-
-# TODO: add diminishing lr.
-"""The ini-
-tial learning rate of 0.1 was reduced by a factor 0.7
-at iteration 1000 and then again every 200 iterations.
-The batch size was set to 16."""
-
 
 if __name__ == '__main__':
     main()

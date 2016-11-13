@@ -7,13 +7,6 @@ import tensorflow as tf
 from general_util import *
 import vgg
 
-def read_mask(image_path):
-    """
-    :param image_path: the path of the mask image.
-    :return: An np array containing the image.
-    """
-    return imread(image_path)
-
 def generate_mask_layers(mask, layers, vgg_data, mean_pixel):
     """
 

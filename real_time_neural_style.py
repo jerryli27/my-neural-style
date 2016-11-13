@@ -1,6 +1,6 @@
 """
 This file uses the texture nets technique to generate an image by combining style of an input and the content of
-another input.
+another input. The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 """
 
 import os
@@ -26,8 +26,8 @@ STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
-ITERATIONS = 1000  # 2000 in the paper
-BATCH_SIZE = 1  # 16 in the paper
+ITERATIONS = 1000
+BATCH_SIZE = 1
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 
@@ -65,6 +65,10 @@ def build_parser():
                         dest='use_mrf', help='If true, we use Markov Random Fields loss instead of Gramian loss.'
                                              ' (default %(default)s).', action='store_true')
     parser.set_defaults(use_mrf=False)
+    parser.add_argument('--use_johnson',
+                        dest='use_johnson', help='If true, we use the johnson generator net instead of pyramid net'
+                                             ' (default %(default)s).', action='store_true')
+    parser.set_defaults(use_johnson=False)
     parser.add_argument('--content-weight', type=float,
             dest='content_weight', help='content weight (default %(default)s)',
             metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
@@ -97,22 +101,6 @@ def main():
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
     dummy_content = [np.zeros((options.height, options.width, 3))]
-
-    # Todo: use camera.
-    # cap = cv2.VideoCapture(0)
-    # while (True):
-    #     # Capture frame-by-frame
-    #     ret, frame = cap.read()
-    #
-    #     # Our operations on the frame come here
-    #     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    #
-    #     # Display the resulting frame
-    #     cv2.imshow('frame', gray)
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break
-
-    # content_image = imread(options.content)
     style_images = [imread(style) for style in options.styles]
 
     target_shape = (options.height, options.width)
@@ -139,7 +127,7 @@ def main():
     im = ax.imshow(np.zeros((options.height, options.width, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
     axcolor = 'lightgoldenrodyellow'
     slider_axes = [plt.axes([0.25, 0.21 - i * 0.03, 0.65, 0.02], axisbg=axcolor) for i, style in enumerate(options.styles)]
-    sliders = [Slider(slider_axes[i], style, 0.0, 100.0, valinit=style_blend_weights[i]) for i, style in enumerate(options.styles)]
+    sliders = [Slider(slider_axes[i], style, 0.0, 1.0, valinit=style_blend_weights[i]) for i, style in enumerate(options.styles)]
     fig.show()
     im.axes.figure.canvas.draw()
     plt.pause(0.001)
@@ -166,6 +154,7 @@ def main():
             learning_rate=1,  # Dummy learning rate.
             style_only=options.texture_synthesis_only,
             use_mrf=options.use_mrf,
+            use_johnson=options.use_johnson,
             print_iterations=None,
             checkpoint_iterations=None,
             save_dir=options.model_save_dir,

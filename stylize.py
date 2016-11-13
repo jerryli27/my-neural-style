@@ -1,3 +1,4 @@
+# The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 import vgg
 from mrf_util import mrf_loss
 import neural_doodle_util
@@ -120,7 +121,7 @@ def stylize(network, initial, content, styles, iterations,
                     layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
                     assert use_mrf
                 if use_mrf:
-                    style_losses.append(mrf_loss(style_features[i][style_layer], layer))
+                    style_losses.append(mrf_loss(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
                 else:
                     _, height, width, number = map(lambda i: i.value, layer.get_shape())
                     size = height * width * number

@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 
-from misc_util import *
+from general_util import *
 
 
 class TestDataUtilMethods(unittest.TestCase):
