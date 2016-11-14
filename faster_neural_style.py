@@ -183,3 +183,10 @@ if __name__ == '__main__':
     """
     --content=source_compressed/512/sea_512.jpg --styles style_compressed/claude_monet/512/1.jpg --output=output/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-contentnum-%s-stylenum-%s.jpg --learning_rate=10 --iterations=1500 --style_weight=100 --content_weight=5 --checkpoint_output="output_checkpoint/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-contentnum-%s-stylenum-%s_%s.jpg" --checkpoint_iterations=300
     """
+
+# TODO:
+"""
+MRF running on feedforward style transfer net. But it's not working. The texture synthesis was sort of working but
+the style transfer is just a complete mess.
+I will try to add the tv loss back to see if that improves anything. If not I will try a different generator structure.
+"""

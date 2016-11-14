@@ -328,7 +328,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                                     feed_dict[inputs] = np.random.rand(batch_size, style_pre_list[style_i].shape[1],
                                                                        style_pre_list[style_i].shape[2], 3)
                                 else:
-                                    feed_dict[inputs] = content_pre_list[content_i]
+                                    feed_dict[inputs] = get_batch_from_np_list(content_pre_list, content_i, batch_size)
                             else:
                                 if style_only:
                                     noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,

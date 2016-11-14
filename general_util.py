@@ -39,3 +39,20 @@ def read_and_resize_images(contents, styles, height, width):
 
 def get_global_step_from_save_dir(save_dir):
     return int(save_dir[save_dir.rfind("-")+1:])
+
+def get_batch_from_np_list(np_list, start_index, batch_size):
+    """
+
+    :param np_list: a list of np arrays with size (1, height, width, depth)
+    :param start_index:
+    :param batch_size:
+    :return: An np array with size = (batch, height, width, depth)
+    """
+
+    l = len(np_list)
+    assert batch_size < l
+    if start_index + batch_size < l:
+        return np.concatenate(np_list[start_index:start_index+batch_size])
+    else:
+        end_index = (start_index + batch_size) % l
+        return np.concatenate(np_list[start_index:] + np_list[:end_index])
