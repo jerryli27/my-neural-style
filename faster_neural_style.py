@@ -185,7 +185,11 @@ if __name__ == '__main__':
 
 # TODO:
 """
-MRF running on feedforward style transfer net. But it's not working. The texture synthesis was sort of working but
-the style transfer is just a complete mess.
-I will try to add the tv loss back to see if that improves anything. If not I will try a different generator structure.
+MRF running on feedforward style transfer net. But it's not working.
+Using all images from Microsoft COCO dataset improved stuff. There is a wierd boarder effect and I couldn't figure out
+why.
+Also I need to test whether the model is still working if we use mrf instead. It should not. There's no way a network
+can learn nearest neighbor matching.
+
+Added mirror padding in johnson_feedforward_net_util. Try that.
 """

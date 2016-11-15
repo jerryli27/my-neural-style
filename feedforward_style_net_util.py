@@ -425,10 +425,12 @@ def total_variation(image_batch, divide_by_num_pixels=False):
                                     horizontal_diff_shape[3]
 
     if divide_by_num_pixels:
-        total_variation = tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) / num_pixels_in_horizontal_diff + tf.sqrt(
-            tf.reduce_sum(tf.square(vertical_diff))) / num_pixels_in_vertical_diff
+        # Why there's a 2 here? I added it according to https://github.com/antlerros/tensorflow-fast-neuralstyle and
+        # https://github.com/anishathalye/neural-style
+        total_variation = 2 * (tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) / num_pixels_in_horizontal_diff + tf.sqrt(
+            tf.reduce_sum(tf.square(vertical_diff))) / num_pixels_in_vertical_diff)
     else:
-        total_variation = tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) + tf.sqrt(
-            tf.reduce_sum(tf.square(vertical_diff)))
+        total_variation = 2 * (tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) + tf.sqrt(
+            tf.reduce_sum(tf.square(vertical_diff))))
 
     return total_variation

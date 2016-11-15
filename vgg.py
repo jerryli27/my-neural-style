@@ -1,4 +1,5 @@
 # The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
+# Copyright (c) 2015-2016 Anish Athalye. Released under GPLv3.
 import tensorflow as tf
 import numpy as np
 import scipy.io
