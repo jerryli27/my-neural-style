@@ -9,6 +9,7 @@ import cv2
 
 import vgg
 from feedforward_style_net_util import *
+from custom_vgg19 import *
 from mrf_util import mrf_loss
 import johnson_feedforward_net_util
 
@@ -30,7 +31,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         multiple_styles_train_scale_offset_only=False, use_mrf=False,
                         use_johnson=False, print_iterations=None,
                         checkpoint_iterations=None, save_dir="models/", do_restore_and_generate=False,
-                        do_restore_and_train=False,
+                        do_restore_and_train=False, content_folder = '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/',
                         from_screenshot=False, ablation_layer=None):
     """
     Stylize images.
@@ -54,26 +55,27 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
     style_shapes = [(1,) + style.shape for style in styles]
-    content_features = [{} for _ in range(len(contents))]
+    # content_features = [{} for _ in range(len(contents))]
     style_features = [{} for _ in styles]
 
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
+    # vgg_data_dict = loadWeightsData('./vgg19.npy')
     print('Finished loading VGG.')
 
     if not do_restore_and_generate:
-        # Compute content features in feedforward mode.
-        content_pre_list = []
-        for i in range(len(contents)):
-            g = tf.Graph()
-            with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
-                image = tf.placeholder('float', shape=input_shape)
-                # This mean pixel variable is unique to the input trained vgg network. It is independent of the input image.
-                net = vgg.pre_read_net(vgg_data, image)
-                content_pre_list.append(np.array([vgg.preprocess(contents[i], mean_pixel)]))
-                content_features[i][CONTENT_LAYER] = net[CONTENT_LAYER].eval(
-                    feed_dict={image: content_pre_list[-1]})
-        print('Finished loading passing content image to it.')
+        # # Compute content features in feedforward mode.
+        # content_pre_list = []
+        # for i in range(len(contents)):
+        #     g = tf.Graph()
+        #     with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
+        #         image = tf.placeholder('float', shape=input_shape)
+        #         # This mean pixel variable is unique to the input trained vgg network. It is independent of the input image.
+        #         net = vgg.pre_read_net(vgg_data, image)
+        #         content_pre_list.append(np.array([vgg.preprocess(contents[i], mean_pixel)]))
+        #         content_features[i][CONTENT_LAYER] = net[CONTENT_LAYER].eval(
+        #             feed_dict={image: content_pre_list[-1]})
+        # print('Finished loading passing content image to it.')
 
         # Compute style features in feedforward mode.
         style_pre_list = []
@@ -121,10 +123,31 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
             # content loss
-            content_loss_for_each_content = [content_weight * (2 * tf.nn.l2_loss(
-                net[CONTENT_LAYER] - content_features[i][CONTENT_LAYER]) /
-                                                               content_features[i][CONTENT_LAYER].size) for i in
-                                             range(len(contents))]
+
+
+
+            #
+            # content_images = vgg.preprocess(tf.placeholder(tf.float32, [batch_size, input_shape[1], input_shape[2], 3],
+            #                                                name='content_images_placeholder'), mean_pixel)
+            # vgg_c = custom_Vgg19(content_images, data_dict=vgg_data_dict)
+            # content_features = vgg_c.conv4_2
+            # content_loss = content_weight * (2 * tf.nn.l2_loss(
+            #     net[CONTENT_LAYER] - content_features) / content_features.size)
+
+
+
+
+            content_images = tf.placeholder(tf.float32, [batch_size, input_shape[1], input_shape[2], 3],
+                                            name='content_images_placeholder')
+            content_pre = vgg.preprocess(content_images, mean_pixel)
+            content_net = vgg.pre_read_net(vgg_data, content_pre)
+            content_features = content_net[CONTENT_LAYER]
+            content_features_shape = content_features.get_shape().as_list()
+            content_features_size = content_features_shape[0] * content_features_shape[1] * content_features_shape[2] * content_features_shape[3]
+            content_loss = content_weight * (2 * tf.nn.l2_loss(
+                net[CONTENT_LAYER] - content_features) / content_features_size)
+
+
             # style loss
             style_loss_for_each_style = []
             for i in range(len(styles)):
@@ -154,39 +177,33 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
 
             # overall loss
             if style_only:
-                losses_for_each_content_and_style = [[style_loss for _ in content_loss_for_each_content] for
-                                                     style_loss in style_loss_for_each_style]
+                losses_for_each_style = [style_loss for style_loss in style_loss_for_each_style]
             else:
-                losses_for_each_content_and_style = [
-                    [style_loss + content_loss + tv_loss for content_loss in content_loss_for_each_content] for
-                    style_loss in style_loss_for_each_style]
+                losses_for_each_style = [style_loss + content_loss + tv_loss for style_loss in style_loss_for_each_style]
             overall_loss = 0
-            for i, loss_for_each_content in enumerate(losses_for_each_content_and_style):
-                for loss in loss_for_each_content:
-                    overall_loss += loss
+            for loss_for_each_style in losses_for_each_style:
+                overall_loss += loss_for_each_style
             # optimizer setup
             # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
             # TODO: tell which one is better, training all variables or training only scale and offset.
             # Get all variables
             scale_offset_var = get_scale_offset_var()
             if multiple_styles_train_scale_offset_only:
-                train_step_for_each_content_and_style = [[
+                train_step_for_each_style = [
                                                              tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                                                                     beta2=0.999).minimize(loss,
                                                                                                           var_list=scale_offset_var)
                                                              if i != 0 else
                                                              tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                                                                    beta2=0.999).minimize(loss) for loss
-                                                             in loss_for_each_content]
-                                                         for i, loss_for_each_content in
-                                                         enumerate(losses_for_each_content_and_style)]
+                                                                                    beta2=0.999).minimize(loss)
+                                                         for i, loss in
+                                                         enumerate(losses_for_each_style)]
             else:
-                train_step_for_each_content_and_style = [[
+                train_step_for_each_style = [
                                                              tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                                                                    beta2=0.999).minimize(loss) for loss
-                                                             in loss_for_each_content]
-                                                         for i, loss_for_each_content in
-                                                         enumerate(losses_for_each_content_and_style)]
+                                                                                    beta2=0.999).minimize(loss)
+                                                         for i, loss in
+                                                         enumerate(losses_for_each_style)]
 
             def print_progress(i, feed_dict, last=False):
                 # stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
@@ -200,10 +217,8 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                     stderr.write('    total loss: %g\n' % overall_loss.eval(feed_dict=feed_dict))
 
         # Optimization
-        best_loss_for_each_content_and_style = [[float('inf') for content_i in range(len(contents))] for style_i in
-                                                range(len(styles))]
-        best_for_each_content_and_style = [[None for content_i in range(len(contents))] for style_i in
-                                           range(len(styles))]
+        best_loss_for_each_style = [float('inf') for style_i in range(len(styles))]
+        best_for_each_style = [None for style_i in range(len(styles))]
 
         saver = tf.train.Saver()
         with tf.Session() as sess:
@@ -220,8 +235,10 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                     kScreenY = 300
                 else:
                     cap = cv2.VideoCapture(0)
+                    ret = cap.set(3, 1280)
+                    ret = cap.set(4, 960)
                     ret, frame = cap.read()
-                    print('The dimension of this camera is : %d x %d' % (frame.shape[0], frame.shape[1]))
+                    print('The dimension of this camera is : %d x %d' % (frame.shape[1], frame.shape[0]))
 
                 if use_johnson:
                     inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
@@ -257,7 +274,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         content_image = pb.pixel_array
                     else:
                         ret, frame = cap.read()
-                        content_image = frame
+                        content_image = scipy.misc.imresize(frame, (input_shape[1], input_shape[2]))
 
                     content_pre = np.array([vgg.preprocess(content_image, mean_pixel)])
                     # Now generate an image using the style_blend_weights given.
@@ -309,58 +326,70 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         return
                 else:
                     sess.run(tf.initialize_all_variables())
-                content_image_pyramids = [
-                    generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre) for content_pre in
-                    content_pre_list]
+
+                # Get path to all content images.
+                content_dirs =get_all_image_paths_in_dir(content_folder)
+                # Ignore the ones at the end to avoid
+                if batch_size != 1:
+                    content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+                # content_image_pyramids = [
+                #     generate_image_pyramid(input_shape[1], input_shape[2], batch_size, content_pre) for content_pre in
+                #     content_pre_list]
                 for i in range(iter_start, iterations):
                     # First decay the learning rate if we need to
                     if (i % lr_decay_steps == 0):
                         current_lr = learning_rate_decayed.eval()
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
 
+                    # Load content images
+                    current_content_dirs = get_batch(content_dirs, i * batch_size, batch_size)
+                    content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1], input_shape[2])
+
                     for style_i in range(len(styles)):
-                        for content_i in range(len(contents)):
-                            last_step = (i == iterations - 1)
-                            # Feed the content image.
-                            feed_dict = {}
-                            if use_johnson:
-                                if style_only:
-                                    feed_dict[inputs] = np.random.rand(batch_size, style_pre_list[style_i].shape[1],
-                                                                       style_pre_list[style_i].shape[2], 3)
-                                else:
-                                    feed_dict[inputs] = get_batch_from_np_list(content_pre_list, content_i, batch_size)
+                        last_step = (i == iterations - 1)
+                        # Feed the content image.
+                        feed_dict = {content_images:content_pre_list}
+                        if use_johnson:
+                            if style_only:
+                                feed_dict[inputs] = np.random.rand(batch_size, style_pre_list[style_i].shape[1],
+                                                                   style_pre_list[style_i].shape[2], 3)
                             else:
-                                if style_only:
-                                    noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                          ablation_layer=ablation_layer)
-                                else:
-                                    noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
-                                                                        content_image_pyramids[content_i])
+                                feed_dict[inputs] = content_pre_list
+                        else:
+                            if style_only:
+                                noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
+                                                      ablation_layer=ablation_layer)
+                            else:
+                                content_image_pyramids = generate_image_pyramid_from_content_list(input_shape[1], input_shape[2], content_pre_list)
+                                # TODO: This is for sure not working.
+                                noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
+                                                                    content_image_pyramids)
 
-                                for index, noise_frame in enumerate(noise_inputs):
-                                    feed_dict[noise_frame] = noise[index]
-                                feed_dict[input_style_placeholder] = \
-                                    np.array([[1.0 if current_style_i == style_i else 0.0
-                                               for current_style_i in range(len(styles))]])
+                            for index, noise_frame in enumerate(noise_inputs):
+                                feed_dict[noise_frame] = noise[index]
+                            feed_dict[input_style_placeholder] = \
+                                np.array([[1.0 if current_style_i == style_i else 0.0
+                                           for current_style_i in range(len(styles))]])
 
-                            train_step_for_each_content_and_style[style_i][content_i].run(feed_dict=feed_dict)
-                            if style_i == len(styles) - 1 and content_i == len(contents) - 1:
-                                print_progress(i, feed_dict=feed_dict, last=last_step)
 
-                            if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
-                                this_loss = losses_for_each_content_and_style[style_i][content_i].eval(
+
+                        train_step_for_each_style[style_i].run(feed_dict=feed_dict)
+                        if style_i == len(styles) - 1:
+                            print_progress(i, feed_dict=feed_dict, last=last_step)
+
+                        if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
+                            this_loss = losses_for_each_style[style_i].eval(
+                                feed_dict=feed_dict)
+                            if this_loss < best_loss_for_each_style[style_i]:
+                                best_loss_for_each_style[style_i] = this_loss
+                                best_for_each_style[style_i] = image.eval(
                                     feed_dict=feed_dict)
-                                if this_loss < best_loss_for_each_content_and_style[style_i][content_i]:
-                                    best_loss_for_each_content_and_style[style_i][content_i] = this_loss
-                                    best_for_each_content_and_style[style_i][content_i] = image.eval(
-                                        feed_dict=feed_dict)
-                                if style_i == len(styles) - 1 and content_i == len(contents) - 1:
-                                    saver.save(sess, save_dir + 'model.ckpt', global_step=i)
-                                    # Because we now have batch, choose the first one in the batch as our sample image.
-                                    yield (
-                                        (None if last_step else i),
-                                        [[vgg.unprocess(
-                                            best_for_each_content_and_style[style_i][content_i][0, :, :, :].reshape(
-                                                input_shape[1:]), mean_pixel)
-                                          for content_i in range(len(contents))] for style_i in range(len(styles))]
-                                    )
+                            if style_i == len(styles) - 1:
+                                saver.save(sess, save_dir + 'model.ckpt', global_step=i)
+                                # Because we now have batch, choose the first one in the batch as our sample image.
+                                yield (
+                                    (None if last_step else i),
+                                    [vgg.unprocess(
+                                        best_for_each_style[style_i][0, :, :, :].reshape(
+                                            input_shape[1:]), mean_pixel) for style_i in range(len(styles))]
+                                )

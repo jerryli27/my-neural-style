@@ -282,6 +282,11 @@ def generate_image_pyramid(height, width, batch_size, content_image, k=5):
                                           (max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
                       for batch in range(batch_size)]) for x in range(k)]
 
+def generate_image_pyramid_from_content_list(height, width, content_image, k=5):
+    return [np.array([scipy.misc.imresize(content_image[i],
+                                          (max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
+                      for i in range(content_image.shape[0])]) for x in range(k)]
+
 
 # TODO: add support for reuse.
 def spatial_batch_norm(input_layer, input_style_placeholder, name='spatial_batch_norm', reuse=False):

@@ -1,9 +1,15 @@
-import scipy
+import scipy.misc
 import numpy as np
 import math
+import os, sys
+from PIL import Image
 
-def imread(path):
-    return scipy.misc.imread(path).astype(np.float)
+def imread(path, shape = None):
+    if shape is None:
+        return np.asarray(Image.open(path).convert('RGB'), np.float32)
+    else:
+        return np.asarray(Image.open(path).convert('RGB').resize(shape), np.float32)
+    # return scipy.misc.imread(path).astype(np.float)
 
 
 def imsave(path, img):
@@ -37,6 +43,32 @@ def read_and_resize_images(contents, styles, height, width):
             target_shape[0], target_shape[1]))
     return content_images, style_images
 
+
+
+def read_and_resize_batch_images(dirs, height, width):
+    images = [imread(dir, shape=(height, width)) for dir in dirs]
+
+    # If there is no width and height, we automatically take the first image's width and height and apply to all the
+    # other ones.
+    # target_shape = (height, width, 3)
+    #
+    # for i in range(len(images)):
+    #     if images[i].shape != target_shape:
+    #         if len(images[i].shape) != 3:
+    #             assert len(images[i].shape) == 2
+    #             images[i] = np.concatenate((images[i],images[i],images[i]), axis=2)
+    #         images[i] = scipy.misc.imresize(images[i], target_shape)
+    return np.array(images)
+
+def get_all_image_paths_in_dir(dir):
+    assert(dir.endswith('/'))
+    content_dirs = []
+    for file_name in os.listdir(dir):
+        base, ext = os.path.splitext(file_name)
+        if ext == '.jpg' or ext == '.png':
+            content_dirs.append(dir + file_name)
+    return content_dirs
+
 def get_global_step_from_save_dir(save_dir):
     return int(save_dir[save_dir.rfind("-")+1:])
 
@@ -56,3 +88,22 @@ def get_batch_from_np_list(np_list, start_index, batch_size):
     else:
         end_index = (start_index + batch_size) % l
         return np.concatenate(np_list[start_index:] + np_list[:end_index])
+
+
+def get_batch(dir_list, start_index, batch_size):
+    """
+
+    :param dir_list: a list of directories
+    :param start_index:
+    :param batch_size:
+    :return: An array with length = batch.
+    """
+
+    l = len(dir_list)
+    assert batch_size < l
+    start_index = start_index % l
+    if start_index + batch_size < l:
+        return dir_list[start_index:start_index+batch_size]
+    else:
+        end_index = (start_index + batch_size) % l
+        return dir_list[start_index:] + dir_list[:end_index]

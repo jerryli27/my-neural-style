@@ -138,12 +138,12 @@ def main():
         style_blend_weights = [weight / total_blend_weight * len(style_blend_weights)
                                for weight in style_blend_weights]
 
-    if options.output and options.output.count("%s") != 2:
+    if options.output and options.output.count("%s") != 1:
         parser.error("To save intermediate images, the checkpoint output "
-                     "parameter must contain at least two `%s` (e.g. `foo_content_%s_style_%s.jpg`).")
-    if options.checkpoint_output and options.checkpoint_output.count("%s") != 3:
+                     "parameter must contain only one `%s` (e.g. `foo_style_%s.jpg`).")
+    if options.checkpoint_output and options.checkpoint_output.count("%s") != 2:
         parser.error("To save intermediate images, the checkpoint output "
-                     "parameter must contain at least three `%s` (e.g. `foo_content_%s_style_%s_iteration_%s.jpg`).")
+                     "parameter must contain only two `%s` (e.g. `foo_style_%s_iteration_%s.jpg`).")
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
@@ -169,13 +169,12 @@ def main():
             imsave(options.output, image)
         else:
             for style_i, _ in enumerate(options.styles):
-                for content_i, _ in enumerate(options.content):
-                    if iteration is not None:
-                        output_file = options.checkpoint_output % (content_i, style_i, iteration)
-                    else:
-                        output_file = options.output % (content_i, style_i)  # TODO: add test for legal output.
-                    if output_file:
-                        imsave(output_file, image[style_i][content_i])
+                if iteration is not None:
+                    output_file = options.checkpoint_output % (style_i, iteration)
+                else:
+                    output_file = options.output % (style_i)  # TODO: add test for legal output.
+                if output_file:
+                    imsave(output_file, image[style_i])
 
 if __name__ == '__main__':
     main()
