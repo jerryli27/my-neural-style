@@ -9,7 +9,6 @@ import cv2
 
 import vgg
 from feedforward_style_net_util import *
-from custom_vgg19 import *
 from mrf_util import mrf_loss
 import johnson_feedforward_net_util
 
