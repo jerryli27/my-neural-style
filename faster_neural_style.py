@@ -37,6 +37,9 @@ def build_parser():
     parser.add_argument('--content', dest='content', nargs='+',
                         help='One or more content images.',
                         metavar='CONTENT', required=True)
+    parser.add_argument('--content_folder', dest='content_folder',
+                        help='The path to the content images for training. In the papers they use the Microsoft COCO dataset.',
+                        metavar='CONTENT_FOLDER', default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
     parser.add_argument('--styles',dest='styles', nargs='+',
                         help='One or more style images.',
                         metavar='STYLE', required=True)
@@ -163,7 +166,8 @@ def main():
             checkpoint_iterations=options.checkpoint_iterations,
             save_dir=options.model_save_dir,
             do_restore_and_generate=options.do_restore_and_generate,
-            do_restore_and_train=options.do_restore_and_train
+            do_restore_and_train=options.do_restore_and_train,
+            content_folder=options.content_folder
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)

@@ -31,7 +31,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         multiple_styles_train_scale_offset_only=False, use_mrf=False,
                         use_johnson=False, print_iterations=None,
                         checkpoint_iterations=None, save_dir="models/", do_restore_and_generate=False,
-                        do_restore_and_train=False, content_folder = '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/',
+                        do_restore_and_train=False, content_folder = None,
                         from_screenshot=False, ablation_layer=None):
     """
     Stylize images.
