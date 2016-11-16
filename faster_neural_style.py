@@ -10,9 +10,6 @@ Perceptual Losses for Real-Time Style Transfer and Super-Resolution: https://arx
 Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks: https://arxiv.org/abs/1603.01768
 """
 
-import math
-import os
-import scipy.misc
 from argparse import ArgumentParser
 
 import n_style_feedforward_net
@@ -21,7 +18,7 @@ from general_util import *
 # default arguments
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
-TV_WEIGHT = 1e2
+TV_WEIGHT = 2e2
 # lr = 0.001 in https://arxiv.org/abs/1610.07629.
 # Higher learning rate than 0.01 may sacrifice the quality of the network.
 LEARNING_RATE = 0.001
@@ -34,9 +31,6 @@ PRINT_ITERATIONS = 100
 
 def build_parser():
     parser = ArgumentParser()
-    parser.add_argument('--content', dest='content', nargs='+',
-                        help='One or more content images.',
-                        metavar='CONTENT', required=True)
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the content images for training. In the papers they use the Microsoft COCO dataset.',
                         metavar='CONTENT_FOLDER', default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
@@ -106,6 +100,9 @@ def build_parser():
     parser.add_argument('--checkpoint_iterations', type=int, dest='checkpoint_iterations',
                         help='Checkpoint frequency.',
                         metavar='CHECKPOINT_ITERATIONS')
+    parser.add_argument('--test_img', type=str,
+                        dest='test_img', help='test image path',
+                        metavar='TEST_IMAGE')
     parser.add_argument('--model_save_dir', dest='model_save_dir',
                         help='The directory to save trained model and its checkpoints.',
                         metavar='MODEL_SAVE_DIR', default='models/')
@@ -128,7 +125,7 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_images, style_images = read_and_resize_images(options.content, options.styles, options.height, options.width)
+    style_images = read_and_resize_images(options.styles, options.height, options.width)
 
     style_blend_weights = options.style_blend_weights
     if style_blend_weights is None:
@@ -150,7 +147,8 @@ def main():
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
-            contents=content_images,
+            height=options.height,
+            width=options.width,
             styles=style_images,
             iterations=options.iterations,
             batch_size=options.batch_size,
@@ -167,18 +165,20 @@ def main():
             save_dir=options.model_save_dir,
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
-            content_folder=options.content_folder
+            content_folder=options.content_folder,
+            test_img_dir=options.test_img
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)
         else:
             for style_i, _ in enumerate(options.styles):
-                if iteration is not None:
-                    output_file = options.checkpoint_output % (style_i, iteration)
-                else:
-                    output_file = options.output % (style_i)  # TODO: add test for legal output.
-                if output_file:
-                    imsave(output_file, image[style_i])
+                if options.test_img:
+                    if iteration is not None:
+                        output_file = options.checkpoint_output % (style_i, iteration)
+                    else:
+                        output_file = options.output % (style_i)  # TODO: add test for legal output.
+                    if output_file:
+                        imsave(output_file, image[style_i])
 
 if __name__ == '__main__':
     main()
@@ -195,5 +195,23 @@ why.
 Also I need to test whether the model is still working if we use mrf instead. It should not. There's no way a network
 can learn nearest neighbor matching.
 
-Added mirror padding in johnson_feedforward_net_util. Try that.
+
+It is crucial to have a low enough learning rate. If you have a high one and decrease it over time, it still won't work.
+
+Here are two unsolved problems:
+The size of the features/styles. The image genearted when input is 100 x 100 versus 1000 x 1000 is drastically different.
+The generated image is limited to the structure of the original painting. In art, you can draw something larger or
+smaller than usual to achieve some effect. There's no such thing here because the loss is localized
+(You can't just change the absolute position of objects in content image.)
+
+
+Two ideas: artists "zoom in" to a spot when they want to paint it in more detail. Is it possible to do so in our architecture?
+
+Second idea: if the generator network can generate styled images, why can't it be used to reformat the feature layers?
+Turn the feature layers into something that look like other artforms (without loosing too much originality)
+and generate ... But how's that different from just use the generator network to generate the image? Not really
+
+I want something other than difference squared loss. I thought about nearest neighbor loss of the normalized feature
+layers. That one is invariant to translation.
+
 """

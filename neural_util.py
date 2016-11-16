@@ -36,7 +36,7 @@ def conv2d_mirror_padding(input_layer, w, b, kernel_size, stride=1):
 
 def conv2d_transpose_mirror_padding(input_layer, w, b, output_shape, kernel_size, stride=1):
     """
-
+    TODO: For some reason transpose mirror padding is causing some error in the optimization step
     :param input_layer: Input tensor.
     :param w: Weight. Either tensorflow constant or variable.
     :param b: Bias. Either tensorflow constant or variable.

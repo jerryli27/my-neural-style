@@ -5,6 +5,7 @@ from neural_util import conv2d_mirror_padding, conv2d_transpose_mirror_padding
 
 WEIGHTS_INIT_STDEV = .1
 
+# NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly by 4.
 def net(image, mirror_padding = True, reuse = False):
     conv1 = _conv_layer(image, 32, 9, 1, mirror_padding = mirror_padding, name = 'conv1', reuse = reuse)
     conv2 = _conv_layer(conv1, 64, 3, 2, mirror_padding = mirror_padding, name = 'conv2', reuse = reuse)
@@ -19,6 +20,7 @@ def net(image, mirror_padding = True, reuse = False):
     conv_t2 = _conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name = 'conv_t2',reuse = reuse)
     conv_t3 = _conv_layer(conv_t2, 3, 9, 1, relu=False, mirror_padding = mirror_padding, name = 'conv_t3', reuse = reuse)
     preds = tf.nn.tanh(conv_t3) * 150 + 255./2
+    # assert image.get_shape().as_list() == preds.get_shape().as_list()
     return preds
 
 def _conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_padding = True, name = '', reuse = False):

@@ -399,11 +399,12 @@ def get_scale_offset_var():
     return scale_offset_variables
 
 
-def total_variation(image_batch, divide_by_num_pixels=False):
+def total_variation(image_batch):
     """
     :param image_batch: A 4D tensor of shape [batch_size, height, width, channels]
     """
     batch_shape = image_batch.get_shape().as_list()
+    batch_size = batch_shape[0]
     height = batch_shape[1]
     left = tf.slice(image_batch, [0, 0, 0, 0], [-1, height - 1, -1, -1])
     right = tf.slice(image_batch, [0, 1, 0, 0], [-1, -1, -1, -1])
@@ -424,13 +425,9 @@ def total_variation(image_batch, divide_by_num_pixels=False):
     num_pixels_in_horizontal_diff = horizontal_diff_shape[0] * horizontal_diff_shape[1] * horizontal_diff_shape[2] * \
                                     horizontal_diff_shape[3]
 
-    if divide_by_num_pixels:
-        # Why there's a 2 here? I added it according to https://github.com/antlerros/tensorflow-fast-neuralstyle and
-        # https://github.com/anishathalye/neural-style
-        total_variation = 2 * (tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) / num_pixels_in_horizontal_diff + tf.sqrt(
-            tf.reduce_sum(tf.square(vertical_diff))) / num_pixels_in_vertical_diff)
-    else:
-        total_variation = 2 * (tf.sqrt(tf.reduce_sum(tf.square(horizontal_diff))) + tf.sqrt(
-            tf.reduce_sum(tf.square(vertical_diff))))
+    # Why there's a 2 here? I added it according to https://github.com/antlerros/tensorflow-fast-neuralstyle and
+    # https://github.com/anishathalye/neural-style
+    total_variation = 2 * (tf.nn.l2_loss(horizontal_diff) / num_pixels_in_horizontal_diff + tf.nn.l2_loss(vertical_diff)/ num_pixels_in_vertical_diff) / batch_size
+
 
     return total_variation

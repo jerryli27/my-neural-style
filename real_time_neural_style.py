@@ -87,6 +87,12 @@ def build_parser():
     parser.add_argument('--from_screenshot',
             dest='from_screenshot', help='If true, the content image is the screen shot', action='store_true')
     parser.set_defaults(from_screenshot=False)
+    parser.add_argument('--from_webcam',
+            dest='from_webcam', help='If true, the content image is the webcam', action='store_true')
+    parser.set_defaults(from_webcam=False)
+    parser.add_argument('--test_img', type=str,
+                        dest='test_img', help='test image path',
+                        metavar='TEST_IMAGE')
     parser.add_argument('--ablation_layer', type=int,
             dest='ablation_layer', help='If not none, all noise layer except for the given ablation layer will be zero.',
             metavar='ABLATION_LAYER', default=None)
@@ -101,9 +107,9 @@ def main():
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
     dummy_content = [np.zeros((options.height, options.width, 3))]
-    style_images = [imread(style) for style in options.styles]
-
     target_shape = (options.height, options.width)
+    style_images = [imread(style, shape=target_shape) for style in options.styles]
+
     for i in range(len(style_images)):
         style_scale = STYLE_SCALE
         if options.style_scales is not None:
@@ -143,7 +149,8 @@ def main():
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
-            contents=dummy_content,
+            height=options.height,
+            width=options.width,
             styles=style_images,
             iterations=None,
             batch_size=options.batch_size,
@@ -160,7 +167,9 @@ def main():
             save_dir=options.model_save_dir,
             do_restore_and_generate=True,
             from_screenshot = options.from_screenshot,
-            ablation_layer=options.ablation_layer
+            from_webcam = options.from_webcam,
+            ablation_layer=options.ablation_layer,
+            test_img_dir=options.test_img
         ):
         # We must do this clip step before we display the image. Otherwise the color will be off.
         image = np.clip(image, 0, 255).astype(np.uint8)
@@ -172,6 +181,8 @@ def main():
         im.axes.figure.canvas.draw()
         plt.pause(0.001)
         print ('FPS:', iteration / (time.time() - tstart + 0.001))
+    plt.ioff()
+    plt.show()
 
 
 if __name__ == '__main__':

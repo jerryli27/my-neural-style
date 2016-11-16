@@ -23,15 +23,15 @@ STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/
 # loop. it will save lots of memory.
 
 # TODO: change rtype
-def style_synthesis_net(path_to_network, contents, styles, iterations, batch_size,
+def style_synthesis_net(path_to_network, height, width, styles, iterations, batch_size,
                         content_weight, style_weight, style_blend_weights, tv_weight,
                         learning_rate, lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7,
                         style_only=False,
                         multiple_styles_train_scale_offset_only=False, use_mrf=False,
                         use_johnson=False, print_iterations=None,
-                        checkpoint_iterations=None, save_dir="models/", do_restore_and_generate=False,
+                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder = None,
-                        from_screenshot=False, ablation_layer=None):
+                        from_screenshot=False, from_webcam=False, test_img_dir = None, ablation_layer=None):
     """
     Stylize images.
 
@@ -50,7 +50,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
     if use_mrf:
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
 
-    input_shape = (1,) + contents[0].shape
+    input_shape = (1,height, width, 3)
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
     style_shapes = [(1,) + style.shape for style in styles]
@@ -165,14 +165,14 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         style_losses_for_each_style_layer.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
 
                 style_loss_for_each_style.append(
-                    style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer))
+                    style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer) / batch_size)
             # According to https://arxiv.org/abs/1610.07629 when "zero-padding is replaced with mirror-padding,
             # and transposed convolutions (also sometimes called deconvolutions) are replaced with nearest-neighbor
             # upsampling followed by a convolution.", tv is no longer needed.
             # But in other papers I've seen tv-loss still applicable, like in https://arxiv.org/abs/1603.08155.
             # TODO: find out the difference between having tv loss and not.
-            tv_loss = 0
-            # tv_loss = tv_weight * total_variation(image)
+            # tv_loss = 0
+            tv_loss = tv_weight * total_variation(image)
 
             # overall loss
             if style_only:
@@ -205,14 +205,17 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                                                          enumerate(losses_for_each_style)]
 
             def print_progress(i, feed_dict, last=False):
-                # stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
+                stderr.write(
+                    'Iteration %d/%d\n' % (i + 1, iterations))
                 if last or (print_iterations and i % print_iterations == 0):
-                    stderr.write(
-                        'Iteration %d/%d\tLearning rate %f\n' % (i + 1, iterations, learning_rate_decayed.eval()))
+                    # stderr.write(
+                    #     'Iteration %d/%d\tLearning rate %f\n' % (i + 1, iterations, learning_rate_decayed.eval()))
                     # Assume that the feed_dict is for the last content and style.
-                    # stderr.write('  content loss: %g\n' % content_loss_for_each_content[-1].eval(feed_dict=feed_dict))
-                    # stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
-                    # stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
+                    if not style_only:
+                        stderr.write('  content loss: %g\n' % content_loss.eval(feed_dict=feed_dict))
+                    stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
+                    if not style_only:
+                        stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
                     stderr.write('    total loss: %g\n' % overall_loss.eval(feed_dict=feed_dict))
 
         # Optimization
@@ -232,16 +235,18 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                 if from_screenshot:
                     kScreenX = 300
                     kScreenY = 300
-                else:
+                elif from_webcam:
                     cap = cv2.VideoCapture(0)
                     ret = cap.set(3, 1280)
                     ret = cap.set(4, 960)
                     ret, frame = cap.read()
                     print('The dimension of this camera is : %d x %d' % (frame.shape[1], frame.shape[0]))
+                else:
+                    assert test_img_dir is not None
 
                 if use_johnson:
                     inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-                    image = johnson_feedforward_net_util.net(inputs / 255.0, reuse=True)
+                    image = johnson_feedforward_net_util.net(inputs, reuse=True)
                     image = vgg.preprocess(image, mean_pixel)
                 else:
                     if style_only:
@@ -262,7 +267,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                 # END
                 iterator = 0
 
-                while True:
+                while from_screenshot or from_webcam or (iterator == 0):
                     if from_screenshot:
                         w = gtk.gdk.get_default_root_window()
                         sz = w.get_size()
@@ -271,9 +276,11 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                         pb = pb.get_from_drawable(w, w.get_colormap(), kScreenX, kScreenY, 0, 0, input_shape[1],
                                                   input_shape[2])
                         content_image = pb.pixel_array
-                    else:
+                    elif from_webcam:
                         ret, frame = cap.read()
                         content_image = scipy.misc.imresize(frame, (input_shape[1], input_shape[2]))
+                    else:
+                        content_image = imread(test_img_dir, (input_shape[1], input_shape[2]))
 
                     content_pre = np.array([vgg.preprocess(content_image, mean_pixel)])
                     # Now generate an image using the style_blend_weights given.
@@ -311,7 +318,7 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                     # END
                     iterator += 1
                     # Can't return because we are in a generator.
-                    yield (iterator, vgg.unprocess(generated_image[0, :, :, :].reshape(input_shape[1:]), mean_pixel))
+                    yield (iterator, vgg.unprocess(scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])), mean_pixel))
             else:
                 # Do Training.
                 iter_start = 0
@@ -377,18 +384,68 @@ def style_synthesis_net(path_to_network, contents, styles, iterations, batch_siz
                             print_progress(i, feed_dict=feed_dict, last=last_step)
 
                         if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
-                            this_loss = losses_for_each_style[style_i].eval(
-                                feed_dict=feed_dict)
-                            if this_loss < best_loss_for_each_style[style_i]:
-                                best_loss_for_each_style[style_i] = this_loss
-                                best_for_each_style[style_i] = image.eval(
-                                    feed_dict=feed_dict)
+                            #     content_pre = np.array([vgg.preprocess(content_image, mean_pixel)])
+                            #
+                            # if use_johnson:
+                            #     if style_only:
+                            #         feed_dict[inputs] = np.random.rand(batch_size, style_pre_list[style_i].shape[1],
+                            #                                            style_pre_list[style_i].shape[2], 3)
+                            #     else:
+                            #         feed_dict[inputs] = content_pre
+                            # else:
+                            #     if style_only:
+                            #         noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
+                            #                               ablation_layer=ablation_layer)
+                            #     else:
+                            #         content_image_pyramids = generate_image_pyramid_from_content_list(input_shape[1],
+                            #                                                                           input_shape[2],
+                            #                                                                           content_pre)
+                            #         # TODO: This is for sure not working.
+                            #         noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
+                            #                                             content_image_pyramids)
+                            #     for index, noise_frame in enumerate(noise_inputs):
+                            #         feed_dict[noise_frame] = noise[index]
+                            #     feed_dict[input_style_placeholder] = \
+                            #         np.array([[1.0 if current_style_i == style_i else 0.0
+                            #                    for current_style_i in range(len(styles))]])
+
+                            # best_for_each_style[style_i] = image.eval(feed_dict)
+                            # this_loss = losses_for_each_style[style_i].eval(
+                            #     feed_dict=feed_dict)
+                            # if this_loss < best_loss_for_each_style[style_i]:
+                            #     best_loss_for_each_style[style_i] = this_loss
+                            #     best_for_each_style[style_i] = image.eval(
+                            #         feed_dict=feed_dict)
                             if style_i == len(styles) - 1:
                                 saver.save(sess, save_dir + 'model.ckpt', global_step=i)
+
+                                if test_img_dir is not None:
+                                    test_image = imread(test_img_dir)
+                                    test_image_shape = test_image.shape
+                                    # The for loop will run once and terminate. Can't use return and yield in the same function so this is a hacky way to do it.
+                                    for _, generated_image in style_synthesis_net(path_to_network, test_image_shape[0],
+                                                                          test_image_shape[1], styles, iterations,
+                                                                          1,
+                                                                          content_weight, style_weight,
+                                                                          style_blend_weights, tv_weight,
+                                                                          learning_rate,
+                                                                          style_only=style_only,
+                                                                          multiple_styles_train_scale_offset_only=multiple_styles_train_scale_offset_only,
+                                                                          use_mrf=use_mrf,
+                                                                          use_johnson=use_johnson,
+                                                                          save_dir=save_dir,
+                                                                          do_restore_and_generate=True,
+                                                                          do_restore_and_train=False,
+                                                                          from_screenshot=False, from_webcam=False,
+                                                                          test_img_dir=test_img_dir,
+                                                                          ablation_layer=ablation_layer):
+                                        pass
+
+                                    best_for_each_style[style_i] = generated_image
+
                                 # Because we now have batch, choose the first one in the batch as our sample image.
                                 yield (
                                     (None if last_step else i),
-                                    [vgg.unprocess(
-                                        best_for_each_style[style_i][0, :, :, :].reshape(
-                                            input_shape[1:]), mean_pixel) for style_i in range(len(styles))]
+                                    [None if test_img_dir is None else
+                                        best_for_each_style[style_i] for style_i in range(len(styles))]
                                 )
