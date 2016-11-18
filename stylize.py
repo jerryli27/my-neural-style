@@ -1,6 +1,6 @@
 # The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 import vgg
-from mrf_util import mrf_loss
+from mrf_util import mrf_loss, mrf_loss_experiment
 import neural_doodle_util
 
 import tensorflow as tf
@@ -62,8 +62,8 @@ def stylize(network, initial, content, styles, iterations,
             style_pre = np.array([vgg.preprocess(styles[i], mean_pixel)])
             for layer in STYLE_LAYERS:
                 features = net[layer].eval(feed_dict={image: style_pre})
-                if use_mrf:
-                    style_features[i][layer] = features
+                if use_mrf or use_semantic_masks:
+                    style_features[i][layer] = features # Compute gram later if use semantic masks
                 else:
                     features = np.reshape(features, (-1, features.shape[3]))
                     gram = np.matmul(features.T, features) / features.size
@@ -90,10 +90,10 @@ def stylize(network, initial, content, styles, iterations,
                     if use_mrf:
                         style_features[i][layer] = neural_doodle_util.concatenate_mask_layer_np(features, style_features[i][layer])
                     else:
-                        pass
-                        # features = np.reshape(features, (-1, features.shape[3]))
-                        # gram = np.matmul(features.T, features) / features.size
-                        # style_semantic_masks_features[i][layer] = gram
+                        features = neural_doodle_util.concatenate_mask_layer_np(features, style_features[i][layer])
+                        features = np.reshape(features, (-1, features.shape[3]))
+                        gram = np.matmul(features.T, features) / features.size
+                        style_semantic_masks_features[i][layer] = gram
 
     # make stylized image using backpropogation
     with tf.Graph().as_default():
@@ -119,15 +119,14 @@ def stylize(network, initial, content, styles, iterations,
 
                 if use_semantic_masks:
                     layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
-                    assert use_mrf
                 if use_mrf:
-                    style_losses.append(mrf_loss(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
+                    style_losses.append(mrf_loss_experiment(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
                 else:
                     _, height, width, number = map(lambda i: i.value, layer.get_shape())
                     size = height * width * number
                     feats = tf.reshape(layer, (-1, number))
                     gram = tf.matmul(tf.transpose(feats), feats) / size
-                    style_gram = style_features[i][style_layer]
+                    style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
                     style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising

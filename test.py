@@ -13,9 +13,12 @@ from general_util import *
 # #contents= ['source_compressed/my256/%d.jpg' % i for i in range(1,17)]
 # contents_name = '256'
 # styles = ['style_compressed/van_gogh/self_portrait.jpg', 'style_compressed/van_gogh/starry_sky.jpg']
-styles = ['van_gogh/starry_sky256.jpg']
-style_name = 'van_gogh_starry_sky'
+# styles = ['van_gogh/starry_sky256.jpg']
+# style_name = 'van_gogh_starry_sky'
 # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
+
+styles = ['van_gogh/starry_sky256.jpg'] # DUMMY
+style_name = 'shirobako'
 
 learning_rate=0.001
 iterations=80000
@@ -50,9 +53,9 @@ do_restore_and_train = False
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
 
 # TODO: Don't forget to delete mirror.
-checkpoint_output='output_checkpoint/mirror-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d-stylenum-%%s_%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
-output='output/mirror-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d-stylenum-%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
-model_save_dir='model/mirror-%s-%s-iter-batchsize-%d-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d/' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
+checkpoint_output='output_checkpoint/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d-stylenum-%%s_%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
+output='output/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d-stylenum-%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
+model_save_dir='model/genstyle-%s-%s-iter-batchsize-%d-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d/' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
 if not os.path.exists(model_save_dir):
     os.makedirs(model_save_dir)
 

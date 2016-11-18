@@ -421,7 +421,7 @@ def total_variation(image_batch):
     vertical_diff_shape = vertical_diff.get_shape().as_list()
     num_pixels_in_vertical_diff = vertical_diff_shape[0] * vertical_diff_shape[1] * vertical_diff_shape[2] * \
                                   vertical_diff_shape[3]
-    horizontal_diff_shape = vertical_diff.get_shape().as_list()
+    horizontal_diff_shape = horizontal_diff.get_shape().as_list()
     num_pixels_in_horizontal_diff = horizontal_diff_shape[0] * horizontal_diff_shape[1] * horizontal_diff_shape[2] * \
                                     horizontal_diff_shape[3]
 

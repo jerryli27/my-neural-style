@@ -34,6 +34,12 @@ def build_parser():
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the content images for training. In the papers they use the Microsoft COCO dataset.',
                         metavar='CONTENT_FOLDER', default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
+
+    parser.add_argument('--style_folder', dest='style_folder',
+                        help='The path to the style images for training.',
+                        metavar='STYLE_FOLDER',
+                        default='/home/jerryli27/shirobako01pic/')
+
     parser.add_argument('--styles',dest='styles', nargs='+',
                         help='One or more style images.',
                         metavar='STYLE', required=True)
@@ -166,19 +172,27 @@ def main():
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
             content_folder=options.content_folder,
+            style_folder=options.style_folder,
             test_img_dir=options.test_img
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)
         else:
-            for style_i, _ in enumerate(options.styles):
-                if options.test_img:
-                    if iteration is not None:
-                        output_file = options.checkpoint_output % (style_i, iteration)
-                    else:
-                        output_file = options.output % (style_i)  # TODO: add test for legal output.
-                    if output_file:
-                        imsave(output_file, image[style_i])
+            # for style_i, _ in enumerate(options.styles):
+            #     if options.test_img:
+            #         if iteration is not None:
+            #             output_file = options.checkpoint_output % (style_i, iteration)
+            #         else:
+            #             output_file = options.output % (style_i)  # TODO: add test for legal output.
+            #         if output_file:
+            #             imsave(output_file, image[style_i])
+            if options.test_img:
+                if iteration is not None:
+                    output_file = options.checkpoint_output % (0, iteration)
+                else:
+                    output_file = options.output % (0)  # TODO: add test for legal output.
+                if output_file:
+                    imsave(output_file, image)
 
 if __name__ == '__main__':
     main()
@@ -189,14 +203,10 @@ if __name__ == '__main__':
 
 # TODO:
 """
-MRF running on feedforward style transfer net. But it's not working.
-Using all images from Microsoft COCO dataset improved stuff. There is a wierd boarder effect and I couldn't figure out
-why.
-Also I need to test whether the model is still working if we use mrf instead. It should not. There's no way a network
-can learn nearest neighbor matching.
-
-
 It is crucial to have a low enough learning rate. If you have a high one and decrease it over time, it still won't work.
+
+MRF is confirmed not to work with feed forward neural network. But mrf is not really absolutely necessary. I might need
+it for semantic related masking stuff. But it has also been shown that masking works with gram loss and feed forward network.
 
 Here are two unsolved problems:
 The size of the features/styles. The image genearted when input is 100 x 100 versus 1000 x 1000 is drastically different.
@@ -213,5 +223,36 @@ and generate ... But how's that different from just use the generator network to
 
 I want something other than difference squared loss. I thought about nearest neighbor loss of the normalized feature
 layers. That one is invariant to translation.
+
+
+Trying two things now: one is to directly observe what is going on in each loss function for each feature layer.
+Another is to feed multiple styles into the network while modifying the same parameters.
+
+simply feed 15000 shirobako images as style didn't work.
+
+I tried the mask again using hand-segmented shirobako mask (mrf loss). Surprisingly it's sort of working. Maybe I don't need the
+content loss. I can just create a drawing from scratch. Maybe that would be too hard.
+One more difficulty if I choose to go on this direction. I don't have hand-segmented masks for me to train.
+Even if I do, I don't know how to incorporate say 10 masked style images together. Simple nearest neighbor matching on
+the 10 images would require 10x memory in the gpu.
+
+One idea for automatically label images: start with example image and a hand-labeled mask. Now for each input
+we compute the nearest neighbor of say conv4-2 (any high level layer) and assign the nearest neighbor's mask
+to the input layer. Then add the constraint that nearby pixels should preferrably have the same label.
+Then do deconv to get pixel-wise label for the original image.
+
+Texture and placement of objects are two different things. Texture is given a mask, how to fill in the colors
+so that the style loss is the least. That is already solved. Placement of object is another issue. How to
+place objects relative to each other so that it is the most probable.
+
+I tried the nn loss. NN is not differentiable so it has no gradient. I should've realized earlier. Now I probably have
+to get around this problem.
+
+One thing is, the reason why mrf can perform better is because it has those patches that captures info about nearby
+cells. Gram simply multiply them together and add all cells. There's no interaction between a cell and the cell on its
+side. On the otherhand, the mrf is expensive to calculate because of the nn step.
+
+After some thinking, it comes down to knowing the feature layers first. (like each of the conv layers, when they're
+activated and compare two inputs, content and style, see when their conv layers look similar.)
 
 """
