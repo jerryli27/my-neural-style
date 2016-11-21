@@ -27,7 +27,7 @@ width = 256
 height = 256
 print_iteration = 100
 use_mrf = False
-use_johnson = True
+use_johnson = False
 texture_synthesis_only = False
 
 style_or_texture_string = 'texture' if texture_synthesis_only else 'nstyle'

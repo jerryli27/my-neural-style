@@ -225,8 +225,7 @@ def input_pyramid(name, height, width, batch_size, k=5, with_content_image=False
     noise generated.
     """
     if height % (2 ** (k - 1)) != 0 or width % (2 ** (k - 1)) != 0:
-        stderr('Warning: Input width or height cannot be divided by 2^(k-1). This might cause problems when generating '
-               'images.')
+        print ('Warning: Input width or height cannot be divided by 2^(k-1). Width: %d. Height: %d This might cause problems when generating images.' %(width, height))
     with tf.get_default_graph().name_scope(name):
         return_val = [tf.placeholder(tf.float32, [batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)),
                                                   6 if with_content_image else 3], name=str(x)) for x in range(k)]

@@ -51,6 +51,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
 
     input_shape = (1,height, width, 3)
+    print('The input shape is: %s' % (str(input_shape)))
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
     style_shapes = [(1,) + style.shape for style in styles]
