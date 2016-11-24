@@ -18,7 +18,8 @@ from general_util import *
 # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
 
 styles = ['van_gogh/starry_sky256.jpg'] # DUMMY
-style_name = 'shirobako'
+style_folder = 'style_compressed/claude_monet_2/'
+style_name = 'claude_monet_2'
 
 learning_rate=0.001
 iterations=80000
@@ -64,8 +65,8 @@ if not os.path.exists(model_save_dir):
     os.makedirs(model_save_dir)
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
-os.system('python ~/PycharmProjects/my-neural-style/faster_neural_style.py --styles %s %s --learning_rate=%f --iterations=%d --batch_size=%d %s %s %s --style_weight=%d --content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --output=%s --model_save_dir=%s --print_iterations=%d %s'
-          % (' '.join(styles), texture_synthesis_only_string, learning_rate, iterations, batch_size, use_mrf_string, use_johnson_string, multi_style_offset_only_string, style_weight, content_weight, checkpoint_iterations, width, height, checkpoint_output, test_img, output, model_save_dir, print_iteration, do_restore_and_train_string))
+os.system('python ~/PycharmProjects/my-neural-style/faster_neural_style.py --style_folder=%s --styles %s %s --learning_rate=%f --iterations=%d --batch_size=%d %s %s %s --style_weight=%d --content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --output=%s --model_save_dir=%s --print_iterations=%d %s'
+          % (style_folder, ' '.join(styles), texture_synthesis_only_string, learning_rate, iterations, batch_size, use_mrf_string, use_johnson_string, multi_style_offset_only_string, style_weight, content_weight, checkpoint_iterations, width, height, checkpoint_output, test_img, output, model_save_dir, print_iteration, do_restore_and_train_string))
 
 
 

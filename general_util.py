@@ -74,6 +74,9 @@ def get_all_image_paths_in_dir(dir):
         base, ext = os.path.splitext(file_name)
         if ext == '.jpg' or ext == '.png':
             content_dirs.append(dir + file_name)
+    if (len(content_dirs) == 0):
+        print('There is no image in directory %s' % dir)
+        raise AssertionError
     return content_dirs
 
 def get_global_step_from_save_dir(save_dir):
@@ -107,7 +110,7 @@ def get_batch(dir_list, start_index, batch_size):
     """
 
     l = len(dir_list)
-    assert batch_size < l
+    assert batch_size <= l
     start_index = start_index % l
     if start_index + batch_size < l:
         return dir_list[start_index:start_index+batch_size]

@@ -53,16 +53,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
     input_shape = (1,height, width, 3)
 
-    # Get path to all content images.
-    content_dirs = get_all_image_paths_in_dir(content_folder)
-    # Ignore the ones at the end to avoid
-    if batch_size != 1:
-        content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
-    style_dirs = get_all_image_paths_in_dir(style_folder)
-    # Ignore the ones at the end to avoid
-    if batch_size != 1:
-        style_dirs = style_dirs[:-(len(style_dirs) % batch_size)]
-
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
     # vgg_data_dict = loadWeightsData('./vgg19.npy')
@@ -93,9 +83,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         if use_johnson:
             # Input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
             # different style images.
-            input_style_placeholder = tf.placeholder(tf.float32, [batch_size, len(style_dirs)], name='input_style_placeholder')
+            # input_style_placeholder = tf.placeholder(tf.float32, [batch_size, len(style_dirs)], name='input_style_placeholder')
             inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-            image = johnson_feedforward_net_util.net(inputs / 255.0, input_style_placeholder)
+            image = johnson_feedforward_net_util.net(inputs / 255.0)
             image = vgg.preprocess(image, mean_pixel)
         else:
             if style_only:
@@ -106,7 +96,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                              with_content_image=True)
             # Input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
             # different style images.
-            input_style_placeholder = tf.placeholder(tf.float32, [batch_size, len(style_dirs)], name='input_style_placeholder')
+            # TODO: fix style placeholders
+            input_style_placeholder = tf.placeholder(tf.float32, [batch_size, len(styles)], name='input_style_placeholder')
             image = generator_net_n_styles(noise_inputs, input_style_placeholder)
             # TODO: Do I need to preprocess the generated image here? When I use the johnson model it seems I have to do so.
             # image = vgg.preprocess(image, mean_pixel)
@@ -330,6 +321,17 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     # Can't return because we are in a generator.
                     yield (iterator, vgg.unprocess(scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])), mean_pixel))
             else:
+
+                # Get path to all content images.
+                content_dirs = get_all_image_paths_in_dir(content_folder)
+                # Ignore the ones at the end to avoid
+                if batch_size != 1:
+                    content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+                style_dirs = get_all_image_paths_in_dir(style_folder)
+                # Ignore the ones at the end to avoid
+                if batch_size != 1 and len(style_dirs) > batch_size:
+                    style_dirs = style_dirs[:-(len(style_dirs) % batch_size)]
+
                 # Do Training.
                 iter_start = 0
                 if do_restore_and_train:
@@ -381,10 +383,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         for index, noise_frame in enumerate(noise_inputs):
                             feed_dict[noise_frame] = noise[index]
 
-                    current_batch_indices = get_batch_indices(style_dirs, i * batch_size, batch_size)
-                    feed_dict[input_style_placeholder] = \
-                        np.array([[1.0 if (current_style_i in current_batch_indices) else 0.0
-                                   for current_style_i in range(len(style_dirs))]])
+                        feed_dict[input_style_placeholder] = \
+                            np.array([[style_blend_weights[current_style_i]
+                                       for current_style_i in range(len(style_dirs))]])
 
 
 
