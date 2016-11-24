@@ -81,6 +81,10 @@ def build_parser():
                         help='If true, we use the johnson generator net instead of pyramid net (default %(default)s).',
                         action='store_true')
     parser.set_defaults(use_johnson=False)
+    parser.add_argument('--multiple_styles_train_scale_offset_only', dest='multiple_styles_train_scale_offset_only',
+                        help='If true, TODO (default %(default)s).',
+                        action='store_true')
+    parser.set_defaults(multiple_styles_train_scale_offset_only=False)
     # TODO: delete content weight after we make sure we do not need tv weight.
     parser.add_argument('--content_weight', type=float, dest='content_weight',
                         help='Content weight (default %(default)s).',
@@ -164,6 +168,7 @@ def main():
             tv_weight=options.tv_weight,
             learning_rate=options.learning_rate,
             style_only=options.texture_synthesis_only,
+            multiple_styles_train_scale_offset_only= options.multiple_styles_train_scale_offset_only,
             use_mrf=options.use_mrf,
             use_johnson=options.use_johnson,
             print_iterations=options.print_iterations,
@@ -178,14 +183,6 @@ def main():
         if options.do_restore_and_generate:
             imsave(options.output, image)
         else:
-            # for style_i, _ in enumerate(options.styles):
-            #     if options.test_img:
-            #         if iteration is not None:
-            #             output_file = options.checkpoint_output % (style_i, iteration)
-            #         else:
-            #             output_file = options.output % (style_i)  # TODO: add test for legal output.
-            #         if output_file:
-            #             imsave(output_file, image[style_i])
             if options.test_img:
                 if iteration is not None:
                     output_file = options.checkpoint_output % (0, iteration)
@@ -239,7 +236,8 @@ the 10 images would require 10x memory in the gpu.
 One idea for automatically label images: start with example image and a hand-labeled mask. Now for each input
 we compute the nearest neighbor of say conv4-2 (any high level layer) and assign the nearest neighbor's mask
 to the input layer. Then add the constraint that nearby pixels should preferrably have the same label.
-Then do deconv to get pixel-wise label for the original image.
+Then do deconv to get pixel-wise label for the original image. (Sounds like a plan, but this requires the
+high level layers of the style and content to be similar, which may well not be the case. 20161122)
 
 Texture and placement of objects are two different things. Texture is given a mask, how to fill in the colors
 so that the style loss is the least. That is already solved. Placement of object is another issue. How to
@@ -255,4 +253,38 @@ side. On the otherhand, the mrf is expensive to calculate because of the nn step
 After some thinking, it comes down to knowing the feature layers first. (like each of the conv layers, when they're
 activated and compare two inputs, content and style, see when their conv layers look similar.)
 
+Adversarial generative network may be worth investigating into. But don't do that just yet. I still have to finish up
+this experiment.
+
+We can make the additional semantic masks learnable. Just add a loss for too much deviation from original (more
+complicated loss can be added later)
+
+Things learned from the experiment: the conv layer won't look close to the original image. So we can't hope to morph
+one image into another in the conv layers. Also, making semantic masks learnable will need further refinement.
+
+I thought maybe finding the spatial correlation of semantic layers might be helpful. Now it is only finding the
+correlation in-place (that is, the same pixel times the same pixel in another layer). What happens if we shift it by
+say half of the width and find the correlation? The hope is that , for example we have two eyes, one on the left
+and one on the right. By finding the correlation after shifting, we may find: ah whenever there's an
+eye here, there will be on on its right with distance half screen away. That's my hope.
+
+
+I was correct that correlation after shifting one layer encodes the relative positional information. Now the problem is
+1. It was not perfect. I hope the problem can be solved after adding a content loss.
+2. It was spatially too similar to the style image. ie. no shifting etc. There was some shift for subfeatures, like
+the mouth was on the right first and slowly came to the center. But overall the head position was still the same, the
+position of everything was the same as in the style. This is not what we want. We just want to modify the content image
+a little so that the eyes become bigger, or the nose become less noticeable and things like that.
+I want to have two very simple images as input and see how it goes.
+
+Not going well so far.
+
+Side projects during thxgiving:
+Run multi-style feed forward network.
+Shit.. I realized it actually doesn't make sense in the current frame work. I have to separate each style by itself
+instead of feeding them in as batches. ( Otherwise I can't set the image placeholder so I can't train scale and offset
+individually. I'll try to fix this tomorrow by going back to the master branch and merge the two..
+I don't know if I should keep the batch style... Maybe I should.
+
+Other future directions: feed forward neural doodle.
 """

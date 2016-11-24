@@ -40,6 +40,8 @@ johnson_or_pyramid_string = 'johnson' if use_johnson else 'pyramid'
 use_johnson_string = '--use_johnson' if use_johnson else ''
 do_restore_and_train = False
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
+multi_style_offset_only = False
+multi_style_offset_only_string = '--multiple_styles_train_scale_offset_only' if multi_style_offset_only else ''
 
 # contents= ['source_compressed/my256/%d.jpg' % i for i in range(1,17)]
 # contents_name = 'my256'
@@ -51,17 +53,19 @@ use_mrf = False
 use_mrf_string = '--use_mrf' if use_mrf else ''
 do_restore_and_train = False
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
+multi_style_offset_only = False
+multi_style_offset_only_string = '--multiple_styles_train_scale_offset_only' if multi_style_offset_only else ''
 
 # TODO: Don't forget to delete mirror.
-checkpoint_output='output_checkpoint/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d-stylenum-%%s_%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
-output='output/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d-stylenum-%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
-model_save_dir='model/genstyle-%s-%s-iter-batchsize-%d-%d-lr-%f-use_mrf-%s-%s-style-%d-content-%d/' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, style_weight, content_weight)
+checkpoint_output='output_checkpoint/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-multi_style_offset_only-%s-style-%d-content-%d-stylenum-%%s_%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(multi_style_offset_only), style_weight, content_weight)
+output='output/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-multi_style_offset_only-%s-style-%d-content-%d-stylenum-%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(multi_style_offset_only), style_weight, content_weight)
+model_save_dir='model/genstyle-%s-%s-iter-batchsize-%d-%d-lr-%f-use_mrf-%s-%s-multi_style_offset_only-%s-style-%d-content-%d/' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(multi_style_offset_only), style_weight, content_weight)
 if not os.path.exists(model_save_dir):
     os.makedirs(model_save_dir)
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
-os.system('python ~/PycharmProjects/my-neural-style/faster_neural_style.py --styles %s %s --learning_rate=%f --iterations=%d --batch_size=%d %s %s --style_weight=%d --content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --output=%s --model_save_dir=%s --print_iterations=%d %s'
-          % (' '.join(styles), texture_synthesis_only_string, learning_rate, iterations, batch_size, use_mrf_string, use_johnson_string, style_weight, content_weight, checkpoint_iterations, width, height, checkpoint_output, test_img, output, model_save_dir, print_iteration, do_restore_and_train_string))
+os.system('python ~/PycharmProjects/my-neural-style/faster_neural_style.py --styles %s %s --learning_rate=%f --iterations=%d --batch_size=%d %s %s %s --style_weight=%d --content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --output=%s --model_save_dir=%s --print_iterations=%d %s'
+          % (' '.join(styles), texture_synthesis_only_string, learning_rate, iterations, batch_size, use_mrf_string, use_johnson_string, multi_style_offset_only_string, style_weight, content_weight, checkpoint_iterations, width, height, checkpoint_output, test_img, output, model_save_dir, print_iteration, do_restore_and_train_string))
 
 
 

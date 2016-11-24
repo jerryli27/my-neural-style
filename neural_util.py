@@ -1,4 +1,5 @@
 import tensorflow as tf
+import math
 
 
 def conv2d(input_layer, w, b, stride=1):
@@ -55,3 +56,40 @@ def conv2d_transpose_mirror_padding(input_layer, w, b, output_shape, kernel_size
 
 def leaky_relu(input_layer, alpha):
     return tf.maximum(input_layer * alpha, input_layer)
+
+def gram_experiment(features, shift = None, shift_is_horizontal = True):
+    _, height, width, number = map(lambda i: i.value, features.get_shape())
+    size = height * width * number
+    if shift is None:
+        features = tf.reshape(features, (-1, number))
+        gram = tf.matmul(tf.transpose(features), features) / size
+    else:
+        if shift_is_horizontal:
+            left = tf.slice(features, [0, 0, 0, 0], [-1, -1, width - shift, -1])
+            right = tf.slice(features, [0, 0, shift, 0], [-1, -1, -1, -1])
+            left_reshaped = tf.reshape(left, (-1, number))
+            right_reshaped = tf.reshape(right, (-1, number))
+            gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / size
+        else:
+            top = tf.slice(features, [0, 0, 0, 0], [-1, height - shift, -1, -1])
+            bottom = tf.slice(features, [0, shift, 0, 0], [-1, -1, -1, -1])
+            top_reshaped = tf.reshape(top, (-1, number))
+            bottom_reshaped = tf.reshape(bottom, (-1, number))
+            gram = tf.matmul(tf.transpose(top_reshaped), bottom_reshaped) / size
+
+
+    return gram
+
+
+def gram_stacks(features):
+    _, height, width, number = map(lambda i: i.value, features.get_shape())
+    good_old_gram = gram_experiment(features)
+    gram = [good_old_gram]
+    for shift in range(1,int(width),1):
+        shifted_gram = gram_experiment(features, shift=shift)
+        gram.append(shifted_gram)
+    for shift in range(1,int(height),1):
+        shifted_gram = gram_experiment(features, shift=shift, shift_is_horizontal=False)
+        gram.append(shifted_gram)
+    gram_stack = tf.pack(gram)  / math.sqrt(len(gram))
+    return gram_stack

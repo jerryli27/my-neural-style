@@ -52,11 +52,16 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
 
     input_shape = (1,height, width, 3)
-    # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
-    # 3 corresponds to rgb.
-    style_shapes = [(1,) + style.shape for style in styles]
-    # content_features = [{} for _ in range(len(contents))]
-    style_features = [{} for _ in styles]
+
+    # Get path to all content images.
+    content_dirs = get_all_image_paths_in_dir(content_folder)
+    # Ignore the ones at the end to avoid
+    if batch_size != 1:
+        content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+    style_dirs = get_all_image_paths_in_dir(style_folder)
+    # Ignore the ones at the end to avoid
+    if batch_size != 1:
+        style_dirs = style_dirs[:-(len(style_dirs) % batch_size)]
 
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
@@ -66,7 +71,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     # if not do_restore_and_generate:
     #     # Compute style features in feedforward mode.
     #     style_pre_list = []
-    #     for i in range(len(styles)):
+    #     for i in range(len(style_dirs)):
     #         g = tf.Graph()
     #         with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
     #             image = tf.placeholder('float', shape=style_shapes[i])
@@ -86,8 +91,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     # Make stylized image using backpropogation.
     with tf.Graph().as_default():
         if use_johnson:
+            # Input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
+            # different style images.
+            input_style_placeholder = tf.placeholder(tf.float32, [batch_size, len(style_dirs)], name='input_style_placeholder')
             inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-            image = johnson_feedforward_net_util.net(inputs / 255.0)
+            image = johnson_feedforward_net_util.net(inputs / 255.0, input_style_placeholder)
             image = vgg.preprocess(image, mean_pixel)
         else:
             if style_only:
@@ -98,7 +106,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                              with_content_image=True)
             # Input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
             # different style images.
-            input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)], name='input_style_placeholder')
+            input_style_placeholder = tf.placeholder(tf.float32, [batch_size, len(style_dirs)], name='input_style_placeholder')
             image = generator_net_n_styles(noise_inputs, input_style_placeholder)
             # TODO: Do I need to preprocess the generated image here? When I use the johnson model it seems I have to do so.
             # image = vgg.preprocess(image, mean_pixel)
@@ -135,7 +143,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     style_features[layer] = gramian(current_feature)
 
             # style_loss_for_each_style = []
-            # for i in range(len(styles)):
+            # for i in range(len(style_dirs)):
             #     style_losses_for_each_style_layer = []
             #     for style_layer in STYLE_LAYERS:
             #         layer = net[style_layer]
@@ -187,14 +195,22 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             # optimizer setup
             # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
             # TODO: tell which one is better, training all variables or training only scale and offset.
-            # Get all variables
-            scale_offset_var = get_scale_offset_var()
+
+            # I can't really train scale and offset only now because all style images now uses the same input
+            # placeholder. Also it doesn't make sense to pick one image as the 'main one' and train scale offset on
+            # the rest.
             if multiple_styles_train_scale_offset_only:
                 raise NotImplementedError
+                # Get all variables
+                if use_johnson:
+                    scale_offset_var = johnson_feedforward_net_util.get_johnson_scale_offset_var()
+                else:
+                    scale_offset_var = get_pyramid_scale_offset_var()
                 train_step= tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                                beta2=0.999).minimize(overall_loss,
-                                                                      var_list=scale_offset_var) if i != 0 else tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                                 beta2=0.999).minimize(overall_loss)
+                # train_step_scale_offset_only = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                #                                 beta2=0.999).minimize(overall_loss,
+                #                                                       var_list=scale_offset_var)
             else:
                 train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9, beta2=0.999).minimize(overall_loss)
 
@@ -252,7 +268,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     # input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
                     # different style images.
-                    input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
+                    input_style_placeholder = tf.placeholder(tf.float32, [1, len(style_dirs)],
                                                              name='input_style_placeholder')
 
                     image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
@@ -296,7 +312,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[noise_frame] = noise[index]
                         feed_dict[input_style_placeholder] = \
                             np.array([[style_blend_weights[current_style_i]
-                                       for current_style_i in range(len(styles))]])
+                                       for current_style_i in range(len(style_dirs))]])
                     generated_image = image.eval(feed_dict=feed_dict)
 
                     # FOR DEBUGGING:
@@ -327,15 +343,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 else:
                     sess.run(tf.initialize_all_variables())
 
-                # Get path to all content images.
-                content_dirs =get_all_image_paths_in_dir(content_folder)
-                # Ignore the ones at the end to avoid
-                if batch_size != 1:
-                    content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
-                style_dirs =get_all_image_paths_in_dir(style_folder)
-                # Ignore the ones at the end to avoid
-                if batch_size != 1:
-                    style_dirs = style_dirs[:-(len(style_dirs) % batch_size)]
 
                 for i in range(iter_start, iterations):
                     # First decay the learning rate if we need to
@@ -359,6 +366,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[inputs] = np.random.rand(batch_size, input_shape[1], input_shape[2], 3)
                         else:
                             feed_dict[inputs] = content_pre_list
+
                     else:
                         if style_only:
                             noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
@@ -372,9 +380,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                         for index, noise_frame in enumerate(noise_inputs):
                             feed_dict[noise_frame] = noise[index]
-                        feed_dict[input_style_placeholder] = \
-                            np.array([[1.0 if current_style_i == style_i else 0.0
-                                       for current_style_i in range(len(styles))]])
+
+                    current_batch_indices = get_batch_indices(style_dirs, i * batch_size, batch_size)
+                    feed_dict[input_style_placeholder] = \
+                        np.array([[1.0 if (current_style_i in current_batch_indices) else 0.0
+                                   for current_style_i in range(len(style_dirs))]])
 
 
 

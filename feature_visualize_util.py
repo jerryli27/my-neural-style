@@ -1,5 +1,5 @@
 """
-This file implements functions to visualize some potential loss functions.
+This file implements functions to visualize the feature layers
 """
 
 import gtk.gdk
@@ -18,7 +18,7 @@ STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/
 
 
 # TODO: change rtype
-def style_synthesis_net(content, style, layers, per_pixel_loss_func, path_to_network = 'imagenet-vgg-verydeep-19.mat'):
+def style_synthesis_net(content, style, layers, path_to_network = 'imagenet-vgg-verydeep-19.mat'):
     height = content.shape[0]
     width = content.shape[1]
     input_shape = (1,height, width, 3)
@@ -32,7 +32,6 @@ def style_synthesis_net(content, style, layers, per_pixel_loss_func, path_to_net
 
     content_features = {}
     style_features = {}
-    losses = {}
 
 
     g = tf.Graph()
@@ -43,10 +42,10 @@ def style_synthesis_net(content, style, layers, per_pixel_loss_func, path_to_net
         for layer in layers:
             content_features[layer] = net[layer].eval(feed_dict={image: content_pre})
             style_features[layer] = net[layer].eval(feed_dict={image: style_pre})
-            losses[layer] =  per_pixel_loss_func(content_features[layer], style_features[layer])
+
         print('Finished loading content and style image features.')
 
-    return losses
+    return content_features,style_features
 
 def per_pixel_gram_loss(content_feature, style_feature):
     gram = np_gramian(content_feature)
