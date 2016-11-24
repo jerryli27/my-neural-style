@@ -286,5 +286,7 @@ instead of feeding them in as batches. ( Otherwise I can't set the image placeho
 individually. I'll try to fix this tomorrow by going back to the master branch and merge the two..
 I don't know if I should keep the batch style... Maybe I should.
 
+Tested overnight on claude monet's paintings. Now I'm sure I can't just merge styles like that. It doesn't work.
+
 Other future directions: feed forward neural doodle.
 """
