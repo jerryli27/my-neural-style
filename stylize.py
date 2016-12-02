@@ -21,8 +21,9 @@ STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/
 
 def stylize(network, initial, content, styles, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
-            learning_rate, use_mrf = False, use_semantic_masks = False, output_semantic_mask = None,
-            style_semantic_masks = None, print_iterations=None, checkpoint_iterations=None):
+            learning_rate, use_mrf = False, use_semantic_masks = False, mask_resize_as_feature = True,
+            output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
+            print_iterations=None, checkpoint_iterations=None):
     """
     Stylize images.
 
@@ -35,6 +36,11 @@ def stylize(network, initial, content, styles, iterations,
     global STYLE_LAYERS
     if use_mrf:
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
+    if use_semantic_masks:
+        assert semantic_masks_weight is not None
+        assert output_semantic_mask is not None
+        assert style_semantic_masks is not None
+
     shape = (1,) + content.shape
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
@@ -116,6 +122,8 @@ def stylize(network, initial, content, styles, iterations,
         content_pre = np.array([vgg.preprocess(content, mean_pixel)])
         content_features[CONTENT_LAYER] = net[CONTENT_LAYER]
 
+        net_layer_sizes = vgg.get_net_layer_sizes(net)
+
         # compute style features in feedforward mode
         style_images = []
         style_pres = []
@@ -139,28 +147,44 @@ def stylize(network, initial, content, styles, iterations,
                     # ***** END TEST GRAM*****
 
         if use_semantic_masks:
-            output_image = tf.placeholder('float', shape=shape, name='content_mask')
-            net, mean_pixel = vgg.net(network, output_image)
+            content_semantic_mask = tf.placeholder('float', shape=shape, name='content_mask')
             output_semantic_mask_pre = np.array([vgg.preprocess(output_semantic_mask, mean_pixel)])
-            for layer in STYLE_LAYERS:
-                # output_semantic_mask_features[layer] = net[layer].eval(
-                #     feed_dict={image: output_semantic_mask_pre})
-                # ***** TEST*****
-                output_semantic_mask_feature = net[layer]
-                output_semantic_mask_features[layer] = tf.get_variable('feature_masks_' + layer,
-                                                                       initializer=output_semantic_mask_feature,
-                                                                       trainable=False)
-                # ***** END TEST*****
+            if mask_resize_as_feature:
+
+                for layer in STYLE_LAYERS:
+                    output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) \
+                                                   * semantic_masks_weight
+                    output_semantic_mask_features[layer] = tf.get_variable('feature_masks_' + layer,
+                                                                           initializer=output_semantic_mask_feature,
+                                                                           trainable=False)
+            else:
+                net, _ = vgg.net(network, content_semantic_mask)
+                for layer in STYLE_LAYERS:
+                    # output_semantic_mask_features[layer] = net[layer].eval(
+                    #     feed_dict={image: output_semantic_mask_pre})
+                    # ***** TEST*****
+                    output_semantic_mask_feature = net[layer] * semantic_masks_weight
+                    output_semantic_mask_features[layer] = tf.get_variable('feature_masks_' + layer,
+                                                                           initializer=output_semantic_mask_feature,
+                                                                           trainable=False)
+                    # ***** END TEST*****
 
             # compute style features in feedforward mode
             style_semantic_masks_pres = []
             style_semantic_masks_images=[]
             for i in range(len(styles)):
                 style_semantic_masks_images.append(tf.placeholder('float', shape=style_shapes[i], name='style_mask_%d' % i))
-                net, _ = vgg.net(network, style_semantic_masks_images[-1])
                 style_semantic_masks_pres.append(np.array([vgg.preprocess(style_semantic_masks[i], mean_pixel)]))
+
+                if not mask_resize_as_feature:
+                    net, _ = vgg.net(network, style_semantic_masks_images[-1])
+
                 for layer in STYLE_LAYERS:
-                    features = net[layer]
+                    if mask_resize_as_feature:
+                        features = tf.image.resize_images(style_semantic_masks_images[-1], (net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
+                    else:
+                        features = net[layer]
+                    features = features * semantic_masks_weight
                     # ***** TEST*****
                     features = tf.get_variable('style_masks_' + layer, initializer=features,
                                                trainable=False)
@@ -256,7 +280,7 @@ def stylize(network, initial, content, styles, iterations,
             for i in range(len(styles)):
                 feed_dict[style_images[i]] = style_pres[i]
             if use_semantic_masks:
-                feed_dict[output_image]= output_semantic_mask_pre
+                feed_dict[content_semantic_mask]= output_semantic_mask_pre
                 for i in range(len(styles)):
                     feed_dict[style_semantic_masks_images[i]] = style_semantic_masks_pres[i]
             sess.run(tf.initialize_all_variables(), feed_dict=feed_dict)

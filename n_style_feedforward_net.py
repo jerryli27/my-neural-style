@@ -187,7 +187,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
             # TODO: tell which one is better, training all variables or training only scale and offset.
             # Get all variables
-            scale_offset_var = get_scale_offset_var()
+            scale_offset_var = get_pyramid_scale_offset_var()
             if multiple_styles_train_scale_offset_only:
                 train_step_for_each_style = [
                                                              tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,

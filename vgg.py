@@ -110,3 +110,9 @@ def preprocess(image, mean_pixel):
 
 def unprocess(image, mean_pixel):
     return image + mean_pixel
+
+def get_net_layer_sizes(net):
+    net_layer_sizes = {}
+    for key, val in net.iteritems():
+        net_layer_sizes[key] = map(lambda i: i.value, val.get_shape())
+    return net_layer_sizes

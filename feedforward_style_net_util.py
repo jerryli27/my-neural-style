@@ -377,8 +377,6 @@ def gramian(layer):
 
 
 def get_pyramid_scale_offset_var():
-    # TODO: I forgot to get offsets.
-    raise NotImplementedError
     scale_offset_variables = []
     for d in range(8, 48, 8):
         for layer in range(1, 4):

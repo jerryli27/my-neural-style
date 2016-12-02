@@ -177,19 +177,19 @@ def main():
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
             content_folder=options.content_folder,
-            style_folder=options.style_folder,
             test_img_dir=options.test_img
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)
         else:
-            if options.test_img:
-                if iteration is not None:
-                    output_file = options.checkpoint_output % (0, iteration)
-                else:
-                    output_file = options.output % (0)  # TODO: add test for legal output.
-                if output_file:
-                    imsave(output_file, image)
+            for style_i, _ in enumerate(options.styles):
+                if options.test_img:
+                    if iteration is not None:
+                        output_file = options.checkpoint_output % (style_i, iteration)
+                    else:
+                        output_file = options.output % (style_i)  # TODO: add test for legal output.
+                    if output_file:
+                        imsave(output_file, image[style_i])
 
 if __name__ == '__main__':
     main()

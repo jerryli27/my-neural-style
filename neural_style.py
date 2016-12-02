@@ -13,7 +13,7 @@ from argparse import ArgumentParser
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
-SEMANTIC_MASK_WEIGHT = 1.0
+semantic_masks_weight = 1.0
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
@@ -35,9 +35,9 @@ def build_parser():
                                                         'represent the semantic masks of the content and style images.'
                                                         '(default %(default)s).', action='store_true')
     parser.set_defaults(use_semantic_masks=False)
-    parser.add_argument('--semantic_mask_weight',
-                        dest='semantic_mask_weight', help='The weight we give to matching semantic masks',
-                        metavar='WIDTH', required=False, type=float, default=SEMANTIC_MASK_WEIGHT)
+    parser.add_argument('--semantic_masks_weight',
+                        dest='semantic_masks_weight', help='The weight we give to matching semantic masks',
+                        metavar='WIDTH', required=False, type=float, default=semantic_masks_weight)
     parser.add_argument('--output_semantic_mask',
             dest='output_semantic_mask', help='one content image semantic mask', required=False)
     parser.add_argument('--style_semantic_masks',
@@ -179,6 +179,7 @@ def main():
         use_semantic_masks = options.use_semantic_masks,
         output_semantic_mask = output_semantic_mask,
         style_semantic_masks= style_semantic_masks,
+        semantic_masks_weight= options.semantic_masks_weight,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations
     ):
@@ -212,7 +213,7 @@ if __name__ == '__main__':
 --width=256
 --use_mrf
 --use_semantic_masks
---semantic_mask_weight=0.00000001"""
+--semantic_masks_weight=0.00000001"""
 
 """
 --content=style_compressed/semantic_masks/Freddie.jpg
@@ -229,7 +230,7 @@ if __name__ == '__main__':
 --width=256
 --use_mrf
 --use_semantic_masks
---semantic_mask_weight=0.1
+--semantic_masks_weight=0.1
 --print-iterations=10"""
 
 """
@@ -247,6 +248,24 @@ if __name__ == '__main__':
 --style_semantic_masks=style_compressed/shirobako_mask/shirobako_01_0025_mask.jpg
 --width=256
 --height=256
---semantic_mask_weight=0.1
+--semantic_masks_weight=0.1
 --print-iterations=100
 """
+
+"""
+--content=style_compressed/semantic_masks/Freddie.jpg
+--styles=style_compressed/shirobako_mask/shirobako_01_0025.png
+--output=output/shirobako.jpg
+--learning-rate=10
+--iterations=1000
+--style-weight=20
+--content-weight=5
+--checkpoint-output="output_checkpoint/checkpoint_shirobako_%s.jpg"
+--checkpoint-iterations=50
+--output_semantic_mask=style_compressed/semantic_masks/Freddie_sem_mod.png
+--style_semantic_masks=style_compressed/shirobako_mask/shirobako_01_0025_mask.jpg
+--width=256
+--use_mrf
+--use_semantic_masks
+--semantic_masks_weight=100.0
+--print-iterations=10"""
