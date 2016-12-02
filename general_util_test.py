@@ -30,21 +30,21 @@ class TestDataUtilMethods(unittest.TestCase):
 
         height = 256
         width = 256
-        batch_size = 4
-        content_folder = '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/'
+        batch_size = 8
+        content_folder = '/home/jerryli27/shirobako01pic/'# '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/'
 
         # Get path to all content images.
         content_dirs = get_all_image_paths_in_dir(content_folder)
         # Ignore the ones at the end to avoid
         content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
 
-        for i in range(20500, 21000):
+        for i in range(10, 100):
             if i % 10 == 0:
                 print(i)
             content_pre_list = read_and_resize_batch_images(
                 get_batch(content_dirs,i * batch_size,batch_size),
                 height, width)
-            self.assertEqual(content_pre_list.shape,(4,256,256,3))
+            self.assertEqual(content_pre_list.shape,(batch_size,height,width,3))
 
 if __name__ == '__main__':
     unittest.main()

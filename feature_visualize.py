@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 import time
 
 from general_util import *
-import loss_visualize_util
+import feature_visualize_util
 
 import numpy as np
 import scipy.misc
@@ -66,48 +66,77 @@ def main():
     target_shape = (options.height, options.width)
     content_image = imread(options.content_img, shape=target_shape)
     style_image = imread(options.style_img, shape=target_shape)
+    # layers = (
+    #     'conv1_1', 'relu1_1', 'conv1_2', 'relu1_2', 'pool1',
+    #
+    #     'conv2_1', 'relu2_1', 'conv2_2', 'relu2_2', 'pool2',
+    #
+    #     'conv3_1', 'relu3_1', 'conv3_2', 'relu3_2', 'conv3_3',
+    #     'relu3_3', 'conv3_4', 'relu3_4', 'pool3',
+    #
+    #     'conv4_1', 'relu4_1', 'conv4_2', 'relu4_2', 'conv4_3',
+    #     'relu4_3', 'conv4_4', 'relu4_4', 'pool4',
+    #
+    #     'conv5_1', 'relu5_1', 'conv5_2', 'relu5_2', 'conv5_3',
+    #     'relu5_3', 'conv5_4', 'relu5_4'
+    # )
     layers = (
-        'conv1_1', 'relu1_1', 'conv1_2', 'relu1_2', 'pool1',
-
-        'conv2_1', 'relu2_1', 'conv2_2', 'relu2_2', 'pool2',
-
-        'conv3_1', 'relu3_1', 'conv3_2', 'relu3_2', 'conv3_3',
-        'relu3_3', 'conv3_4', 'relu3_4', 'pool3',
-
-        'conv4_1', 'relu4_1', 'conv4_2', 'relu4_2', 'conv4_3',
-        'relu4_3', 'conv4_4', 'relu4_4', 'pool4',
-
         'conv5_1', 'relu5_1', 'conv5_2', 'relu5_2', 'conv5_3',
         'relu5_3', 'conv5_4', 'relu5_4'
     )
 
 
     plt.ion()
-    fig, ax = plt.subplots()
+    fig, axes = plt.subplots(nrows=2,ncols=2)
     plt.subplots_adjust(left=0.25, bottom=0.25)
-    ax.set_title("Loss visualization")
-    fig.show()
+
+    axes[0,0].set_title("Content image")
+    axes[1,0].set_title("Content Activation")
+    axes[0,1].set_title("Style image")
+    axes[1,1].set_title("Style Activation")
+
+    for i in range(2):
+        for j in range(2):
+            axes[i, j].axis("off")
+
+    content_im = axes[0, 0].imshow(content_image.astype(np.uint8), vmin=0, vmax=255)  # Blank starting image
+    content_im.axes.figure.canvas.draw()
+    style_im = axes[0, 1].imshow(style_image.astype(np.uint8), vmin=0, vmax=255)  # Blank starting image
+    style_im.axes.figure.canvas.draw()
+    content_feature_im = axes[1, 0].imshow(np.zeros((options.height, options.width, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
+    content_feature_im.axes.figure.canvas.draw()
+    style_feature_im = axes[1, 1].imshow(np.zeros((options.height, options.width, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
+    style_feature_im.axes.figure.canvas.draw()
+    plt.show()
     plt.pause(0.001)
 
-    losses =  loss_visualize_util.style_synthesis_net(content_image, style_image,layers, loss_visualize_util.per_pixel_gram_loss, options.network)
+    content_features, style_features =  feature_visualize_util.style_synthesis_net(content_image, style_image,layers, options.network)
     
     
     for layer in layers:
-        #plt.ion()
         # We must do this clip step before we display the image. Otherwise the color will be off.
-        image = np.clip(losses[layer], 0, 255).astype(np.uint8)
+        content_feature_image = np.clip(content_features[layer], 0, 255).astype(np.uint8)
+        style_feature_image = np.clip(style_features[layer], 0, 255).astype(np.uint8)
         # Change the data in place instead of create a new window.
-        for feature_i in image.shape[3]:
-            ax.set_title(str('%s, %d'% (layer, feature_i)))
-            feature = image[0,:,:, feature_i]
-            feature = np.dstack((feature,feature,feature))
-            im = ax.imshow(feature,vmin=0,vmax=255)  # Blank starting image
-            im.axes.figure.canvas.draw()
+        for feature_i in range(content_feature_image.shape[3]):
+            axes[1, 0].set_title(str('Content Activation %s, %d'% (layer, feature_i)))
+            content_feature = content_feature_image[0,:,:, feature_i]
+            content_feature = np.dstack((content_feature,content_feature,content_feature))
+            content_feature_im.set_data(content_feature)  # Blank starting image
+            content_feature_im.axes.figure.canvas.draw()
+
+            axes[1, 1].set_title(str('Style Activation %s, %d'% (layer, feature_i)))
+            style_feature = style_feature_image[0,:,:, feature_i]
+            style_feature = np.dstack((style_feature,style_feature,style_feature))
+            style_feature_im.set_data(style_feature)  # Blank starting image
+            style_feature_im.axes.figure.canvas.draw()
+
             plt.show()
-            plt.pause(0.01)
-            plt.ioff()
-            raw_input('Showing layer %s, press enter to continue.' %layer)
-            plt.ion()
+            plt.pause(0.1)
+            # plt.ioff()
+            print('Showing layer %s, press enter to continue.' %layer)
+            plt.waitforbuttonpress()
+            # plt.ion()
 
 
 if __name__ == '__main__':

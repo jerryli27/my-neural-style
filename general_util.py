@@ -23,25 +23,43 @@ def imsave(path, img):
     scipy.misc.imsave(path, img)
 
 def read_and_resize_images(dirs, height, width):
-    image_1 = imread(dirs[0])
-    # If there is no width and height, we automatically take the first image's width and height and apply to all the
-    # other ones.
-    if width is not None:
-        if height is not None:
-            target_shape = (height, width)
+    if isinstance(dirs, list):
+        image_1 = imread(dirs[0])
+        # If there is no width and height, we automatically take the first image's width and height and apply to all the
+        # other ones.
+        if width is not None:
+            if height is not None:
+                target_shape = (height, width)
+            else:
+                target_shape = (int(math.floor(float(image_1.shape[0]) /
+                                               image_1.shape[1] * width)), width)
         else:
-            target_shape = (int(math.floor(float(image_1.shape[0]) /
-                                           image_1.shape[1] * width)), width)
-    else:
-        if height is not None:
-            target_shape = (height, int(math.floor(float(image_1.shape[1]) /
-                                                   image_1.shape[0] * height)))
-        else:
-            target_shape = (image_1.shape[0], image_1.shape[1])
-    images = [imread(d, shape=target_shape) for d in dirs]
+            if height is not None:
+                target_shape = (height, int(math.floor(float(image_1.shape[1]) /
+                                                       image_1.shape[0] * height)))
+            else:
+                target_shape = (image_1.shape[0], image_1.shape[1])
+        images = [imread(d, shape=target_shape) for d in dirs]
 
 
-    return images
+        return images
+    elif isinstance(dirs, str):
+        image_1 = imread(dirs)
+        # If there is no width and height, we automatically take the first image's width and height and apply to all the
+        # other ones.
+        if width is not None:
+            if height is not None:
+                target_shape = (height, width)
+            else:
+                target_shape = (int(math.floor(float(image_1.shape[0]) /
+                                               image_1.shape[1] * width)), width)
+        else:
+            if height is not None:
+                target_shape = (height, int(math.floor(float(image_1.shape[1]) /
+                                                       image_1.shape[0] * height)))
+            else:
+                target_shape = (image_1.shape[0], image_1.shape[1])
+        return imread(dirs, shape=target_shape)
 
 
 
@@ -56,6 +74,9 @@ def get_all_image_paths_in_dir(dir):
         base, ext = os.path.splitext(file_name)
         if ext == '.jpg' or ext == '.png':
             content_dirs.append(dir + file_name)
+    if (len(content_dirs) == 0):
+        print('There is no image in directory %s' % dir)
+        raise AssertionError
     return content_dirs
 
 def get_global_step_from_save_dir(save_dir):
@@ -89,10 +110,28 @@ def get_batch(dir_list, start_index, batch_size):
     """
 
     l = len(dir_list)
-    assert batch_size < l
+    assert batch_size <= l
     start_index = start_index % l
     if start_index + batch_size < l:
         return dir_list[start_index:start_index+batch_size]
     else:
         end_index = (start_index + batch_size) % l
         return dir_list[start_index:] + dir_list[:end_index]
+
+def get_batch_indices(dir_list, start_index, batch_size):
+    """
+
+    :param dir_list: a list of directories
+    :param start_index:
+    :param batch_size:
+    :return: An array with length = batch.
+    """
+
+    l = len(dir_list)
+    assert batch_size < l
+    start_index = start_index % l
+    if start_index + batch_size < l:
+        return range(start_index,start_index + batch_size)
+    else:
+        end_index = (start_index + batch_size) % l
+        return range(start_index,l) + range(0,end_index)

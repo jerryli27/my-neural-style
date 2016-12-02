@@ -55,7 +55,11 @@ def build_parser():
             metavar='ITERATIONS', default=ITERATIONS)
     parser.add_argument('--width', type=int,
             dest='width', help='output width',
-            metavar='WIDTH')
+            metavar='WIDTH', default=256)
+    parser.add_argument('--height', type=int, dest='height',
+                        help='Input and output height. All content images and style images should be automatically '
+                             'scaled accordingly.',
+                        metavar='HEIGHT', default=256)
     parser.add_argument('--style-scales', type=float,
             dest='style_scales',
             nargs='+', help='one or more style scales',
@@ -101,14 +105,18 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_image = imread(options.content)
-    style_images = [imread(style) for style in options.styles]
+    # content_image = imread(options.content)
+    # style_images = [imread(style) for style in options.styles]
+    #
+    # width = options.width
+    # if width is not None:
+    #     new_shape = (int(math.floor(float(content_image.shape[0]) /
+    #             content_image.shape[1] * width)), width)
+    #     content_image = scipy.misc.imresize(content_image, new_shape)
 
-    width = options.width
-    if width is not None:
-        new_shape = (int(math.floor(float(content_image.shape[0]) /
-                content_image.shape[1] * width)), width)
-        content_image = scipy.misc.imresize(content_image, new_shape)
+    content_image =read_and_resize_images(options.content, options.height, options.width)
+    style_images = read_and_resize_images(options.styles, options.height, options.width)
+
     target_shape = content_image.shape
     for i in range(len(style_images)):
         style_scale = STYLE_SCALE
@@ -134,19 +142,21 @@ def main():
     style_semantic_masks = None
     if options.use_semantic_masks:
         assert (len(options.style_semantic_masks) == len(options.styles))
-        output_semantic_mask = imread(options.output_semantic_mask)
-        width = options.width
-        if width is not None:
-            new_shape = (int(math.floor(float(output_semantic_mask.shape[0]) /
-                                        output_semantic_mask.shape[1] * width)), width)
-            output_semantic_mask = scipy.misc.imresize(output_semantic_mask, new_shape)
-        style_semantic_masks = [imread(style) for style in options.style_semantic_masks]
-        for i in range(len(style_semantic_masks)):
-            style_scale = STYLE_SCALE
-            if options.style_scales is not None:
-                style_scale = options.style_scales[i]
-            style_semantic_masks[i] = scipy.misc.imresize(style_semantic_masks[i], style_scale *
-                    target_shape[1] / style_semantic_masks[i].shape[1])
+        # output_semantic_mask = imread(options.output_semantic_mask)
+        # width = options.width
+        # if width is not None:
+        #     new_shape = (int(math.floor(float(output_semantic_mask.shape[0]) /
+        #                                 output_semantic_mask.shape[1] * width)), width)
+        #     output_semantic_mask = scipy.misc.imresize(output_semantic_mask, new_shape)
+        # style_semantic_masks = [imread(style) for style in options.style_semantic_masks]
+        # for i in range(len(style_semantic_masks)):
+        #     style_scale = STYLE_SCALE
+        #     if options.style_scales is not None:
+        #         style_scale = options.style_scales[i]
+        #     style_semantic_masks[i] = scipy.misc.imresize(style_semantic_masks[i], style_scale *
+        #             target_shape[1] / style_semantic_masks[i].shape[1])
+        output_semantic_mask = read_and_resize_images(options.output_semantic_mask, options.height, options.width)
+        style_semantic_masks = read_and_resize_images(options.style_semantic_masks, options.height, options.width)
 
 
 
@@ -181,7 +191,62 @@ def main():
         if output_file:
             imsave(output_file, image)
 
+# TODO: add loss for deviation from original mask layer
 
 
 if __name__ == '__main__':
     main()
+
+"""
+--content=style_compressed/semantic_masks/Freddie.jpg
+--styles=style_compressed/semantic_masks/Mia.jpg
+--output=output/test.jpg
+--learning-rate=10
+--iterations=1000
+--style-weight=50
+--content-weight=5
+--checkpoint-output="output_checkpoint/checkpoint_test_%s.jpg"
+--checkpoint-iterations=50
+--output_semantic_mask=style_compressed/semantic_masks/Freddie_sem.png
+--style_semantic_masks=style_compressed/semantic_masks/Mia_sem.png
+--width=256
+--use_mrf
+--use_semantic_masks
+--semantic_mask_weight=0.00000001"""
+
+"""
+--content=style_compressed/semantic_masks/Freddie.jpg
+--styles=style_compressed/shirobako_mask/shirobako_01_0025.png
+--output=output/shirobako.jpg
+--learning-rate=10
+--iterations=1000
+--style-weight=200
+--content-weight=5
+--checkpoint-output="output_checkpoint/checkpoint_shirobako_%s.jpg"
+--checkpoint-iterations=50
+--output_semantic_mask=style_compressed/semantic_masks/Freddie_sem_mod.png
+--style_semantic_masks=style_compressed/shirobako_mask/shirobako_01_0025_mask.jpg
+--width=256
+--use_mrf
+--use_semantic_masks
+--semantic_mask_weight=0.1
+--print-iterations=10"""
+
+"""
+
+--content=style_compressed/semantic_masks/Freddie.jpg
+--styles=style_compressed/shirobako_mask/shirobako_01_0025.png
+--output=output/shirobako.jpg
+--learning-rate=10
+--iterations=1000
+--style-weight=500
+--content-weight=5
+--checkpoint-output="output_checkpoint/checkpoint_shirobako_%s.jpg"
+--checkpoint-iterations=50
+--output_semantic_mask=style_compressed/semantic_masks/Freddie_sem_mod.png
+--style_semantic_masks=style_compressed/shirobako_mask/shirobako_01_0025_mask.jpg
+--width=256
+--height=256
+--semantic_mask_weight=0.1
+--print-iterations=100
+"""

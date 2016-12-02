@@ -376,7 +376,9 @@ def gramian(layer):
     return tf.pack(grams)
 
 
-def get_scale_offset_var():
+def get_pyramid_scale_offset_var():
+    # TODO: I forgot to get offsets.
+    raise NotImplementedError
     scale_offset_variables = []
     for d in range(8, 48, 8):
         for layer in range(1, 4):
@@ -420,7 +422,7 @@ def total_variation(image_batch):
     vertical_diff_shape = vertical_diff.get_shape().as_list()
     num_pixels_in_vertical_diff = vertical_diff_shape[0] * vertical_diff_shape[1] * vertical_diff_shape[2] * \
                                   vertical_diff_shape[3]
-    horizontal_diff_shape = vertical_diff.get_shape().as_list()
+    horizontal_diff_shape = horizontal_diff.get_shape().as_list()
     num_pixels_in_horizontal_diff = horizontal_diff_shape[0] * horizontal_diff_shape[1] * horizontal_diff_shape[2] * \
                                     horizontal_diff_shape[3]
 

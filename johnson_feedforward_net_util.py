@@ -83,3 +83,24 @@ def _conv_init_vars(net, out_channels, filter_size, transpose=False,name = '', r
         weights_initializer = tf.truncated_normal(weights_shape, stddev=WEIGHTS_INIT_STDEV, seed=1)
         weights_init = tf.get_variable('weights_init', dtype=tf.float32, initializer=weights_initializer)
         return weights_init
+    
+def get_johnson_scale_offset_var():
+    scale_offset_variables = []
+    for d in range(8, 48, 8):
+        for layer in range(1, 4):
+            scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
+                                                        scope='texture_nets/block_low_%d/layer%d/conditional_instance_norm/scale' % (
+                                                        d, layer))
+            scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
+                                                        scope='texture_nets/block_high_%d/layer%d/conditional_instance_norm/scale' % (
+                                                        d, layer))
+
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
+                                                scope='texture_nets/output_chain/layer1/conditional_instance_norm/scale')
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
+                                                scope='texture_nets/output_chain/layer2/conditional_instance_norm/scale')
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
+                                                scope='texture_nets/output_chain/layer3/conditional_instance_norm/scale')
+    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
+                                                scope='texture_nets/output/conditional_instance_norm/scale')
+    return scale_offset_variables
