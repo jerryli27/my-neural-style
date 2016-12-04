@@ -289,4 +289,21 @@ I don't know if I should keep the batch style... Maybe I should.
 Tested overnight on claude monet's paintings. Now I'm sure I can't just merge styles like that. It doesn't work.
 
 Other future directions: feed forward neural doodle.
+
+
+As I think of it, maybe we don't need the content image at all? There are many things that are hard to find in real life
+but exist in drawings. I know that a feed forward network with masks can be trained as long as I have enough training
+data. The only problem is where to get that semantically labeled training data. I can get that from 3d model... I think
+I can look into that direction. No content image. Content loss comes directly from thousands of style images. Details
+of how content loss can come from those may be filled in later but I think this is the right direction. We don't have
+to worry about distorting content image into the style image, which is a big challenge.
+
+Before that, let me modify the current code so that it can accept only semantic style images and semantic masks and
+learn them using feed-forward nn. the loss... we can use content loss or style loss. try both I guess. I need to
+copy the previous code into a new file because the change will make the code incompatible with the previous version.
+(since there no longer need to be a content image). Actually, I can use the same file... Since I may use that framework
+to learn auto generating textures.
+
+Basically I will implement feed forward neural doodle, but better than what they've done. I need not only rgb mask, but
+any number of masks for each style image.
 """

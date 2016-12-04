@@ -16,7 +16,8 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
+#STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
+STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 def stylize(network, initial, content, styles, iterations,
@@ -138,17 +139,18 @@ def stylize(network, initial, content, styles, iterations,
                 else:
 
                     # ***** TEST GRAM*****
-                    # _, height, width, number = map(lambda i: i.value, features.get_shape())
-                    # size = height * width * number
-                    # features = tf.reshape(features, (-1, number))
-                    # gram = tf.matmul(tf.transpose(features), features) / size
-                    gram = neural_util.gram_stacks(features)
+                    _, height, width, number = map(lambda i: i.value, features.get_shape())
+                    size = height * width * number
+                    features = tf.reshape(features, (-1, number))
+                    gram = tf.matmul(tf.transpose(features), features) / size
+                    # gram = neural_util.gram_stacks(features)
                     style_features[i][layer] = gram
                     # ***** END TEST GRAM*****
 
         if use_semantic_masks:
-            content_semantic_mask = tf.placeholder('float', shape=shape, name='content_mask')
             output_semantic_mask_pre = np.array([vgg.preprocess(output_semantic_mask, mean_pixel)])
+
+            content_semantic_mask = tf.placeholder('float', shape=shape, name='content_mask')
             if mask_resize_as_feature:
 
                 for layer in STYLE_LAYERS:
@@ -195,14 +197,14 @@ def stylize(network, initial, content, styles, iterations,
                                                                                                     layer])
                     else:
                         # ***** TEST GRAM*****
-                        features = neural_doodle_util.concatenate_mask_layer_tf(features, style_features[i][layer])
-                        #
-                        # _, height, width, number = map(lambda i: i.value, features.get_shape())
-                        # size = height * width * number
-                        #
-                        # features = tf.reshape(features, (-1, number))
-                        # gram = tf.matmul(tf.transpose(features), features) / size
-                        gram = neural_util.gram_stacks(features)
+                        features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
+
+                        _, height, width, number = map(lambda i: i.value, features.get_shape())
+                        size = height * width * number
+
+                        features = tf.reshape(features, (-1, number))
+                        gram = tf.matmul(tf.transpose(features), features) / size
+                        # gram = neural_util.gram_stacks(features)
                         style_semantic_masks_features[i][layer] = gram
                         # ***** END TEST GRAM*****
 
@@ -229,25 +231,30 @@ def stylize(network, initial, content, styles, iterations,
             for style_layer in STYLE_LAYERS:
                 layer = net[style_layer]
 
-                if use_semantic_masks:
-                    layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
                 if use_mrf:
+                    if use_semantic_masks:
+                        layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
                     style_losses.append(mrf_loss(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
                 else:
 
+                    if use_semantic_masks:
+                        layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
                     # ***** TEST GRAM*****
-                    # _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                    # size = height * width * number
-                    # feats = tf.reshape(layer, (-1, number))
-                    # gram = tf.matmul(tf.transpose(feats), feats) / size
+                    _, height, width, number = map(lambda i: i.value, layer.get_shape())
+                    size = height * width * number
+                    feats = tf.reshape(layer, (-1, number))
+                    gram = tf.matmul(tf.transpose(feats), feats) / size
+                    # TODO: using gram stacks will make the local details look closer to the style image at the cost of
+                    # using more memory.
+                    # gram = neural_util.gram_stacks(layer)
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
-                    gram = neural_util.gram_stacks(layer)
+
                     # ***** END TEST GRAM*****
 
 
-                    _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                    style_gram_size = height * width * number
-                    style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram_size)
+                    height, width = map(lambda i: i.value, style_gram.get_shape())
+                    style_gram_size = height * width
+                    style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising
         tv_y_size = _tensor_size(image[:,1:,:,:])

@@ -51,3 +51,11 @@ def concatenate_mask(mask, original, layers):
         ret[layer] = concatenate_mask_layer_tf(mask[layer], original[layer])
     return ret
 
+def vgg_layer_dot_mask(masks, vgg_layer):
+    masks_dim_expanded = tf.expand_dims(masks, 4)
+    vgg_layer_dim_expanded = tf.expand_dims(vgg_layer, 3)
+    dot = tf.mul(masks_dim_expanded, vgg_layer_dim_expanded)
+
+    batch_size, height, width, num_mask, num_features = map(lambda i: i.value, dot.get_shape())
+    dot = tf.reshape(dot, [batch_size, height, width, num_mask * num_features])
+    return dot

@@ -11,6 +11,7 @@ import vgg
 from feedforward_style_net_util import *
 from mrf_util import mrf_loss
 import johnson_feedforward_net_util
+import neural_doodle_util
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 # STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
@@ -31,6 +32,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         use_johnson=False, print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder = None,
+                        use_semantic_masks=False, mask_resize_as_feature=True, style_semantic_masks=None,
+                        semantic_masks_weight=1.0, semantic_masks_num_layers = 1,
                         from_screenshot=False, from_webcam=False, test_img_dir = None, ablation_layer=None):
     """
     Stylize images.
@@ -44,6 +47,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     :param: min_lr: The minimum learning rate. Default per https://arxiv.org/abs/1603.03417
     :param: lr_decay_rate: learning rate decays by lr_decay_rate after lr_decay steps.
     Default per https://arxiv.org/abs/1603.03417
+    :param: use_semantic_masks: If it is true, the input to the generator network will be the semantic masks instead
+    of the content image. The content image will serve as ground truth for loss (I haven't decided whether to use content
+    or style loss).
     :rtype: iterator[tuple[int|None,image]]
     """
     global STYLE_LAYERS
@@ -55,8 +61,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
     style_shapes = [(1,) + style.shape for style in styles]
-    # content_features = [{} for _ in range(len(contents))]
+
+    content_features = {}
     style_features = [{} for _ in styles]
+    output_semantic_mask_features = {}
+    style_semantic_masks_features = [{} for _ in styles]
 
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
@@ -64,19 +73,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     print('Finished loading VGG.')
 
     if not do_restore_and_generate:
-        # # Compute content features in feedforward mode.
-        # content_pre_list = []
-        # for i in range(len(contents)):
-        #     g = tf.Graph()
-        #     with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
-        #         image = tf.placeholder('float', shape=input_shape)
-        #         # This mean pixel variable is unique to the input trained vgg network. It is independent of the input image.
-        #         net = vgg.pre_read_net(vgg_data, image)
-        #         content_pre_list.append(np.array([vgg.preprocess(contents[i], mean_pixel)]))
-        #         content_features[i][CONTENT_LAYER] = net[CONTENT_LAYER].eval(
-        #             feed_dict={image: content_pre_list[-1]})
-        # print('Finished loading passing content image to it.')
-
         # Compute style features in feedforward mode.
         style_pre_list = []
         for i in range(len(styles)):
@@ -99,7 +95,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     # Make stylized image using backpropogation.
     with tf.Graph().as_default():
         if use_johnson:
-            inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
+            if use_semantic_masks:
+                # TODO: test if this works. Also don't forget to feed in semantic masks during training.
+                inputs = tf.placeholder(tf.float32, shape=[semantic_masks_num_layers, input_shape[1], input_shape[2], 3])
+            else:
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
             image = johnson_feedforward_net_util.net(inputs / 255.0)
             image = vgg.preprocess(image, mean_pixel)
         else:
@@ -116,13 +116,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             # TODO: Do I need to preprocess the generated image here? When I use the johnson model it seems I have to do so.
             # image = vgg.preprocess(image, mean_pixel)
         net = vgg.pre_read_net(vgg_data, image)
+        net_layer_sizes = vgg.get_net_layer_sizes(net)
         if not do_restore_and_generate:
             global_step_init = tf.constant(0)
             global_step = tf.get_variable(name='global_step', trainable=False, initializer=global_step_init)
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
-            # content loss
+            # compute content features in feedforward mode
 
 
 
@@ -136,19 +137,42 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
 
 
-
             content_images = tf.placeholder(tf.float32, [batch_size, input_shape[1], input_shape[2], 3],
                                             name='content_images_placeholder')
             content_pre = vgg.preprocess(content_images, mean_pixel)
             content_net = vgg.pre_read_net(vgg_data, content_pre)
-            content_features = content_net[CONTENT_LAYER]
-            content_features_shape = content_features.get_shape().as_list()
-            content_features_size = content_features_shape[0] * content_features_shape[1] * content_features_shape[2] * content_features_shape[3]
+            content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
+
+            if use_semantic_masks:
+                content_semantic_mask = tf.placeholder('float', shape=[semantic_masks_num_layers, input_shape[1], input_shape[2], 3], name='content_mask')
+                if mask_resize_as_feature:
+                    for layer in STYLE_LAYERS:
+                        output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
+                        net_layer_sizes[layer][1], net_layer_sizes[layer][2])) \
+                                                       * semantic_masks_weight
+                        output_semantic_mask_features[layer] = tf.get_variable('feature_masks_' + layer,
+                                                                               initializer=output_semantic_mask_feature,
+                                                                               trainable=False)
+                else:
+                    net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask)
+                    for layer in STYLE_LAYERS:
+                        output_semantic_mask_feature = net[layer] * semantic_masks_weight
+                        output_semantic_mask_features[layer] = tf.get_variable('feature_masks_' + layer,
+                                                                               initializer=output_semantic_mask_feature,
+                                                                               trainable=False)
+
+
+
+            # content loss
+            _, height, width, number = map(lambda i: i.value, content_features[CONTENT_LAYER].get_shape())
+            content_features_size = batch_size * height * width * number
             content_loss = content_weight * (2 * tf.nn.l2_loss(
-                net[CONTENT_LAYER] - content_features) / content_features_size)
+                net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) /
+                                             content_features_size)
 
 
             # style loss
+            # TODO: add output_semantic_mask_features to the loss (if we decide to do style loss at all).
             style_loss_for_each_style = []
             for i in range(len(styles)):
                 style_losses_for_each_style_layer = []
