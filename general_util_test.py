@@ -1,7 +1,6 @@
-import os
+import shutil
 import tempfile
 import unittest
-import shutil
 
 from general_util import *
 
@@ -22,29 +21,50 @@ class TestDataUtilMethods(unittest.TestCase):
         expected_answer = [image_path]
         shutil.rmtree(dirpath)
         self.assertEqual(expected_answer,actual_answer)
+    #
+    # def test_read_and_resize_batch_images(self):
+    #     dirs = ['/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/COCO_train2014_000000000009.jpg']
+    #     # dirs = ['source_compressed/512/1.jpg']
+    #
+    #
+    #     height = 256
+    #     width = 256
+    #     batch_size = 8
+    #     content_folder = '/home/jerryli27/shirobako01pic/'# '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/'
+    #
+    #     # Get path to all content images.
+    #     content_dirs = get_all_image_paths_in_dir(content_folder)
+    #     # Ignore the ones at the end to avoid
+    #     content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+    #
+    #     for i in range(10, 100):
+    #         if i % 10 == 0:
+    #             print(i)
+    #         content_pre_list = read_and_resize_batch_images(
+    #             get_batch(content_dirs,i * batch_size,batch_size),
+    #             height, width)
+    #         self.assertEqual(content_pre_list.shape,(batch_size,height,width,3))
 
-    def test_read_and_resize_batch_images(self):
-        dirs = ['/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/COCO_train2014_000000000009.jpg']
-        # dirs = ['source_compressed/512/1.jpg']
-
-
+    def test_read_and_resize_bw_mask_images(self):
         height = 256
         width = 256
-        batch_size = 8
-        content_folder = '/home/jerryli27/shirobako01pic/'# '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/'
+        batch_size = 2
+        semantic_masks_num_layers = 3
+        num_images_per_batch = batch_size * semantic_masks_num_layers
+        content_folder = 'source_compressed/todo/'
 
         # Get path to all content images.
         content_dirs = get_all_image_paths_in_dir(content_folder)
         # Ignore the ones at the end to avoid
-        content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+        content_dirs = content_dirs[:-(len(content_dirs) % num_images_per_batch)]
 
-        for i in range(10, 100):
+        for i in range(0, 1):
             if i % 10 == 0:
                 print(i)
-            content_pre_list = read_and_resize_batch_images(
-                get_batch(content_dirs,i * batch_size,batch_size),
-                height, width)
-            self.assertEqual(content_pre_list.shape,(batch_size,height,width,3))
+            content_pre_list = read_and_resize_bw_mask_images(
+                get_batch(content_dirs, i * num_images_per_batch, num_images_per_batch),
+                height, width, batch_size, semantic_masks_num_layers)
+            self.assertEqual(content_pre_list.shape, (batch_size, height, width, semantic_masks_num_layers))
 
 if __name__ == '__main__':
     unittest.main()

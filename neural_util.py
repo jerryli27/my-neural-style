@@ -1,5 +1,7 @@
-import tensorflow as tf
 import math
+from operator import mul
+
+import tensorflow as tf
 
 
 def conv2d(input_layer, w, b, stride=1):
@@ -93,3 +95,7 @@ def gram_stacks(features):
         gram.append(shifted_gram)
     gram_stack = tf.pack(gram)  / math.sqrt(len(gram))
     return gram_stack
+
+def get_tensor_num_elements(tensor):
+    tensor_shape = map(lambda i: i.value, tensor.get_shape())
+    return reduce(mul, tensor_shape, 1)

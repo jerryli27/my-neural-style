@@ -1,14 +1,12 @@
 # The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
-import vgg
-from mrf_util import mrf_loss, mrf_loss_experiment
-import neural_doodle_util
-import neural_util
-
-import tensorflow as tf
-import numpy as np
-
 from sys import stderr
 
+import numpy as np
+import tensorflow as tf
+
+import neural_doodle_util
+import vgg
+from mrf_util import mrf_loss
 
 try:
     reduce
@@ -49,7 +47,7 @@ def stylize(network, initial, content, styles, iterations,
     content_features = {}
     style_features = [{} for _ in styles]
     output_semantic_mask_features = {}
-    style_semantic_masks_features = [{} for _ in styles]
+    style_semantic_masks_features = [{} for _ in styles] # TODO: get rid of this variable. We don't really need it.
     #
     #
     # # compute content features in feedforward mode

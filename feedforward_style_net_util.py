@@ -1,10 +1,11 @@
-import tensorflow as tf
-import scipy.misc
 from sys import stderr
+
+import scipy.misc
+import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
-from general_util import *
 import neural_util
+from general_util import *
 
 
 def generator_net_n_styles(input_noise_z, input_style_placeholder, reuse=False):
@@ -218,7 +219,7 @@ def get_all_layers_conv_relu_layers(name, input_layer, input_style_placeholder, 
                 'variance': variance, 'inv': inv}
 
 
-def input_pyramid(name, height, width, batch_size, k=5, with_content_image=False):
+def input_pyramid(name, height, width, batch_size, k=5, with_content_image=False, content_image_num_features=3):
     """
     Generates k inputs at different scales, with height x width being the largest.
     If with_content_image is true, add 3 to the last rgb dim because we are appending the resized content image to the
@@ -228,7 +229,7 @@ def input_pyramid(name, height, width, batch_size, k=5, with_content_image=False
         print ('Warning: Input width or height cannot be divided by 2^(k-1). Width: %d. Height: %d This might cause problems when generating images.' %(width, height))
     with tf.get_default_graph().name_scope(name):
         return_val = [tf.placeholder(tf.float32, [batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)),
-                                                  6 if with_content_image else 3], name=str(x)) for x in range(k)]
+                                                  content_image_num_features+3 if with_content_image else 3], name=str(x)) for x in range(k)]
         return_val.reverse()
     return return_val
 

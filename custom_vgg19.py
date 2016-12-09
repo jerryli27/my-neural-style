@@ -1,8 +1,9 @@
-import os, sys, inspect
-import tensorflow as tf
+import inspect
+import os
 
 import numpy as np
-import time
+import tensorflow as tf
+
 import vgg19
 
 VGG_MEAN = [103.939, 116.779, 123.68]

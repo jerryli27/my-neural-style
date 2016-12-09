@@ -7,18 +7,13 @@ This file uses the texture nets technique to generate an image by combining styl
 another input. The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 """
 
-import os
-from matplotlib import pyplot as plt
-import time
-
-from general_util import *
-import loss_visualize_util
+from argparse import ArgumentParser
 
 import numpy as np
-import scipy.misc
+from matplotlib import pyplot as plt
 
-import math
-from argparse import ArgumentParser
+import loss_visualize_util
+from general_util import *
 
 # TODO: Needs reformatting.
 

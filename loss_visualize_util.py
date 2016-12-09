@@ -2,13 +2,8 @@
 This file implements functions to visualize some potential loss functions.
 """
 
-import gtk.gdk
-import cv2
-
 import vgg
 from feedforward_style_net_util import *
-from mrf_util import mrf_loss
-import johnson_feedforward_net_util
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 # STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')

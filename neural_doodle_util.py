@@ -4,8 +4,8 @@
 
 import tensorflow as tf
 
-from general_util import *
 import vgg
+from general_util import *
 
 def generate_mask_layers(mask, layers, vgg_data, mean_pixel):
     """

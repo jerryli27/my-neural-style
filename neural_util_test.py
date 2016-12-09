@@ -1,7 +1,7 @@
-from neural_util import *
-
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
+from neural_util import *
 
 
 class SquareTest(tf.test.TestCase):

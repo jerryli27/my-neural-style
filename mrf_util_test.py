@@ -1,7 +1,7 @@
-from mrf_util import *
-
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
+from mrf_util import *
 
 
 class MrfUtilTest(tf.test.TestCase):

@@ -1,20 +1,21 @@
-import scipy.misc
-import numpy as np
 import math
-import os, sys
+import os
+
+import numpy as np
+import scipy.misc
 from PIL import Image
 
 
-def imread(path, shape = None):
+def imread(path, shape = None, bw = False):
     """
     :param path: path to the image
     :param shape: (Height, width)
     :return: np array with shape (height, width, 3)
     """
     if shape is None:
-        return np.asarray(Image.open(path).convert('RGB'), np.float32)
+        return np.asarray(Image.open(path).convert('L' if bw else 'RGB'), np.float32)
     else:
-        return np.asarray(Image.open(path).convert('RGB').resize((shape[1], shape[0])), np.float32)
+        return np.asarray(Image.open(path).convert('L' if bw else 'RGB').resize((shape[1], shape[0])), np.float32)
     # return scipy.misc.imread(path).astype(np.float)
 
 
@@ -66,6 +67,15 @@ def read_and_resize_images(dirs, height, width):
 def read_and_resize_batch_images(dirs, height, width):
     images = [imread(dir, shape=(height, width)) for dir in dirs]
     return np.array(images)
+
+
+def read_and_resize_bw_mask_images(dirs, height, width, batch_size, semantic_masks_num_layers):
+    # Assume now that there is no order difference.
+    images = [imread(dir, shape=(height, width), bw=True) for dir in dirs]
+    np_images = np.array(images)
+    np_images = np.reshape(np_images, (batch_size, semantic_masks_num_layers, height, width))
+    np_images = np.transpose(np_images, (0, 2, 3, 1))
+    return np_images
 
 def get_all_image_paths_in_dir(dir):
     assert(dir.endswith('/'))

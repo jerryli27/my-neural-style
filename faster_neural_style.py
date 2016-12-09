@@ -27,6 +27,9 @@ ITERATIONS = 160000  # 40000 in https://arxiv.org/abs/1610.07629
 BATCH_SIZE = 4  # 16 in https://arxiv.org/abs/1610.07629
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 PRINT_ITERATIONS = 100
+MASK_FOLDER = 'random_masks/'
+SEMANTIC_MASKS_WEIGHT = 1.0
+SEMANTIC_MASKS_NUM_LAYERS = 1
 
 
 def build_parser():
@@ -85,6 +88,28 @@ def build_parser():
                         help='If true, TODO (default %(default)s).',
                         action='store_true')
     parser.set_defaults(multiple_styles_train_scale_offset_only=False)
+
+
+    parser.add_argument('--use_semantic_masks', dest='use_semantic_masks',
+                        help='If true, we use semantic masks to help training (default %(default)s).',
+                        action='store_true')
+    parser.set_defaults(use_semantic_masks=False)
+    parser.add_argument('--mask_folder', dest='mask_folder',
+                        help='Folder to a directory containing random mask images for training.',
+                        metavar='MASK_FOLDER', default=MASK_FOLDER)
+    parser.add_argument('--mask_resize_as_feature', dest='mask_resize_as_feature',
+                        help='If true, instead of feeding mask through the network, we resize it and treat that '
+                             'resized image as the feature for a given feature layer. (default %(default)s).',
+                        action='store_true')
+    parser.set_defaults(mask_resize_as_feature=True)
+    parser.add_argument('--style_semantic_mask_dirs',dest='style_semantic_mask_dirs', nargs='+',
+                        help='One or more style mask images.')
+    parser.add_argument('--semantic_masks_weight', type=float, dest='semantic_masks_weight',
+                        help='Semantic masks weight (default %(default)s).',
+                        metavar='SEMANTIC_MASKS_WEIGHT', default=SEMANTIC_MASKS_WEIGHT)
+    parser.add_argument('--semantic_masks_num_layers', type=int, dest='semantic_masks_num_layers',
+                        help='number of semantic masks (default %(default)s).',
+                        metavar='SEMANTIC_MASKS_NUM_LAYERS', default=SEMANTIC_MASKS_NUM_LAYERS)
     # TODO: delete content weight after we make sure we do not need tv weight.
     parser.add_argument('--content_weight', type=float, dest='content_weight',
                         help='Content weight (default %(default)s).',
@@ -148,6 +173,8 @@ def main():
         style_blend_weights = [weight / total_blend_weight * len(style_blend_weights)
                                for weight in style_blend_weights]
 
+    style_semantic_masks = read_and_resize_bw_mask_images(options.style_semantic_mask_dirs, options.height, options.width, len(options.styles), options.semantic_masks_num_layers) if options.use_semantic_masks else []
+
     if options.output and options.output.count("%s") != 1:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain only one `%s` (e.g. `foo_style_%s.jpg`).")
@@ -177,6 +204,12 @@ def main():
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
             content_folder=options.content_folder,
+            use_semantic_masks=True,
+            mask_folder=options.mask_folder,
+            mask_resize_as_feature=options.mask_resize_as_feature,
+            style_semantic_masks=style_semantic_masks,
+            semantic_masks_weight=options.semantic_masks_weight,
+            semantic_masks_num_layers=options.semantic_masks_num_layers,
             test_img_dir=options.test_img
     ):
         if options.do_restore_and_generate:
@@ -196,6 +229,24 @@ if __name__ == '__main__':
     # following are some lists of possible commands.
     """
     --content=source_compressed/512/sea_512.jpg --styles style_compressed/claude_monet/512/1.jpg --output=output/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-contentnum-%s-stylenum-%s.jpg --learning_rate=10 --iterations=1500 --style_weight=100 --content_weight=5 --checkpoint_output="output_checkpoint/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-contentnum-%s-stylenum-%s_%s.jpg" --checkpoint_iterations=300
+    """
+    """
+    --styles
+    style_compressed/claude_monet/512/1.jpg
+    --output=output/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-stylenum-%s.jpg
+    --width=256
+    --height=256
+    --learning_rate=10
+    --iterations=1500
+    --style_weight=10vcxxxxxccx0
+    --content_weight=5
+    --checkpoint_output="output_checkpoint/sea-512-nstyle-iter-1500-lr-10-style-100-content-5-stylenum-%s_%s.jpg"
+    --checkpoint_iterations=300
+    --use_johnson
+    --print_iterations=10
+    --test_img=source_compressed/chicago.jpg
+    --model_save_dir=model/tempmodel/
+    --style_folder=./style_compressed/claude_monet_2/
     """
 
 # TODO:
