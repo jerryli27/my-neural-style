@@ -51,6 +51,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     """
 
     # Before training, make sure everything is set correctly.
+
+    print('use_semantic_masks is true' if use_semantic_masks else 'is false')
     global STYLE_LAYERS
     if use_mrf:
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
@@ -478,9 +480,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         feed_dict = {content_images: content_pre_list}
                         if use_johnson:
                             if use_semantic_masks:
+                                print('use_semantic_masks is true' if use_semantic_masks else 'is false')
                                 feed_dict[inputs] = mask_pre_list
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
+                                    print('use_semantic_masks is true' if use_semantic_masks else 'is false')
                                     feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
                                         style_semantic_masks[styles_iter], axis=0)
                             else:
@@ -521,8 +525,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                                 if test_img_dir is not None:
                                     if use_semantic_masks:
-                                        mask_dirs = get_all_image_paths_in_dir(test_img_dir)
-                                        test_image = imread(mask_dirs[0])
+                                        test_mask_dirs = get_all_image_paths_in_dir(test_img_dir)
+                                        test_image = imread(test_mask_dirs[0])
                                         test_image_shape = test_image.shape
                                     else:
                                         test_image = imread(test_img_dir)

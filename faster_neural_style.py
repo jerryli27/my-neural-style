@@ -204,7 +204,7 @@ def main():
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
             content_folder=options.content_folder,
-            use_semantic_masks=True,
+            use_semantic_masks=options.use_semantic_masks,
             mask_folder=options.mask_folder,
             mask_resize_as_feature=options.mask_resize_as_feature,
             style_semantic_masks=style_semantic_masks,

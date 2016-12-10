@@ -120,7 +120,10 @@ def get_batch(dir_list, start_index, batch_size):
     """
 
     l = len(dir_list)
-    assert batch_size <= l
+    if not batch_size <= l:
+        print ('Given batch size must be smaller than the number of photos to load. Batch size : %d, num photos: %d'
+               %(batch_size, len(dir_list)))
+        raise AssertionError
     start_index = start_index % l
     if start_index + batch_size < l:
         return dir_list[start_index:start_index+batch_size]
