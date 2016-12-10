@@ -30,8 +30,6 @@ args = parser.parse_args()
 
 n_colors = args.n_colors
 
-assert n_colors==2 or n_colors==3
-
 # get shape
 dims = (int(args.height), int(args.width))
 
@@ -64,14 +62,11 @@ def generate():
 
 # Generate doodles
 
-
 gen_masks = Parallel(n_jobs=args.n_jobs)(delayed(generate)()
                                          for i in range(args.n_masks))
 
 # Save
 for i, mask in enumerate(gen_masks):
-    if n_colors==2:
-        mask_rgb = np.transpose(np.repeat(np.array([mask[0,:,:]]), 3, axis=0),(1,2,0))
-        scipy.misc.imsave('%strain_mask_%d.jpg' % (args.out_dir, i), mask_rgb)
-    else:
-        scipy.misc.imsave('%strain_mask_%d.jpg' % (args.out_dir,i), mask)
+    for j in range(n_colors):
+        mask_rgb = np.transpose(np.repeat(np.array([mask[j,:,:]]), 3, axis=0),(1,2,0))
+        scipy.misc.imsave('%strain_mask_%d_%d.jpg' % (args.out_dir, i, j), mask_rgb)

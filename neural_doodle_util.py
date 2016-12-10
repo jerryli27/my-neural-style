@@ -4,28 +4,7 @@
 
 import tensorflow as tf
 
-import vgg
 from general_util import *
-
-def generate_mask_layers(mask, layers, vgg_data, mean_pixel):
-    """
-
-    :param mask: The mask image represented in an np array.
-    :param layers:
-    :param vgg_data:
-    :param mean_pixel:
-    :return: A list of constant tensors, one for each layer.
-    """
-    ret = {}
-    g = tf.Graph()
-    with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
-        image = tf.placeholder('float', shape=mask.shape)
-        net = vgg.pre_read_net(vgg_data, image)
-        preprocessed_list = np.array([vgg.preprocess(mask, mean_pixel)])
-        for layer in layers:
-            features = net[layer].eval(feed_dict={image: preprocessed_list})
-            ret[layer] = features
-    return ret
 
 def concatenate_mask_layer_tf(mask_layer, original_layer):
     """

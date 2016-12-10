@@ -92,7 +92,6 @@ def join_block(name, lower_res_layer, higher_res_layer):
     """
     with tf.variable_scope(name):
         upsampled = tf.image.resize_nearest_neighbor(lower_res_layer, higher_res_layer.get_shape().as_list()[1:3])
-        # TODO: DO we need to normalize here?
         # No need to normalize here. According to https://arxiv.org/abs/1610.07629  normalize only after convolution.
         return tf.concat(3, [upsampled, higher_res_layer])
 
