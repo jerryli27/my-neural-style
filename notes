@@ -110,3 +110,10 @@ any number of masks for each style image.
 2016/12/09
 I implemented fast neural doodle. Testing it. It is running super slow for some reason... I don't get it. I should test
 running the normal version... (without masks and doodles.)
+
+2016/12/10
+Fixed some bugs, but the thing is still super slow, even if I don't turn on masks. Was it like that from the very
+beginning? I think so because it takes the whole night to train around 20000 rounds, so it's like one round per second.
+
+Also the loss for style is unnaturally high only after I apply masks. I found that was because I was doing dot product
+so each number is dotted with 255. lol.

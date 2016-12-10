@@ -5,7 +5,7 @@ from general_util import *
 styles = ['van_gogh/style.png'] # DUMMY
 style_folder = 'style_compressed/claude_monet_2/'
 style_name = 'van_gogh'
-test_img = 'test_masks/' # 'source_compressed/chicago.jpg'
+test_img = 'test_masks/' #'source_compressed/chicago.jpg'
 style_semantic_mask_dirs=['van_gogh/style_mask_segmented_0.jpg', 'van_gogh/style_mask_segmented_1.jpg', 'van_gogh/style_mask_segmented_2.jpg', 'van_gogh/style_mask_segmented_3.jpg']
 
 learning_rate=0.001
@@ -22,7 +22,7 @@ use_johnson = True
 texture_synthesis_only = False
 do_restore_and_train = False
 multi_style_offset_only = False
-use_semantic_masks = False
+use_semantic_masks = True
 semantic_masks_num_layers = 4
 
 style_or_texture_string = 'texture' if texture_synthesis_only else 'nstyle'

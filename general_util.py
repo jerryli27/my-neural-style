@@ -1,5 +1,6 @@
 import math
 import os
+from operator import mul
 
 import numpy as np
 import scipy.misc
@@ -148,3 +149,7 @@ def get_batch_indices(dir_list, start_index, batch_size):
     else:
         end_index = (start_index + batch_size) % l
         return range(start_index,l) + range(0,end_index)
+
+
+def get_np_array_num_elements(arr):
+    return reduce(mul, arr.shape, 1)

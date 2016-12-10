@@ -51,8 +51,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     """
 
     # Before training, make sure everything is set correctly.
-
-    print('use_semantic_masks is true' if use_semantic_masks else 'is false')
     global STYLE_LAYERS
     if use_mrf:
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
@@ -154,9 +152,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     # convolutions and average pooling along with pooling layers."
                     # But this is just a minor improvement that should not affect the final result too much.
                     for layer in STYLE_LAYERS:
+                        # Must be normalized (/ 255), otherwise the style loss just gets out of control.
                         output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
                             net_layer_sizes[layer][1], net_layer_sizes[layer][2])) \
-                                                       * semantic_masks_weight
+                                                       * semantic_masks_weight / 255.0
+
                         output_semantic_mask_features[layer] = output_semantic_mask_feature
                 else:
                     content_semantic_mask_pre = vgg.preprocess(style_semantic_masks[i], mean_pixel)
@@ -180,8 +180,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     for layer in STYLE_LAYERS:
                         if mask_resize_as_feature:
+                            # Must be normalized (/ 255), otherwise the style loss just gets out of control.
                             features = tf.image.resize_images(style_semantic_masks_images[-1],
-                                                              (net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
+                                                              (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
                         else:
                             features = semantic_mask_net[layer]
                         features = features * semantic_masks_weight
@@ -228,8 +229,12 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         # Use gramian loss.
                         gram = gramian(layer)
                         style_gram = style_features[i][style_layer]
+                        if use_semantic_masks:
+                            style_gram_num_elements = neural_util.get_tensor_num_elements(style_gram)
+                        else:
+                            style_gram_num_elements = get_np_array_num_elements(style_gram)
                         style_losses_for_each_style_layer.append(
-                            2 * tf.nn.l2_loss(gram - style_gram) / neural_util.get_tensor_num_elements(style_gram))
+                            2 * tf.nn.l2_loss(gram - style_gram) / style_gram_num_elements)
 
                 style_loss_for_each_style.append(
                     style_weight * style_blend_weights[i] * reduce(tf.add,
@@ -480,11 +485,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         feed_dict = {content_images: content_pre_list}
                         if use_johnson:
                             if use_semantic_masks:
-                                print('use_semantic_masks is true' if use_semantic_masks else 'is false')
                                 feed_dict[inputs] = mask_pre_list
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
-                                    print('use_semantic_masks is true' if use_semantic_masks else 'is false')
                                     feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
                                         style_semantic_masks[styles_iter], axis=0)
                             else:
