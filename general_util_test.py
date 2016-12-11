@@ -5,6 +5,9 @@ import unittest
 from general_util import *
 
 
+def rgb2gray(rgb):
+    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
 class TestDataUtilMethods(unittest.TestCase):
     def test_get_global_step_from_save_dir(self):
         save_dir = u'model/my256-nstyle-van_gogh_starry_sky-iter-batchsize-160000-4-lr-0.001000-use_mrf-False-style-5-content-5/model.ckpt-5000'
@@ -21,50 +24,64 @@ class TestDataUtilMethods(unittest.TestCase):
         expected_answer = [image_path]
         shutil.rmtree(dirpath)
         self.assertEqual(expected_answer,actual_answer)
-    #
-    # def test_read_and_resize_batch_images(self):
-    #     dirs = ['/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/COCO_train2014_000000000009.jpg']
-    #     # dirs = ['source_compressed/512/1.jpg']
-    #
+
+    def test_read_and_resize_batch_images(self):
+        height = 256
+        width = 256
+        batch_size = 8
+
+        random_images = []
+
+        content_folder = tempfile.mkdtemp()
+        for i in range(batch_size):
+            image_path = content_folder + ('/image_%d.jpg' %i)
+            current_image = np.random.rand(height, width, 3)
+            current_image = current_image / np.linalg.norm(current_image)
+            random_images.append(np.ndarray.astype(current_image, np.int32))
+            scipy.misc.imsave(image_path, random_images[-1])
+
+        # Get path to all content images.
+        content_dirs = get_all_image_paths_in_dir(content_folder + '/')
+
+        content_pre_list = read_and_resize_batch_images(
+            get_batch(content_dirs,0,batch_size),
+            height, width)
+
+        expected_answer = np.array(random_images)
+        np.testing.assert_almost_equal(expected_answer, content_pre_list)
+
+        shutil.rmtree(content_folder)
+
+    # def test_read_and_resize_bw_mask_images(self):
     #
     #     height = 256
     #     width = 256
     #     batch_size = 8
-    #     content_folder = '/home/jerryli27/shirobako01pic/'# '/home/jerryli27/PycharmProjects/johnson-fast-neural-style/fast-style-transfer/train2014/'
+    #     semantic_masks_num_layers = 3
+    #     num_images_per_batch = batch_size * semantic_masks_num_layers
+    #
+    #     random_images = []
+    #
+    #     content_folder = tempfile.mkdtemp()
+    #     for i in range(batch_size):
+    #         random_images.append([])
+    #         for j in range(semantic_masks_num_layers):
+    #             image_path = content_folder + ('/image_%d_%d.jpg' % (i,j))
+    #             random_images[-1].append(np.random.rand(height, width, 3))
+    #             scipy.misc.imsave(image_path, random_images[-1][-1])
     #
     #     # Get path to all content images.
-    #     content_dirs = get_all_image_paths_in_dir(content_folder)
-    #     # Ignore the ones at the end to avoid
-    #     content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+    #     content_dirs = get_all_image_paths_in_dir(content_folder + '/')
     #
-    #     for i in range(10, 100):
-    #         if i % 10 == 0:
-    #             print(i)
-    #         content_pre_list = read_and_resize_batch_images(
-    #             get_batch(content_dirs,i * batch_size,batch_size),
-    #             height, width)
-    #         self.assertEqual(content_pre_list.shape,(batch_size,height,width,3))
-
-    def test_read_and_resize_bw_mask_images(self):
-        height = 256
-        width = 256
-        batch_size = 2
-        semantic_masks_num_layers = 3
-        num_images_per_batch = batch_size * semantic_masks_num_layers
-        content_folder = 'source_compressed/todo/'
-
-        # Get path to all content images.
-        content_dirs = get_all_image_paths_in_dir(content_folder)
-        # Ignore the ones at the end to avoid
-        content_dirs = content_dirs[:-(len(content_dirs) % num_images_per_batch)]
-
-        for i in range(0, 1):
-            if i % 10 == 0:
-                print(i)
-            content_pre_list = read_and_resize_bw_mask_images(
-                get_batch(content_dirs, i * num_images_per_batch, num_images_per_batch),
-                height, width, batch_size, semantic_masks_num_layers)
-            self.assertEqual(content_pre_list.shape, (batch_size, height, width, semantic_masks_num_layers))
+    #     content_pre_list = read_and_resize_bw_mask_images(
+    #             get_batch(content_dirs, 0, num_images_per_batch),
+    #             height, width, batch_size, semantic_masks_num_layers)
+    #
+    #     temp = np.array(random_images)
+    #     expected_answer = np.ndarray.astype(np.transpose(rgb2gray(temp), (0, 2, 3, 1)) * 255.0, np.int32)
+    #     np.testing.assert_almost_equal(expected_answer, content_pre_list)
+    #
+    #     shutil.rmtree(content_folder)
 
 if __name__ == '__main__':
     unittest.main()

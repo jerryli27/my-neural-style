@@ -2,15 +2,14 @@
 # configuration and/or type the command each time.
 
 from general_util import *
-styles = ['van_gogh/style.png'] # DUMMY
-style_folder = 'style_compressed/claude_monet_2/'
+styles = ['van_gogh/style.png']
+style_folder = 'style_compressed/claude_monet_2/' # DUMMY
 style_name = 'van_gogh'
-test_img = 'test_masks/' #'source_compressed/chicago.jpg'
 style_semantic_mask_dirs=['van_gogh/style_mask_segmented_0.jpg', 'van_gogh/style_mask_segmented_1.jpg', 'van_gogh/style_mask_segmented_2.jpg', 'van_gogh/style_mask_segmented_3.jpg']
 
 learning_rate=0.001
 iterations=80000
-batch_size=8 # Optimally 16, but it ran out of memory.
+batch_size=1 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 style_weight=200
 content_weight=5
 checkpoint_iterations=100
@@ -18,12 +17,15 @@ width = 256
 height = 256
 print_iteration = 100
 use_mrf = False
-use_johnson = False
+use_johnson = True
 texture_synthesis_only = False
-do_restore_and_train = True
+do_restore_and_train = False
 multi_style_offset_only = False
 use_semantic_masks = True
 semantic_masks_num_layers = 4
+
+test_img = 'test_masks/' if use_semantic_masks else 'source_compressed/chicago.jpg'
+
 
 style_or_texture_string = 'texture' if texture_synthesis_only else 'nstyle'
 texture_synthesis_only_string = '--texture_synthesis_only' if texture_synthesis_only else ''

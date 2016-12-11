@@ -10,8 +10,8 @@ from general_util import *
 
 def generator_net_n_styles(input_noise_z, input_style_placeholder, reuse=False):
     """
-    This function takes a list of tensors as input, and outputs a tensor with a given width and height. The output
-    should be similar in style to the target image.
+    This function is a generator. It takes a list of tensors as input, and outputs a tensor with a given width and
+    height. The output should be similar in content to the content image and style to the style image.
     :param input_noise_z: A list of tensors seeded with noise.
     :param input_style_placeholder: A one-hot tensor indicating which style we chose.
     :param reuse: If true, instead of creating new variables, we reuse the variables previously trained.
@@ -256,8 +256,6 @@ def noise_pyramid(height, width, batch_size, k=5, ablation_layer=None):
             np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3) * 0.0
             for x in range(k)][::-1]
 
-
-# TODO: went till here. Continue from here.
 def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid, k=5, ablation_layer=None):
     """
     :param height: Height of the largest noise image.

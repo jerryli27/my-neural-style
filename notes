@@ -145,3 +145,5 @@ might not be the best choice for texture generation with masks. I'll try the pyr
 
 TODO: try pyramid network
 read blog and source code on feed forward network and see why mine did not work.
+The johnson feed forward network is definitely working. It just takes a while to train. It get's faster(to a tolerable
+level) when I decrease the batch size from 8 to 1. I'll try that on the masks.

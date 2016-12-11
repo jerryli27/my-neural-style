@@ -88,6 +88,7 @@ def get_all_image_paths_in_dir(dir):
     if (len(content_dirs) == 0):
         print('There is no image in directory %s' % dir)
         raise AssertionError
+    content_dirs = sorted(content_dirs)
     return content_dirs
 
 def get_global_step_from_save_dir(save_dir):
