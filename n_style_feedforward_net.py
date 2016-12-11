@@ -342,6 +342,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
                                                              name='input_style_placeholder')
                     image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
+                    image = vgg.preprocess(image, mean_pixel)
                 # FOR DEBUGGING:
                 # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
                 # END
@@ -507,6 +508,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
                                                                     mask_image_pyramid, ablation_layer=ablation_layer)
                                 feed_dict[content_semantic_mask] = mask_pre_list
+                                for styles_iter in range(len(styles)):
+                                    feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
+                                        style_semantic_masks[styles_iter], axis=0)
                             elif style_only:
                                 noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
                                                       ablation_layer=ablation_layer)

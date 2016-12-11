@@ -142,3 +142,6 @@ If not working on masked images:
 --
 The thing is not working, at least not on johnson network... I don't know what's going on, but my guess is that johnson
 might not be the best choice for texture generation with masks. I'll try the pyramid network...
+
+TODO: try pyramid network
+read blog and source code on feed forward network and see why mine did not work.
