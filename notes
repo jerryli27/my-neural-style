@@ -117,3 +117,5 @@ beginning? I think so because it takes the whole night to train around 20000 rou
 
 Also the loss for style is unnaturally high only after I apply masks. I found that was because I was doing dot product
 so each number is dotted with 255. lol.
+
+But the result was still unsatisfactory.

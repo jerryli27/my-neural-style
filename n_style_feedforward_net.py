@@ -425,8 +425,12 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     # END
                     iterator += 1
                     # Can't return because we are in a generator.
-                    yield (iterator, vgg.unprocess(
-                        scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])), mean_pixel))
+                    # yield (iterator, vgg.unprocess(
+                    #     scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])), mean_pixel))
+                    # No need to unprocess it because we've preprocessed the generated image in the network. That means
+                    # the generated image is before preprocessing.
+                    yield (iterator, scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])))
+
             else:
                 # Do Training.
                 iter_start = 0
