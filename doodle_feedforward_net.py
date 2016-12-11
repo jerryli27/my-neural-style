@@ -1,7 +1,8 @@
 """
-This file implements the feed-forward texture networks as described in http://arxiv.org/abs/1603.03417 and
-https://arxiv.org/abs/1603.03417.
-(For more background, see http://arxiv.org/abs/1508.06576)
+This file is not done! I was planning to feed into multiple masked style image and let them train on the same parameters
+so if I have a bunch of pictures from van gogh, each with masks, then I can train all of them using one set of
+parameters. I temporarily stopped this project because I first need to make sure one style feed forward style generation
+with masks works.
 """
 
 import operator
