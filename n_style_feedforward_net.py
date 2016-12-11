@@ -528,6 +528,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                         if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                             if style_i == len(styles) - 1:
+                                # Record loss after each training round.
+                                with open(save_dir + 'loss.tsv','a') as loss_record_file:
+                                    loss_record_file.write('%d\t%g\n' % (i, overall_loss.eval(feed_dict=feed_dict)))
+
                                 saver.save(sess, save_dir + 'model.ckpt', global_step=i)
 
                                 if test_img_dir is not None:

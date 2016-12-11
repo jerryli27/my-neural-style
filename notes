@@ -119,3 +119,22 @@ Also the loss for style is unnaturally high only after I apply masks. I found th
 so each number is dotted with 255. lol.
 
 But the result was still unsatisfactory.
+
+2016/12/11
+What can I do that will have some originality instead of repeating what people has done? What is the limit of the
+current system?
+
+If working on masked images:
+    You must first have a mask, whether it is based on real images or not.
+    The mask cannot be too detailed, or it will use up too much memory (grows linearly) and time it takes to create
+    such a mask is prohibitive.
+
+If not working on masked images:
+    The model clearly does not have an idea of scale. If you train it on a 256x256 image, you can't just put that
+    on a 1024x1024 image because the patterns created will be too small.
+    It has no understanding of the relative size/location of objects (unless the two objects are close enough that they
+    become in the same cell after convolution. That is a problem for vgg, but since we're using gram matrix, the
+    problem is also applicable in style generation. For this reason, it is still impossible to tell it to "paint a cat"
+    and expect it to just work.
+    It also has no idea about different style between different objects. See comparison between mask and no mask.
+    It
