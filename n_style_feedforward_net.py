@@ -393,7 +393,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     else:
                         if use_semantic_masks:
                             mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                                           mask_pre_list)
+                                                                           mask_pre_list, num_features=semantic_masks_num_layers)
                             noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
                                                                 mask_image_pyramid, ablation_layer=ablation_layer)
                         elif style_only:
@@ -503,9 +503,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         else:
                             if use_semantic_masks:
                                 mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                                               mask_pre_list)
+                                                                               mask_pre_list, num_features=semantic_masks_num_layers)
                                 noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
                                                                     mask_image_pyramid, ablation_layer=ablation_layer)
+                                feed_dict[content_semantic_mask] = mask_pre_list
                             elif style_only:
                                 noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
                                                       ablation_layer=ablation_layer)

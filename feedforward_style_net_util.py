@@ -276,14 +276,14 @@ def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid
                             content_image_pyramid[x]), axis=3) for x in range(k)][::-1]
 
 
-def generate_image_pyramid(height, width, batch_size, content_image, k=5):
-    return [np.array([scipy.misc.imresize(content_image[0],
-                                          (max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
+def generate_image_pyramid(height, width, batch_size, content_image, k=5, num_features = 3):
+    return [np.array([scipy.misc.imresize(content_image[batch],
+                                          (max(1, height // (2 ** x)), max(1, width // (2 ** x)), num_features))
                       for batch in range(batch_size)]) for x in range(k)]
 
-def generate_image_pyramid_from_content_list(height, width, content_image, k=5):
+def generate_image_pyramid_from_content_list(height, width, content_image, k=5, num_features = 3):
     return [np.array([scipy.misc.imresize(content_image[i],
-                                          (max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
+                                          (max(1, height // (2 ** x)), max(1, width // (2 ** x)), num_features))
                       for i in range(content_image.shape[0])]) for x in range(k)]
 
 
