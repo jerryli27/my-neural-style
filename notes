@@ -151,4 +151,7 @@ level) when I decrease the batch size from 8 to 1. I'll try that on the masks.
 2016/12/12
 on going work:
 Trying pyramid network without masks. Just normal content input.
-Planning to try johnson network with style generation only. No masks.
+Planning to try johnson network with style generation only. No masks. -- It worked!
+
+I'll try to replace input to "johnson network with masks" with random
+noise instead of the masks themselves

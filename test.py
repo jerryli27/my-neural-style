@@ -17,11 +17,11 @@ width = 256
 height = 256
 print_iteration = 100
 use_mrf = False
-use_johnson = False
+use_johnson = True
 texture_synthesis_only = False
 do_restore_and_train = False
 multi_style_offset_only = False
-use_semantic_masks = False
+use_semantic_masks = True
 semantic_masks_num_layers = 4
 
 test_img = 'test_masks/' if use_semantic_masks else 'source_compressed/chicago.jpg'

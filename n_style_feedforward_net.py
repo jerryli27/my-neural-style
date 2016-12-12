@@ -99,8 +99,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             if use_semantic_masks:
                 # If we use johnson generator architecture with semantic masks, then the input is just the masks, since
                 # Now we do not support feeding in content images as well as their masks.
-                inputs = tf.placeholder(tf.float32,
-                                        shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
+                # inputs = tf.placeholder(tf.float32,
+                #                         shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
+                # TODO: test if feeding in noise plus the mask itself would work.
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + 3])
             else:
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
@@ -152,17 +154,21 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     # convolutions and average pooling along with pooling layers."
                     # But this is just a minor improvement that should not affect the final result too much.
                     # prev_layer = None
+
+                    output_semantic_masks_for_each_layer = neural_doodle_util.masks_average_pool(content_semantic_mask)
                     for layer in STYLE_LAYERS:
-                        output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
-                            net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
+                        # output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
+                        #     net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
+                        #
 
 
-                        # output_semantic_mask_feature = tf.contrib.layers.avg_pool2d(content_semantic_mask if prev_layer is None else output_semantic_mask_features[prev_layer], [1, 2, 2, 1], [1, 2, 2, 1]) # TODO: I should go over all layers instead of just style layers.
-                        # output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
-                        # if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) :
-                        #     print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
-                        #           % (layer, str(net_layer_sizes[layer]), str(output_semantic_mask_shape)))
-                        #     raise AssertionError
+                        output_semantic_mask_feature = output_semantic_masks_for_each_layer[layer]
+
+                        output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
+                        if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) :
+                            print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
+                                  % (layer, str(net_layer_sizes[layer]), str(output_semantic_mask_shape)))
+                            raise AssertionError
 
                         # Must be normalized (/ 255), otherwise the style loss just gets out of control.
                         output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
@@ -176,6 +182,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                 style_semantic_masks_pres = []
                 style_semantic_masks_images = []
+                style_semantic_masks_for_each_layer = []
                 for i in range(len(styles)):
                     style_semantic_masks_images.append(
                         tf.placeholder('float',
@@ -186,12 +193,23 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         style_semantic_masks_pres.append(
                             np.array([vgg.preprocess(style_semantic_masks[i], mean_pixel)]))
                         semantic_mask_net, _ = vgg.pre_read_net(vgg_data, style_semantic_masks_pres[-1])
+                    else:
+                        style_semantic_masks_for_each_layer.append(neural_doodle_util.masks_average_pool(style_semantic_masks_images[-1]))
+
 
                     for layer in STYLE_LAYERS:
                         if mask_resize_as_feature:
                             # Must be normalized (/ 255), otherwise the style loss just gets out of control.
-                            features = tf.image.resize_images(style_semantic_masks_images[-1],
-                                                              (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
+                            # features = tf.image.resize_images(style_semantic_masks_images[-1],
+                            #                                   (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
+                            features = style_semantic_masks_for_each_layer[-1][layer] / 255.0
+
+                            features_shape = map(lambda i: i.value, features.get_shape())
+                            if (net_layer_sizes[layer][1] != features_shape[1]) or (net_layer_sizes[layer][1] != features_shape[1]) :
+                                print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
+                                      % (layer, str(net_layer_sizes[layer]), str(features_shape)))
+                                raise AssertionError
+
                         else:
                             features = semantic_mask_net[layer]
                         features = features * semantic_masks_weight
@@ -204,6 +222,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             # If we want to use gram stacks instead of simple gram, uncomment the line below.
                             # gram = neural_util.gram_stacks(features)
                             style_features[i][layer] = gram
+
+
             # content loss
             _, height, width, number = map(lambda i: i.value, content_features[CONTENT_LAYER].get_shape())
             content_features_size = batch_size * height * width * number
@@ -239,7 +259,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         gram = gramian(layer)
                         style_gram = style_features[i][style_layer]
                         if use_semantic_masks:
-                            style_gram_num_elements = neural_util.get_tensor_num_elements(style_gram)
+                            # Dividing by semantic_masks_num_layers because the masks should have one 1 in each pixel
+                            # and we should not divide by the extra elements with 0.
+                            style_gram_num_elements = neural_util.get_tensor_num_elements(style_gram) / semantic_masks_num_layers
                         else:
                             style_gram_num_elements = get_np_array_num_elements(style_gram)
                         style_losses_for_each_style_layer.append(
@@ -331,8 +353,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                 if use_johnson:
                     if use_semantic_masks:
-                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
-                                                                   semantic_masks_num_layers])
+                        # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
+                        #                                            semantic_masks_num_layers])
+                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + 3])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     image = johnson_feedforward_net_util.net(inputs, reuse=True)
@@ -397,7 +420,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     if use_johnson:
                         if use_semantic_masks:
-                            feed_dict[inputs] = mask_pre_list
+                            # feed_dict[inputs] = mask_pre_list
+                            feed_dict[inputs] = np.concatenate((np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3]), mask_pre_list), axis=3)
                         elif style_only:
                             feed_dict[inputs] = np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3])
                         else:
@@ -482,10 +506,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         current_lr = learning_rate_decayed.eval()
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
 
-                    # Load content images
-                    current_content_dirs = get_batch(content_dirs, i * batch_size, batch_size)
-                    content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
-                                                                    input_shape[2])
+                    if not style_only:
+                        # Load content images
+                        current_content_dirs = get_batch(content_dirs, i * batch_size, batch_size)
+                        content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
+                                                                        input_shape[2])
 
                     # Load mask images
                     if use_semantic_masks:
@@ -498,10 +523,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     for style_i in range(len(styles)):
                         last_step = (i == iterations - 1)
                         # Feed the content image.
-                        feed_dict = {content_images: content_pre_list}
+                        feed_dict = {content_images: content_pre_list} if not style_only else {}
                         if use_johnson:
                             if use_semantic_masks:
-                                feed_dict[inputs] = mask_pre_list
+                                # feed_dict[inputs] = mask_pre_list
+
+                                feed_dict[inputs] = np.concatenate((np.random.rand(input_shape[0], input_shape[1],
+                                                                                   input_shape[2], input_shape[3]),
+                                                                    mask_pre_list), axis=3)
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
                                     feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
