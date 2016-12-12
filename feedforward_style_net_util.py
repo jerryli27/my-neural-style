@@ -1,5 +1,3 @@
-from sys import stderr
-
 import scipy.misc
 import tensorflow as tf
 from tensorflow.python.ops import math_ops
@@ -244,7 +242,7 @@ def noise_pyramid(height, width, batch_size, k=5, ablation_layer=None):
     :return: A list of numpy arrays with size (batch_size, h/2^?, w/2^?, 3)
     """
     if height % (2 ** (k - 1)) != 0 or width % (2 ** (k - 1)) != 0:
-        stderr('Warning: Input width or height cannot be divided by 2^(k-1). This might cause problems when generating '
+        print('Warning: Input width or height cannot be divided by 2^(k-1). This might cause problems when generating '
                'images.')
     # return [np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
     #         if (ablation_layer is None or ablation_layer < 0 or (k-1-ablation_layer) != x) else

@@ -107,10 +107,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
             image = johnson_feedforward_net_util.net(inputs)  # Deleting the  / 255.0 because the network normalizes automatically.
-            # To my understanding, preprocessing the images generated can make sure that their gram matrices will look
-            # similar to the preprocessed content/style images. The image generated is in the normal rgb, not the
-            # preprocessed/shifted version. Same reason applies to the other generator network below.
-            image = vgg.preprocess(image, mean_pixel)
 
         else:
             if style_only:
@@ -123,11 +119,17 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
                                              with_content_image=True,
                                              content_image_num_features=semantic_masks_num_layers if use_semantic_masks else 3)
+                if use_semantic_masks:
+                    raise NotImplementedError
             # Input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
             # different style images.
             input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)], name='input_style_placeholder')
             image = generator_net_n_styles(noise_inputs, input_style_placeholder)
-            image = vgg.preprocess(image, mean_pixel)
+        # To my understanding, preprocessing the images generated can make sure that their gram matrices will look
+        # similar to the preprocessed content/style images. The image generated is in the normal rgb, not the
+        # preprocessed/shifted version. Same reason applies to the other generator network below.
+        image = vgg.preprocess(image, mean_pixel)
+
         # Feed the generated images, content images, and style images to vgg network and get each layers' activations.
         net = vgg.pre_read_net(vgg_data, image)
         net_layer_sizes = vgg.get_net_layer_sizes(net)
@@ -359,7 +361,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     image = johnson_feedforward_net_util.net(inputs, reuse=True)
-                    image = vgg.preprocess(image, mean_pixel)
                 else:
                     if style_only:
                         noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
@@ -374,7 +375,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
                                                              name='input_style_placeholder')
                     image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
-                    image = vgg.preprocess(image, mean_pixel)
+                image = vgg.preprocess(image, mean_pixel)
                 # FOR DEBUGGING:
                 # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
                 # END

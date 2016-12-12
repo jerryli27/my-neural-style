@@ -143,7 +143,7 @@ If not working on masked images:
 The thing is not working, at least not on johnson network... I don't know what's going on, but my guess is that johnson
 might not be the best choice for texture generation with masks. I'll try the pyramid network...
 
-TODO: try pyramid network
+Planning to try pyramid network
 read blog and source code on feed forward network and see why mine did not work.
 The johnson feed forward network is definitely working. It just takes a while to train. It get's faster(to a tolerable
 level) when I decrease the batch size from 8 to 1. I'll try that on the masks.
@@ -154,4 +154,13 @@ Trying pyramid network without masks. Just normal content input.
 Planning to try johnson network with style generation only. No masks. -- It worked!
 
 I'll try to replace input to "johnson network with masks" with random
-noise instead of the masks themselves
+noise instead of the masks themselves. It probably will get better after intensive training... Usually generating image
+with random content/mask takes a while to train. Ok there's definitely something wrong with the masks. The masks
+changed their meanings in the middle of training, so we're definitely loading them wrong. If I'm lucky, it might just
+be the output but not the training (judging from the quality of generated images).
+
+
+Also working on finding out why pyramid generator did not work so well. The image generated was just too blue...
+I first thought it might be that I forgot to preprocess the image or something like that. But I checked and it's fine.
+So I thought it might be the generator net. I want to test that with simple "style-only" task.
+
