@@ -34,10 +34,15 @@ class TestDataUtilMethods(unittest.TestCase):
 
         content_folder = tempfile.mkdtemp()
         for i in range(batch_size):
-            image_path = content_folder + ('/image_%d.jpg' %i)
-            current_image = np.random.rand(height, width, 3)
-            current_image = current_image / np.linalg.norm(current_image)
-            random_images.append(np.ndarray.astype(current_image, np.int32))
+            # DO NOT NOT NOT TEST WITH .jpg... There's a compression process. I debugged on this for half an hour.
+            # Also refrain from using completely random image. There's a normalization or whatever process when I save
+            # the image.
+            image_path = content_folder + ('/image_%d.png' %i)
+            # current_image = np.random.rand(height, width, 3)
+            # current_image = current_image / np.max(current_image) * 255.0
+            current_image = np.ones((height, width, 3)) * 255.0
+            current_image[0,i,0] = 0
+            random_images.append(current_image)
             scipy.misc.imsave(image_path, random_images[-1])
 
         # Get path to all content images.
@@ -47,41 +52,45 @@ class TestDataUtilMethods(unittest.TestCase):
             get_batch(content_dirs,0,batch_size),
             height, width)
 
-        expected_answer = np.array(random_images)
+        expected_answer = np.round(np.array(random_images))
         np.testing.assert_almost_equal(expected_answer, content_pre_list)
 
         shutil.rmtree(content_folder)
 
-    # def test_read_and_resize_bw_mask_images(self):
-    #
-    #     height = 256
-    #     width = 256
-    #     batch_size = 8
-    #     semantic_masks_num_layers = 3
-    #     num_images_per_batch = batch_size * semantic_masks_num_layers
-    #
-    #     random_images = []
-    #
-    #     content_folder = tempfile.mkdtemp()
-    #     for i in range(batch_size):
-    #         random_images.append([])
-    #         for j in range(semantic_masks_num_layers):
-    #             image_path = content_folder + ('/image_%d_%d.jpg' % (i,j))
-    #             random_images[-1].append(np.random.rand(height, width, 3))
-    #             scipy.misc.imsave(image_path, random_images[-1][-1])
-    #
-    #     # Get path to all content images.
-    #     content_dirs = get_all_image_paths_in_dir(content_folder + '/')
-    #
-    #     content_pre_list = read_and_resize_bw_mask_images(
-    #             get_batch(content_dirs, 0, num_images_per_batch),
-    #             height, width, batch_size, semantic_masks_num_layers)
-    #
-    #     temp = np.array(random_images)
-    #     expected_answer = np.ndarray.astype(np.transpose(rgb2gray(temp), (0, 2, 3, 1)) * 255.0, np.int32)
-    #     np.testing.assert_almost_equal(expected_answer, content_pre_list)
-    #
-    #     shutil.rmtree(content_folder)
+    def test_read_and_resize_bw_mask_images(self):
+
+        height = 256
+        width = 256
+        batch_size = 8
+        semantic_masks_num_layers = 3
+        num_images_per_batch = batch_size * semantic_masks_num_layers
+
+        random_images = []
+
+        content_folder = tempfile.mkdtemp()
+        for i in range(batch_size):
+            random_images.append([])
+            for j in range(semantic_masks_num_layers):
+                image_path = content_folder + ('/image_%d_%d.jpg' % (i,j))
+
+                # If i change it to one, it won't work...
+                current_image = np.zeros((height, width, 3)) * 255.0
+                # current_image[0, i, 0] = 0
+                random_images[-1].append(current_image)
+                scipy.misc.imsave(image_path, random_images[-1][-1])
+
+        # Get path to all content images.
+        content_dirs = get_all_image_paths_in_dir(content_folder + '/')
+
+        content_pre_list = read_and_resize_bw_mask_images(
+                get_batch(content_dirs, 0, num_images_per_batch),
+                height, width, batch_size, semantic_masks_num_layers)
+
+        temp = np.array(random_images)
+        expected_answer = np.ndarray.astype(np.transpose(rgb2gray(temp), (0, 2, 3, 1)), np.int32)
+        np.testing.assert_almost_equal(expected_answer, content_pre_list)
+
+        shutil.rmtree(content_folder)
 
 if __name__ == '__main__':
     unittest.main()
