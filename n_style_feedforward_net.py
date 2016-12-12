@@ -104,7 +104,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             else:
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-            image = johnson_feedforward_net_util.net(inputs / 255.0)
+            image = johnson_feedforward_net_util.net(inputs)  # Deleting the  / 255.0 because the network normalizes automatically.
             # To my understanding, preprocessing the images generated can make sure that their gram matrices will look
             # similar to the preprocessed content/style images. The image generated is in the normal rgb, not the
             # preprocessed/shifted version. Same reason applies to the other generator network below.
@@ -151,13 +151,22 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     # resizing might not be sufficient. "Use 3x3 mean filter for mask when the data goes through
                     # convolutions and average pooling along with pooling layers."
                     # But this is just a minor improvement that should not affect the final result too much.
+                    # prev_layer = None
                     for layer in STYLE_LAYERS:
-                        # Must be normalized (/ 255), otherwise the style loss just gets out of control.
                         output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
-                            net_layer_sizes[layer][1], net_layer_sizes[layer][2])) \
-                                                       * semantic_masks_weight / 255.0
+                            net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
 
-                        output_semantic_mask_features[layer] = output_semantic_mask_feature
+
+                        # output_semantic_mask_feature = tf.contrib.layers.avg_pool2d(content_semantic_mask if prev_layer is None else output_semantic_mask_features[prev_layer], [1, 2, 2, 1], [1, 2, 2, 1]) # TODO: I should go over all layers instead of just style layers.
+                        # output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
+                        # if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) :
+                        #     print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
+                        #           % (layer, str(net_layer_sizes[layer]), str(output_semantic_mask_shape)))
+                        #     raise AssertionError
+
+                        # Must be normalized (/ 255), otherwise the style loss just gets out of control.
+                        output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
+                        # prev_layer = layer
                 else:
                     content_semantic_mask_pre = vgg.preprocess(style_semantic_masks[i], mean_pixel)
                     semantic_mask_net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask_pre)
@@ -389,6 +398,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     if use_johnson:
                         if use_semantic_masks:
                             feed_dict[inputs] = mask_pre_list
+                        elif style_only:
+                            feed_dict[inputs] = np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3])
                         else:
                             feed_dict[inputs] = content_pre
                     else:
@@ -497,8 +508,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                         style_semantic_masks[styles_iter], axis=0)
                             else:
                                 if style_only:
-                                    feed_dict[inputs] = np.random.rand(batch_size, style_pre_list[style_i].shape[1],
-                                                                       style_pre_list[style_i].shape[2], 3)
+                                    feed_dict[inputs] = feed_dict[inputs] = np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3])
                                 else:
                                     feed_dict[inputs] = content_pre_list
                         else:
