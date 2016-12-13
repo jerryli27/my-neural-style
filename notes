@@ -186,4 +186,9 @@ Humm... Where's the problem???
 Maybe it's not in the generator network??
 Alright I give up... I don't know why it doesn't work. Pushing this off to tomorrow.
 
-Johnson network with masks:
+Task 2: Johnson network with masks:
+
+Task 3: improving slow version.
+    I was comparing the texture generation network (with and without mrf, with and without masks). I found that the key
+    lies in the loss function, ***so if I want to make something new, I need to invent a new loss function. ***
+

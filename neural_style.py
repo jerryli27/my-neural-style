@@ -1,19 +1,16 @@
-import os
+from argparse import ArgumentParser
 
-from stylize import stylize
-from general_util import *
-
-import numpy as np
 import scipy.misc
 
-import math
-from argparse import ArgumentParser
+from general_util import *
+from stylize import stylize
 
 # default arguments
 CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
-semantic_masks_weight = 1.0
+SEMANTIC_MASKS_WEIGHT = 1.0
+SEMANTIC_MASKS_NUM_LAYERS = 1
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
@@ -37,12 +34,15 @@ def build_parser():
     parser.set_defaults(use_semantic_masks=False)
     parser.add_argument('--semantic_masks_weight',
                         dest='semantic_masks_weight', help='The weight we give to matching semantic masks',
-                        metavar='WIDTH', required=False, type=float, default=semantic_masks_weight)
+                        metavar='WIDTH', required=False, type=float, default=SEMANTIC_MASKS_WEIGHT)
     parser.add_argument('--output_semantic_mask',
             dest='output_semantic_mask', help='one content image semantic mask', required=False)
     parser.add_argument('--style_semantic_masks',
             dest='style_semantic_masks',
             nargs='+', help='one or more style image semantic masks', required=False)
+    parser.add_argument('--semantic_masks_num_layers', type=int, dest='semantic_masks_num_layers',
+                        help='number of semantic masks (default %(default)s).',
+                        metavar='SEMANTIC_MASKS_NUM_LAYERS', default=SEMANTIC_MASKS_NUM_LAYERS) # TODO: FOR FUTURE USE.
 
     parser.add_argument('--output',
             dest='output', help='output path',
