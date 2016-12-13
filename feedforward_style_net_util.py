@@ -76,9 +76,9 @@ def conv_relu_layers(name, input_layer, input_style_placeholder, kernel_size, ou
         weights = tf.get_variable('weights', [kernel_size, kernel_size, in_channels, out_channels], tf.float32,
                                   tf.random_normal_initializer(mean=0.0, stddev=0.01, dtype=tf.float32))
         biases = tf.get_variable('biases', [out_channels], tf.float32,
-                                 tf.random_normal_initializer(mean=0.0, stddev=0.01, dtype=tf.float32))
+                                 tf.constant_initializer(dtype=tf.float32))
         conv = neural_util.conv2d_mirror_padding(input_layer, weights, biases, kernel_size)
-        norm = conditional_instance_norm(conv, input_style_placeholder, reuse=reuse)
+        norm = spatial_batch_norm(conv, input_style_placeholder, reuse=reuse)
         relu = tf.nn.elu(norm, 'elu')  # Note: original paper uses leaky ReLU. ELU also seem to work.
         return relu
 
@@ -110,8 +110,8 @@ def join_block(name, lower_res_layer, higher_res_layer):
         branches of the network.
         """
         # According to https://arxiv.org/abs/1603.03417 figure 8, we need to normalize after join block.
-        batch_norm_lower = conditional_instance_norm(upsampled, 'normLower')
-        batch_norm_higher = conditional_instance_norm(higher_res_layer, 'normHigher')
+        batch_norm_lower = spatial_batch_norm(upsampled, None, 'normLower')
+        batch_norm_higher = spatial_batch_norm(higher_res_layer, None, 'normHigher')
         return tf.concat(3, [batch_norm_lower, batch_norm_higher])
 
 
@@ -213,7 +213,7 @@ def get_all_layers_conv_relu_layers(name, input_layer, input_style_placeholder, 
         weights = tf.get_variable('weights', [kernel_size, kernel_size, in_channels, out_channels], tf.float32,
                                   tf.random_normal_initializer(mean=0.0, stddev=0.01, dtype=tf.float32))
         biases = tf.get_variable('biases', [out_channels], tf.float32,
-                                 tf.random_normal_initializer(mean=0.0, stddev=0.01, dtype=tf.float32))
+                                 tf.constant_initializer(dtype=tf.float32))
         conv = neural_util.conv2d_mirror_padding(input_layer, weights, biases, kernel_size)
         norm = conditional_instance_norm(conv, input_style_placeholder, reuse=reuse)
         relu = tf.nn.elu(norm, 'elu')
@@ -312,7 +312,7 @@ def spatial_batch_norm(input_layer, input_style_placeholder, name='spatial_batch
         variance_epsilon = 0.001
         num_channels = input_layer.get_shape().as_list()[3]
         scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
-        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.constant_initializer())
         return_val = tf.nn.batch_normalization(input_layer, mean, variance, offset, scale, variance_epsilon, name=name)
         return return_val
 
@@ -331,7 +331,7 @@ def instance_norm(input_layer, name='instance_norm', reuse=False):
         # NOTE: it is ok to use a different scale and offset for each batch. The meaning of doing so is not so clear but
         # it will still work. The resulting coloring of the image is different from the current implementation.
         scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
-        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.constant_initializer())
         for l in input_layers:
             l = tf.expand_dims(l, 0)
             # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
@@ -357,7 +357,7 @@ def conditional_instance_norm(input_layer, input_style_placeholder, name='condit
         num_styles = input_style_placeholder.get_shape().as_list()[1]
         num_channels = input_layer.get_shape().as_list()[3]
         scale = tf.get_variable('scale', [num_styles, num_channels], tf.float32, tf.random_uniform_initializer())
-        offset = tf.get_variable('offset', [num_styles, num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_styles, num_channels], tf.float32, tf.constant_initializer())
         scale_for_current_style = tf.matmul(input_style_placeholder, scale)
         offset_for_current_style = tf.matmul(input_style_placeholder, offset)
         for l in input_layers:

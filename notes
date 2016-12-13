@@ -175,7 +175,8 @@ problem.
 2016/12/13
 Re-reading the feed-forward paper and trying to figure out why my network did not work.
 Differences:
-    1. They used a uniform noise distribution instead of the whatever distribution numpy offers. (fixed)
+    1. They used a uniform noise distribution instead of the whatever distribution numpy offers. (fixed, changed all to
+    uniform random)
     2. according to the original paper, normalization is done also before concatenation layer. (while in another paper
     it says otherwise. Personally I think it is not necessary to have normalization there, but I want to at least
     reproduce the result of the author. (fixed)
