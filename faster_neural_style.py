@@ -141,10 +141,11 @@ def build_parser():
     parser.add_argument('--model_save_dir', dest='model_save_dir',
                         help='The directory to save trained model and its checkpoints.',
                         metavar='MODEL_SAVE_DIR', default='models/')
-    parser.add_argument('--do_restore_and_generate', type=bool, dest='do_restore_and_generate',
+    parser.add_argument('--do_restore_and_generate', dest='do_restore_and_generate',
                         help='If true, it generates an image from a previously trained model. '
                              'Otherwise it does training and generate a model.',
-                        metavar='DO_RESTORE_AND_GENERATE', default=False)
+                        action='store_true')
+    parser.set_defaults(do_restore_and_generate=False)
     parser.add_argument('--do_restore_and_train', dest='do_restore_and_train',
                         help='If set, we read the model at model_save_dir and start training from there. '
                              'The overall setting and structure must be the same.',

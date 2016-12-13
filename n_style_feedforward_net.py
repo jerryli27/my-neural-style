@@ -5,6 +5,8 @@ https://arxiv.org/abs/1603.03417.
 """
 
 # import gtk.gdk
+from sys import stderr
+
 import cv2
 
 import johnson_feedforward_net_util
@@ -14,9 +16,9 @@ from feedforward_style_net_util import *
 from mrf_util import mrf_loss
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
-# STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
-STYLE_LAYERS = (
-    'relu1_2', 'relu2_2', 'relu3_2', 'relu4_2')  # Set according to https://github.com/DmitryUlyanov/texture_nets
+STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # According to http://arxiv.org/abs/1603.03417
+# STYLE_LAYERS = (
+#     'relu1_2', 'relu2_2', 'relu3_2', 'relu4_2')  # Set according to https://github.com/DmitryUlyanov/texture_nets
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 
@@ -176,7 +178,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
                         # prev_layer = layer
                 else:
-                    content_semantic_mask_pre = vgg.preprocess(style_semantic_masks[i], mean_pixel)
+                    content_semantic_mask_pre = vgg.preprocess(content_semantic_mask, mean_pixel)
                     semantic_mask_net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask_pre)
                     for layer in STYLE_LAYERS:
                         output_semantic_mask_feature = semantic_mask_net[layer] * semantic_masks_weight
@@ -262,7 +264,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         style_gram = style_features[i][style_layer]
                         if use_semantic_masks:
                             # Dividing by semantic_masks_num_layers because the masks should have one 1 in each pixel
-                            # and we should not divide by the extra elements with 0.
+                            # and we should not divide by the number of extra elements with 0.
                             style_gram_num_elements = neural_util.get_tensor_num_elements(style_gram) / semantic_masks_num_layers
                         else:
                             style_gram_num_elements = get_np_array_num_elements(style_gram)
@@ -422,9 +424,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     if use_johnson:
                         if use_semantic_masks:
                             # feed_dict[inputs] = mask_pre_list
-                            feed_dict[inputs] = np.concatenate((np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3]), mask_pre_list), axis=3)
+                            feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3])), mask_pre_list), axis=3)
                         elif style_only:
-                            feed_dict[inputs] = np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3])
+                            feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                         else:
                             feed_dict[inputs] = content_pre
                     else:
@@ -529,8 +531,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             if use_semantic_masks:
                                 # feed_dict[inputs] = mask_pre_list
 
-                                feed_dict[inputs] = np.concatenate((np.random.rand(input_shape[0], input_shape[1],
-                                                                                   input_shape[2], input_shape[3]),
+                                feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1],
+                                                                                   input_shape[2], input_shape[3])),
                                                                     mask_pre_list), axis=3)
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
@@ -538,7 +540,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                         style_semantic_masks[styles_iter], axis=0)
                             else:
                                 if style_only:
-                                    feed_dict[inputs] = feed_dict[inputs] = np.random.rand(input_shape[0], input_shape[1], input_shape[2], input_shape[3])
+                                    feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                                 else:
                                     feed_dict[inputs] = content_pre_list
                         else:

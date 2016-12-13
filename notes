@@ -158,9 +158,25 @@ noise instead of the masks themselves. It probably will get better after intensi
 with random content/mask takes a while to train. Ok there's definitely something wrong with the masks. The masks
 changed their meanings in the middle of training, so we're definitely loading them wrong. If I'm lucky, it might just
 be the output but not the training (judging from the quality of generated images).
+I tested the output. The output's order is correct. So it's the training process... But I don't get what part went
+wrong. I tested getting the files. That part was correct. ... TODO: debug this. I don't know what it will look like
+after more training, but now it's not so satisfactory yet.
+It is interesting to see how each mask acts. when value of a mask is 0, it doesn't mean that it will be black. Instead
+since it indicates that it is not a certain mask, it becomes the color of other masks.
+But when only one mask has all 255s and the rest 0s, the result just becomes the same as no masks for some reason..
+I don't understand why, but it seems the network is doing something wierd.
 
 
 Also working on finding out why pyramid generator did not work so well. The image generated was just too blue...
 I first thought it might be that I forgot to preprocess the image or something like that. But I checked and it's fine.
-So I thought it might be the generator net. I want to test that with simple "style-only" task.
+So I thought it might be the generator net. I want to test that with simple "style-only" task. That failed ... old
+problem.
+
+2016/12/13
+Re-reading the feed-forward paper and trying to figure out why my network did not work.
+Differences:
+    1. They used a uniform noise distribution instead of the whatever distribution numpy offers. (fixed)
+    2. according to the original paper, normalization is done also before concatenation layer. (while in another paper
+    it says otherwise. Personally I think it is not necessary to have normalization there, but I want to at least
+    reproduce the result of the author. (fixed)
 

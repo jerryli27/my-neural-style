@@ -91,12 +91,28 @@ def join_block(name, lower_res_layer, higher_res_layer):
     with tf.variable_scope(name):
         upsampled = tf.image.resize_nearest_neighbor(lower_res_layer, higher_res_layer.get_shape().as_list()[1:3])
         # No need to normalize here. According to https://arxiv.org/abs/1610.07629  normalize only after convolution.
-        return tf.concat(3, [upsampled, higher_res_layer])
+        # return tf.concat(3, [upsampled, higher_res_layer])
 
         # According to https://arxiv.org/abs/1603.03417 figure 8, we need to normalize after join block.
         # batch_norm_lower = spatial_batch_norm(upsampled, 'normLower')
         # batch_norm_higher = spatial_batch_norm(higher_res_layer, 'normHigher')
         # return tf.concat(3, [batch_norm_lower, batch_norm_higher])
+
+
+
+
+        """
+        We found that training benefited signif-
+        icantly from inserting batch normalization layers (Ioffe
+        & Szegedy, 2015) right after each convolutional layer
+        and, most importantly, right before the concatenation lay-
+        ers, since this balances gradients travelling along different
+        branches of the network.
+        """
+        # According to https://arxiv.org/abs/1603.03417 figure 8, we need to normalize after join block.
+        batch_norm_lower = conditional_instance_norm(upsampled, 'normLower')
+        batch_norm_higher = conditional_instance_norm(higher_res_layer, 'normHigher')
+        return tf.concat(3, [batch_norm_lower, batch_norm_higher])
 
 
 def get_all_layers_generator_net_n_styles(input_noise_z, input_style_placeholder):
@@ -244,14 +260,14 @@ def noise_pyramid(height, width, batch_size, k=5, ablation_layer=None):
     if height % (2 ** (k - 1)) != 0 or width % (2 ** (k - 1)) != 0:
         print('Warning: Input width or height cannot be divided by 2^(k-1). This might cause problems when generating '
                'images.')
-    # return [np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
+    # return [np.random.uniform(size=(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
     #         if (ablation_layer is None or ablation_layer < 0 or (k-1-ablation_layer) != x) else
     #         np.zeros((batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3), dtype=np.float64) + 0.5
     #         for x in range(k)][::-1]
 
-    return [np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
+    return [np.random.uniform(size=(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
             if (ablation_layer is None or ablation_layer < 0 or (k - 1 - ablation_layer) == x) else
-            np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3) * 0.0
+            np.random.uniform(size=(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)) * 0.0
             for x in range(k)][::-1]
 
 def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid, k=5, ablation_layer=None):
@@ -266,9 +282,9 @@ def noise_pyramid_w_content_img(height, width, batch_size, content_image_pyramid
     """
     """If an additional input tensor, the content image tensor, is
     provided, then we concatenate the downgraded versions of that tensor to the noise tensors."""
-    return [np.concatenate((np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)
+    return [np.concatenate((np.random.uniform(size=(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3))
                             if (ablation_layer is None or ablation_layer < 0 or (k - 1 - ablation_layer) == x) else
-                            np.random.rand(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3) * 0.0,
+                            np.random.uniform(size=(batch_size, max(1, height // (2 ** x)), max(1, width // (2 ** x)), 3)) * 0.0,
                             content_image_pyramid[x]), axis=3) for x in range(k)][::-1]
 
 
@@ -289,15 +305,16 @@ def spatial_batch_norm(input_layer, input_style_placeholder, name='spatial_batch
     Batch-normalizes the layer as in http://arxiv.org/abs/1502.03167
     This is important since it allows the different scales to talk to each other when they get joined.
     """
-    mean, variance = tf.nn.moments(input_layer, [0, 1, 2])
-    # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
-    variance = tf.abs(variance)
-    variance_epsilon = 0.001
-    num_channels = input_layer.get_shape().as_list()[3]
-    scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
-    offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
-    return_val = tf.nn.batch_normalization(input_layer, mean, variance, offset, scale, variance_epsilon, name=name)
-    return return_val
+    with tf.variable_scope(name, reuse=reuse):
+        mean, variance = tf.nn.moments(input_layer, [0, 1, 2])
+        # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+        variance = tf.abs(variance)
+        variance_epsilon = 0.001
+        num_channels = input_layer.get_shape().as_list()[3]
+        scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
+        return_val = tf.nn.batch_normalization(input_layer, mean, variance, offset, scale, variance_epsilon, name=name)
+        return return_val
 
 
 # TODO: add support for reuse.
@@ -306,24 +323,25 @@ def instance_norm(input_layer, name='instance_norm', reuse=False):
     Instance-normalize the layer as in https://arxiv.org/abs/1607.08022
     """
     # calculate the mean and variance for width and height axises.
-    input_layers = tf.unpack(input_layer)
-    return_val = []
-    num_channels = input_layer.get_shape().as_list()[3]
-    # The scale and offset variable is reused for all batches in this norm.
-    # NOTE: it is ok to use a different scale and offset for each batch. The meaning of doing so is not so clear but
-    # it will still work. The resulting coloring of the image is different from the current implementation.
-    scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
-    offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
-    for l in input_layers:
-        l = tf.expand_dims(l, 0)
-        # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
-        mean, variance = tf.nn.moments(l, [0, 1, 2])
-        variance = tf.abs(variance)
-        variance_epsilon = 0.001
-        return_val.append(
-            tf.squeeze(tf.nn.batch_normalization(l, mean, variance, offset, scale, variance_epsilon, name=name), [0]))
-    return_val = tf.pack(return_val)
-    return return_val
+    with tf.variable_scope(name, reuse=reuse):
+        input_layers = tf.unpack(input_layer)
+        return_val = []
+        num_channels = input_layer.get_shape().as_list()[3]
+        # The scale and offset variable is reused for all batches in this norm.
+        # NOTE: it is ok to use a different scale and offset for each batch. The meaning of doing so is not so clear but
+        # it will still work. The resulting coloring of the image is different from the current implementation.
+        scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.random_uniform_initializer())
+        for l in input_layers:
+            l = tf.expand_dims(l, 0)
+            # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+            mean, variance = tf.nn.moments(l, [0, 1, 2])
+            variance = tf.abs(variance)
+            variance_epsilon = 0.001
+            return_val.append(
+                tf.squeeze(tf.nn.batch_normalization(l, mean, variance, offset, scale, variance_epsilon, name=name), [0]))
+        return_val = tf.pack(return_val)
+        return return_val
 
 
 def conditional_instance_norm(input_layer, input_style_placeholder, name='conditional_instance_norm', reuse=False):

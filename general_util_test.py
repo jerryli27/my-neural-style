@@ -76,8 +76,15 @@ class TestDataUtilMethods(unittest.TestCase):
                 # If i change it to one, it won't work...
                 current_image = np.zeros((height, width, 3)) * 255.0
                 # current_image[0, i, 0] = 0
-                random_images[-1].append(current_image)
-                scipy.misc.imsave(image_path, random_images[-1][-1])
+
+                # Rescale to 0-255 and convert to uint8
+                # rescaled = (255.0 / current_image.max() * (current_image - current_image.min())).astype(np.uint8)
+                rescaled = current_image.astype(np.uint8)
+                random_images[-1].append(rescaled)
+
+                f = Image.fromarray(random_images[-1][-1], 'RGB')
+                f.save(image_path)
+                # scipy.misc.imsave(image_path, random_images[-1][-1])
 
         # Get path to all content images.
         content_dirs = get_all_image_paths_in_dir(content_folder + '/')
