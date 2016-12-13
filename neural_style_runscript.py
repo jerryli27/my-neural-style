@@ -40,4 +40,4 @@ output='output/%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-style-%d-content-%d.j
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
 os.system('python ~/PycharmProjects/my-neural-style/neural_style.py --content %s --styles %s --learning-rate=%f --iterations=%d %s %s --output_semantic_mask=%s --style_semantic_masks %s --style-weight=%d --content-weight=%d --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d'
-          % (content, ' '.join(styles), learning_rate, iterations, use_mrf_string, use_semantic_masks ,output_semantic_mask, ' '.join(style_semantic_masks), style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration))
+          % (content, ' '.join(styles), learning_rate, iterations, use_mrf_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration))
