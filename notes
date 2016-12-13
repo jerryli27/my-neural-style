@@ -180,4 +180,10 @@ Differences:
     2. according to the original paper, normalization is done also before concatenation layer. (while in another paper
     it says otherwise. Personally I think it is not necessary to have normalization there, but I want to at least
     reproduce the result of the author. (fixed)
+    3. Initializations (fixed)
 
+Humm... Where's the problem???
+Maybe it's not in the generator network??
+Alright I give up... I don't know why it doesn't work. Pushing this off to tomorrow.
+
+Johnson network with masks:

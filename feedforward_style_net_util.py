@@ -6,6 +6,8 @@ import neural_util
 from general_util import *
 
 
+# TODO: don't forget to change the normalization back to instantce norm.
+
 def generator_net_n_styles(input_noise_z, input_style_placeholder, reuse=False):
     """
     This function is a generator. It takes a list of tensors as input, and outputs a tensor with a given width and
