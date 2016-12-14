@@ -240,7 +240,7 @@ Tasks not done yet:
     network to learn the dot product. So I thought I can just do it for the network. So now the input would be
     dot(noise, masks) and the dimension would be W x H x (3 * num_masks). Let me try if that works.
 
-    So far it looks a lot better than before... With more training it can probably get even better (TODO: don't forget to continue training)
+    So far it looks a lot better than before... With more training it can probably get even better (TODO: don't forget to continue training, but first change the gram back to original one...)
 
 2. Alternative loss function.
     I modified the "gram_stack" so that it now calculates the gram between the original layer and the shifted layer

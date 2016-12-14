@@ -26,7 +26,7 @@ style_weight=100
 content_weight=5
 checkpoint_iterations=100
 print_iteration = 100
-use_mrf = True
+use_mrf = False
 use_mrf_string = '--use_mrf' if use_mrf else ''
 
 use_semantic_masks = True

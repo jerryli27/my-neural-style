@@ -250,14 +250,12 @@ def stylize(network, initial, content, styles, iterations,
                     # size = height * width * number
                     # feats = tf.reshape(layer, (-1, number))
                     # gram = tf.matmul(tf.transpose(feats), feats) / size
+
                     gram = neural_util.gram_stacks(layer)
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
 
                     # ***** END TEST GRAM*****
-
-
-                    height, width = map(lambda i: i.value, style_gram.get_shape())
-                    style_gram_size = height * width
+                    style_gram_size = 1# neural_util.get_tensor_num_elements(style_gram)
                     style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising
