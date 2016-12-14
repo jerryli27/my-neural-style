@@ -255,7 +255,8 @@ def stylize(network, initial, content, styles, iterations,
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
 
                     # ***** END TEST GRAM*****
-                    style_gram_size = 1# neural_util.get_tensor_num_elements(style_gram)
+
+                    style_gram_size = neural_util.get_tensor_num_elements(style_gram) / ((2 + 1) ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
                     style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising

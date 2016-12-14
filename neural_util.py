@@ -90,7 +90,7 @@ def gram_experiment(features, horizontal_shift = 0, vertical_shift = 0):
 
     grams = []
     for current_feature in features_unpacked:
-        current_feature = tf.expand_dims(current_feature, axis=0)
+        current_feature = tf.expand_dims(current_feature, 0)
         original = tf.slice(current_feature, [0, 0, 0, 0], [-1, height - vertical_shift, width - horizontal_shift, -1])
         shifted = tf.slice(current_feature, [0, vertical_shift, horizontal_shift, 0], [-1, -1, -1, -1])
         left_reshaped = tf.reshape(original, (-1, number))
@@ -127,8 +127,9 @@ def gram_stacks(features, shift_size=2):
             gram.append(shifted_gram)
     gram_stack = tf.pack(gram) / len(gram)
     gram_stack = tf.transpose(gram_stack, (1,2,3,0)) # Shape = [batch_size, number, number, num_shifts]
-    tensor_shape = map(lambda i: i.value, gram_stack.get_shape())
-    assert tensor_shape == (batch_size, number, number, shift_size * shift_size)
+
+    gram_stack_num_elements = get_tensor_num_elements(gram_stack)
+    assert gram_stack_num_elements == (batch_size * number * number * shift_size * shift_size)
     return gram_stack
 
 def get_tensor_num_elements(tensor):

@@ -29,7 +29,7 @@ print_iteration = 100
 use_mrf = False
 use_mrf_string = '--use_mrf' if use_mrf else ''
 
-use_semantic_masks = True
+use_semantic_masks = False
 use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''
 
 output_semantic_mask = 'van_gogh/output_mask256.jpg'
