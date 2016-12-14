@@ -85,14 +85,23 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 net = vgg.pre_read_net(vgg_data, image)
                 style_pre_list.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
                 for layer in STYLE_LAYERS:
-                    features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
                     if use_mrf or use_semantic_masks:
+                        features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
                         style_features[i][layer] = features
                     else:
                         # Calculate and store gramian.
-                        features = np.reshape(features, (-1, features.shape[3]))
-                        gram = np.matmul(features.T, features) / features.size
-                        style_features[i][layer] = gram
+
+                        # features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
+                        # features = np.reshape(features, (-1, features.shape[3]))
+                        # gram = np.matmul(features.T, features) / features.size
+                        # style_features[i][layer] = gram
+
+                        # TODO: testing gram stacks
+                        # gram = gramian(features)
+                        # If we want to use gram stacks instead of simple gram, uncomment the line below.
+                        features = neural_util.gram_stacks(net[layer]).eval(feed_dict={image: style_pre_list[-1]})
+                        style_features[i][layer] = features
+
         print('Finished loading VGG and passing content and style image to it.')
 
     # Define tensorflow placeholders and variables.
@@ -221,9 +230,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 neural_doodle_util.concatenate_mask_layer_tf(features, style_features[i][layer])
                         else:
                             features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
-                            gram = gramian(features)
+                            # TODO: testing gram stacks
+                            # gram = gramian(features)
                             # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                            # gram = neural_util.gram_stacks(features)
+                            gram = neural_util.gram_stacks(features)
                             style_features[i][layer] = gram
 
 
@@ -259,7 +269,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer],
                                                                           layer)
                         # Use gramian loss.
-                        gram = gramian(layer)
+                        # TODO: testing gram stacks
+                        # gram = gramian(layer)
+                        # If we want to use gram stacks instead of simple gram, uncomment the line below.
+                        gram = neural_util.gram_stacks(layer)
                         style_gram = style_features[i][style_layer]
                         if use_semantic_masks:
                             # Dividing by semantic_masks_num_layers because the masks should have one 1 in each pixel

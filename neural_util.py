@@ -1,4 +1,3 @@
-import math
 from operator import mul
 
 import tensorflow as tf
@@ -59,41 +58,69 @@ def conv2d_transpose_mirror_padding(input_layer, w, b, output_shape, kernel_size
 def leaky_relu(input_layer, alpha):
     return tf.maximum(input_layer * alpha, input_layer)
 
-def gram_experiment(features, shift = None, shift_is_horizontal = True):
+# def gram_experiment(features, shift = None, shift_is_horizontal = True):
+#     _, height, width, number = map(lambda i: i.value, features.get_shape())
+#     size = height * width * number
+#     if shift is None:
+#         features = tf.reshape(features, (-1, number))
+#         gram = tf.matmul(tf.transpose(features), features) / size
+#     else:
+#         if shift_is_horizontal:
+#             left = tf.slice(features, [0, 0, 0, 0], [-1, -1, width - shift, -1])
+#             right = tf.slice(features, [0, 0, shift, 0], [-1, -1, -1, -1])
+#             left_reshaped = tf.reshape(left, (-1, number))
+#             right_reshaped = tf.reshape(right, (-1, number))
+#             gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / size
+#         else:
+#             top = tf.slice(features, [0, 0, 0, 0], [-1, height - shift, -1, -1])
+#             bottom = tf.slice(features, [0, shift, 0, 0], [-1, -1, -1, -1])
+#             top_reshaped = tf.reshape(top, (-1, number))
+#             bottom_reshaped = tf.reshape(bottom, (-1, number))
+#             gram = tf.matmul(tf.transpose(top_reshaped), bottom_reshaped) / size
+#
+#
+#     return gram
+
+
+def gram_experiment(features, horizontal_shift = 0, vertical_shift = 0):
     _, height, width, number = map(lambda i: i.value, features.get_shape())
     size = height * width * number
-    if shift is None:
-        features = tf.reshape(features, (-1, number))
-        gram = tf.matmul(tf.transpose(features), features) / size
-    else:
-        if shift_is_horizontal:
-            left = tf.slice(features, [0, 0, 0, 0], [-1, -1, width - shift, -1])
-            right = tf.slice(features, [0, 0, shift, 0], [-1, -1, -1, -1])
-            left_reshaped = tf.reshape(left, (-1, number))
-            right_reshaped = tf.reshape(right, (-1, number))
-            gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / size
-        else:
-            top = tf.slice(features, [0, 0, 0, 0], [-1, height - shift, -1, -1])
-            bottom = tf.slice(features, [0, shift, 0, 0], [-1, -1, -1, -1])
-            top_reshaped = tf.reshape(top, (-1, number))
-            bottom_reshaped = tf.reshape(bottom, (-1, number))
-            gram = tf.matmul(tf.transpose(top_reshaped), bottom_reshaped) / size
+    original = tf.slice(features, [0, 0, 0, 0], [-1, height - vertical_shift, width - horizontal_shift, -1])
+    shifted = tf.slice(features, [0, vertical_shift, horizontal_shift, 0], [-1, -1, -1, -1])
+    left_reshaped = tf.reshape(original, (-1, number))
+    right_reshaped = tf.reshape(shifted, (-1, number))
+    gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / size
 
 
     return gram
 
 
-def gram_stacks(features):
+
+def gram_stacks(features, shift_size=2):
+    # This is the first attempt. It shifts the layers by n pixels vertically and horizontally according to the height
+    # and width and compute gram for each shift.
+    # _, height, width, number = map(lambda i: i.value, features.get_shape())
+    # good_old_gram = gram_experiment(features)
+    # gram = [good_old_gram]
+    # for shift in range(1,int(width),1):
+    #     shifted_gram = gram_experiment(features, shift=shift)
+    #     gram.append(shifted_gram)
+    # for shift in range(1,int(height),1):
+    #     shifted_gram = gram_experiment(features, shift=shift, shift_is_horizontal=False)
+    #     gram.append(shifted_gram)
+    # gram_stack = tf.pack(gram)  / math.sqrt(len(gram))
+    # return gram_stack
+
+    # This is the second attempt. It shifts the gram in a m x n range and calculate gram for each shift.
     _, height, width, number = map(lambda i: i.value, features.get_shape())
     good_old_gram = gram_experiment(features)
     gram = [good_old_gram]
-    for shift in range(1,int(width),1):
-        shifted_gram = gram_experiment(features, shift=shift)
-        gram.append(shifted_gram)
-    for shift in range(1,int(height),1):
-        shifted_gram = gram_experiment(features, shift=shift, shift_is_horizontal=False)
-        gram.append(shifted_gram)
-    gram_stack = tf.pack(gram)  / math.sqrt(len(gram))
+
+    for vertical_shift in range(1,shift_size + 1):
+        for horizontal_shift in range(1, shift_size + 1):
+            shifted_gram = gram_experiment(features, horizontal_shift, vertical_shift)
+            gram.append(shifted_gram)
+    gram_stack = tf.pack(gram) / len(gram)
     return gram_stack
 
 def get_tensor_num_elements(tensor):

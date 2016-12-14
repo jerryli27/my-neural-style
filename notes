@@ -241,3 +241,5 @@ Tasks not done yet:
     dot(noise, masks) and the dimension would be W x H x (3 * num_masks). Let me try if that works.
 
 2. Alternative loss function.
+    I modified the "gram_stack" so that it now calculates the gram between the original layer and the shifted layer
+    where the shift is applied within a window (so if it's a 3x3 window, there will be 9 gram matrices)
