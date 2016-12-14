@@ -192,3 +192,52 @@ Task 3: improving slow version.
     I was comparing the texture generation network (with and without mrf, with and without masks). I found that the key
     lies in the loss function, ***so if I want to make something new, I need to invent a new loss function. ***
 
+    I tested style generation (no content image) for mrf loss and gram loss. It turns out that both are effective,
+    although mrf loss is better at preserving local structure and information. gram loss knows little about the
+    information in the current pixel compared to say five pixel away. mrf handles that pretty well (maybe too well, I
+    suspect that it is most of the time just copying instead of learning).
+
+    I then tested semantic masks
+    mrf failed when I simply append the mask to each layer. I think it is because the magnitude of the image (0~255)
+    and the vgg layers are different, so nearest neighbor didn't work so well (that's why the author said it is ok to
+    simply pass the mask into the vgg as an image. Since this will guarantee that they have the same magnitude as
+    all other feature layers.
+    I tried to dot the feature layers with the mask in mrf. That also worked, but then the gram matrix and the nn
+    convolution becomes pretty large. Both make sense though. Dotting means that: each semantic mask is independent to
+    other layers: the style of the eye has nothing to do with the style of say the hair. On the other hand, appending
+    means that: it is still possible in nearest neighbor that: although one pixel belongs to another semantic mask,
+    it can use the style of the other semantic mask if vgg thinks it is similar enough to another pixel... Considering
+    the inaccuracy of human labeling and the ram, the second one is more preferrable. #TODO: I will make the change
+    and basically delete resizing. (before that, I need to test if appending is really preferrable to the dot product.)
+
+    Another problem is: Since we can't use nn in feed-forward nn (It's probably too hard for a generator network to
+    learn nn), is there a better loss function or any modification I can make to the gram loss function? I came up with
+    the "gram stack" and showed that it can reconstruct local structures to a good extent, given enough stacks. Can I
+    use that? (like have stack = 5, 2 left, 1 center and 2 right?)
+
+                        # TODO: change it back, or make sure it is better than just concatenating.
+        # TODO: don't forget to change it back.
+
+
+TODO list for tomorrow:
+1. Fix resizing/dot/feed into network and append. Compare the three throughly.
+2. Find alternative loss function that gets the good side from both gram and mrf.
+
+Tasks not done yet:
+1. pyramid generator... still doesn't work. it should be something simple that I'm missing
+2. Johnson network does not work with masks.
+3. A better loss function.
+
+2016/12/14
+
+1. Johnson network:
+    I looked at the network itself. THe first layer has a filter of size 9. That is huge. That's probably why the
+    result looks so blurry. And that size is the limit to the size of the features. Notice the image it generated
+    (without masks) when I train it for texture generation. The features are always of a certain size, not larger nor
+    smaller. That is probably one limit of the network.
+    I also guessed why the network no longer works when I added masks. The input I used was noise + masks, basically
+    appending the masks as additional features. That didn;t work and I guessed that it is probably too hard for the
+    network to learn the dot product. So I thought I can just do it for the network. So now the input would be
+    dot(noise, masks) and the dimension would be W x H x (3 * num_masks). Let me try if that works.
+
+2. Alternative loss function.

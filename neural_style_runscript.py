@@ -20,7 +20,7 @@ styles = ['van_gogh/style256.jpg']
 style_name = 'van_gogh_starry_sky'
 
 learning_rate=1
-iterations=2000
+iterations=1000
 batch_size=1
 style_weight=100
 content_weight=5
@@ -32,7 +32,7 @@ use_mrf_string = '--use_mrf' if use_mrf else ''
 use_semantic_masks = True
 use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''
 
-output_semantic_mask = 'van_gogh/style_mask256.jpg'
+output_semantic_mask = 'van_gogh/output_mask256.jpg'
 style_semantic_masks = ['van_gogh/style_mask256.jpg']
 
 checkpoint_output='output_checkpoint/%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-style-%d-content-%d_%%s.jpg' % (contents_name, style_name, iterations, batch_size, learning_rate, str(use_mrf), style_weight, content_weight)

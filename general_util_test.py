@@ -99,5 +99,24 @@ class TestDataUtilMethods(unittest.TestCase):
 
         shutil.rmtree(content_folder)
 
+    def test_np_image_dot_mask(self):
+        image = np.ones((1,2,3,3))
+        mask = np.ones((1,2,3,2))
+
+        image[0,0,0,0] = 0
+        mask[0,0,0,1] = 2
+
+        expected_output = np.ones((1,2,3,6))
+        expected_output[0,0,0,0] = 0
+        expected_output[0,0,0,1] = 0
+        expected_output[0,0,0,2] = 1
+        expected_output[0,0,0,3] = 2
+        expected_output[0,0,0,4] = 1
+        expected_output[0,0,0,5] = 2
+
+        actual_output = np_image_dot_mask(image, mask)
+
+        np.testing.assert_array_equal(actual_output, expected_output)
+
 if __name__ == '__main__':
     unittest.main()

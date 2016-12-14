@@ -153,7 +153,7 @@ def stylize(network, initial, content, styles, iterations,
 
                 for layer in STYLE_LAYERS:
                     output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) \
-                                                   * semantic_masks_weight
+                                                   * semantic_masks_weight / 255.0
                     output_semantic_mask_features[layer] = tf.get_variable('feature_masks_' + layer,
                                                                            initializer=output_semantic_mask_feature,
                                                                            trainable=False)
@@ -181,7 +181,7 @@ def stylize(network, initial, content, styles, iterations,
 
                 for layer in STYLE_LAYERS:
                     if mask_resize_as_feature:
-                        features = tf.image.resize_images(style_semantic_masks_images[-1], (net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
+                        features = tf.image.resize_images(style_semantic_masks_images[-1], (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
                     else:
                         features = net[layer]
                     features = features * semantic_masks_weight
@@ -190,9 +190,12 @@ def stylize(network, initial, content, styles, iterations,
                                                trainable=False)
                     # ***** END TEST*****
                     if use_mrf:
-                        style_features[i][layer] = neural_doodle_util.concatenate_mask_layer_tf(features,
-                                                                                                style_features[i][
-                                                                                                    layer])
+                        # TODO: change it back, or make sure it is better than just concatenating.
+                        # style_features[i][layer] = neural_doodle_util.concatenate_mask_layer_tf(features,
+                        #                                                                         style_features[i][
+                        #                                                                             layer])
+
+                        style_features[i][layer] =  neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
                     else:
                         # ***** TEST GRAM*****
                         features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
@@ -231,7 +234,9 @@ def stylize(network, initial, content, styles, iterations,
 
                 if use_mrf:
                     if use_semantic_masks:
-                        layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
+                        # TODO: change it back, or make sure it is better than just concatenating.
+                        # layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
+                        layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
                     style_losses.append(mrf_loss(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
                 else:
 

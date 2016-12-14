@@ -154,3 +154,15 @@ def get_batch_indices(dir_list, start_index, batch_size):
 
 def get_np_array_num_elements(arr):
     return reduce(mul, arr.shape, 1)
+
+def np_image_dot_mask(image, mask):
+    image_layer_num = image.shape[3]
+    mask_layer_num = mask.shape[3]
+
+    ret = []
+    for i in range(image_layer_num):
+        for j in range(mask_layer_num):
+            ret.append(np.multiply(image[...,i], mask[...,j]))
+
+    ret = np.transpose(np.array(ret), axes=(1,2,3,0))
+    return ret
