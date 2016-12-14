@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 import neural_doodle_util
+import neural_util
 import vgg
 from mrf_util import mrf_loss
 
@@ -137,11 +138,12 @@ def stylize(network, initial, content, styles, iterations,
                 else:
 
                     # ***** TEST GRAM*****
-                    _, height, width, number = map(lambda i: i.value, features.get_shape())
-                    size = height * width * number
-                    features = tf.reshape(features, (-1, number))
-                    gram = tf.matmul(tf.transpose(features), features) / size
-                    # gram = neural_util.gram_stacks(features)
+                    # TODO: Testing new loss function.
+                    # _, height, width, number = map(lambda i: i.value, features.get_shape())
+                    # size = height * width * number
+                    # features = tf.reshape(features, (-1, number))
+                    # gram = tf.matmul(tf.transpose(features), features) / size
+                    gram = neural_util.gram_stacks(features)
                     style_features[i][layer] = gram
                     # ***** END TEST GRAM*****
 
@@ -199,13 +201,13 @@ def stylize(network, initial, content, styles, iterations,
                     else:
                         # ***** TEST GRAM*****
                         features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
-
-                        _, height, width, number = map(lambda i: i.value, features.get_shape())
-                        size = height * width * number
-
-                        features = tf.reshape(features, (-1, number))
-                        gram = tf.matmul(tf.transpose(features), features) / size
-                        # gram = neural_util.gram_stacks(features)
+                        # TODO: Testing new loss function
+                        # _, height, width, number = map(lambda i: i.value, features.get_shape())
+                        # size = height * width * number
+                        #
+                        # features = tf.reshape(features, (-1, number))
+                        # gram = tf.matmul(tf.transpose(features), features) / size
+                        gram = neural_util.gram_stacks(features)
                         style_semantic_masks_features[i][layer] = gram
                         # ***** END TEST GRAM*****
 
@@ -243,13 +245,12 @@ def stylize(network, initial, content, styles, iterations,
                     if use_semantic_masks:
                         layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
                     # ***** TEST GRAM*****
-                    _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                    size = height * width * number
-                    feats = tf.reshape(layer, (-1, number))
-                    gram = tf.matmul(tf.transpose(feats), feats) / size
-                    # TODO: using gram stacks will make the local details look closer to the style image at the cost of
-                    # using more memory.
-                    # gram = neural_util.gram_stacks(layer)
+                    # TODO: Testing new loss function.
+                    # _, height, width, number = map(lambda i: i.value, layer.get_shape())
+                    # size = height * width * number
+                    # feats = tf.reshape(layer, (-1, number))
+                    # gram = tf.matmul(tf.transpose(feats), feats) / size
+                    gram = neural_util.gram_stacks(layer)
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
 
                     # ***** END TEST GRAM*****

@@ -10,7 +10,7 @@ import os
 
 content= 'source_compressed/256/sea.jpg'
 #contents= ['source_compressed/my256/%d.jpg' % i for i in range(1,17)]
-contents_name = '256'
+contents_name = 'new_loss'# '256'
 # styles = ['style_compressed/van_gogh/self_portrait.jpg', 'style_compressed/van_gogh/starry_sky.jpg']
 # styles = ['style_compressed/van_gogh/starry_sky256.jpg']
 # style_name = 'van_gogh_starry_sky'
