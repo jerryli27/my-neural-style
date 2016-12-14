@@ -91,16 +91,16 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     else:
                         # Calculate and store gramian.
 
-                        # features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
-                        # features = np.reshape(features, (-1, features.shape[3]))
-                        # gram = np.matmul(features.T, features) / features.size
-                        # style_features[i][layer] = gram
+                        features = net[layer].eval(feed_dict={image: style_pre_list[-1]})
+                        features = np.reshape(features, (-1, features.shape[3]))
+                        gram = np.matmul(features.T, features) / features.size
+                        style_features[i][layer] = gram
 
-                        # TODO: testing gram stacks
-                        # gram = gramian(features)
-                        # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                        features = neural_util.gram_stacks(net[layer]).eval(feed_dict={image: style_pre_list[-1]})
-                        style_features[i][layer] = features
+                        # # TODO: testing gram stacks
+                        # # gram = gramian(features)
+                        # # If we want to use gram stacks instead of simple gram, uncomment the line below.
+                        # features = neural_util.gram_stacks(net[layer]).eval(feed_dict={image: style_pre_list[-1]})
+                        # style_features[i][layer] = features
 
         print('Finished loading VGG and passing content and style image to it.')
 
@@ -231,9 +231,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         else:
                             features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
                             # TODO: testing gram stacks
-                            # gram = gramian(features)
+                            gram = gramian(features)
                             # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                            gram = neural_util.gram_stacks(features)
+                            # gram = neural_util.gram_stacks(features)
                             style_features[i][layer] = gram
 
 
@@ -270,9 +270,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                                           layer)
                         # Use gramian loss.
                         # TODO: testing gram stacks
-                        # gram = gramian(layer)
+                        gram = gramian(layer)
                         # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                        gram = neural_util.gram_stacks(layer)
+                        # gram = neural_util.gram_stacks(layer)
                         style_gram = style_features[i][style_layer]
                         if use_semantic_masks:
                             # Dividing by semantic_masks_num_layers because the masks should have one 1 in each pixel

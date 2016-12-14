@@ -240,8 +240,16 @@ Tasks not done yet:
     network to learn the dot product. So I thought I can just do it for the network. So now the input would be
     dot(noise, masks) and the dimension would be W x H x (3 * num_masks). Let me try if that works.
 
-    So far it looks a lot better than before... With more training it can probably get even better (TODO: don't forget to continue training, but first change the gram back to original one...)
+    So far it looks a lot better than before... With more training it can probably get even better (TODO: don't forget to continue training)
 
 2. Alternative loss function.
     I modified the "gram_stack" so that it now calculates the gram between the original layer and the shifted layer
     where the shift is applied within a window (so if it's a 3x3 window, there will be 9 gram matrices)
+    This works, to some extent. The image is definitely better than before. Now we can clearly see the houses and the
+    doors whereas before it was just a blur. The feature size is limited to the size of the shift though...
+
+    Also a side note, this might be way down the road, but how do we make sure the sky looks consistent? I mean the
+    swirls are going everywhere in different directions, but in original graph they are consistent in one direction.
+    Should I do something like add tv loss to the feature layers? ( Not just the final output) But Again that might not
+    be a good idea if the feature layers are more like an edge detector (it would have huge tv loss). It's worth trying
+    though.
