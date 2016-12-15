@@ -19,9 +19,9 @@ VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 def build_parser():
     parser = ArgumentParser()
-    parser.add_argument('--content',
-            dest='content', help='content image',
-            metavar='CONTENT', required=True)
+    parser.add_argument('--content', type=str,
+            dest='content', help='content image. If left blank, it will switch to texture/style genration mode.',
+            metavar='CONTENT', default='')
     parser.add_argument('--styles',
             dest='styles',
             nargs='+', help='one or more style images',
@@ -114,7 +114,9 @@ def main():
     #             content_image.shape[1] * width)), width)
     #     content_image = scipy.misc.imresize(content_image, new_shape)
 
-    content_image =read_and_resize_images(options.content, options.height, options.width)
+    content_image = None
+    if options.content != '':
+        content_image =read_and_resize_images(options.content, options.height, options.width)
     style_images = read_and_resize_images(options.styles, options.height, options.width)
 
     target_shape = content_image.shape

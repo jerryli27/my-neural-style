@@ -15,9 +15,11 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-#STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
-STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
+STYLE_LAYERS = ('relu3_1', 'relu4_1')
+#STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
+SHIFT_SIZE = 4 # The shift size for the new loss function.
+
 
 def stylize(network, initial, content, styles, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
@@ -119,10 +121,11 @@ def stylize(network, initial, content, styles, iterations,
         # compute content features in feedforward mode
         content_image = tf.placeholder('float', shape=shape, name='content_image')
         net, mean_pixel = vgg.net(network, content_image)
-        content_pre = np.array([vgg.preprocess(content, mean_pixel)])
         content_features[CONTENT_LAYER] = net[CONTENT_LAYER]
-
         net_layer_sizes = vgg.get_net_layer_sizes(net)
+
+        if content is not None:
+            content_pre = np.array([vgg.preprocess(content, mean_pixel)])
 
         # compute style features in feedforward mode
         style_images = []
@@ -143,7 +146,7 @@ def stylize(network, initial, content, styles, iterations,
                     # size = height * width * number
                     # features = tf.reshape(features, (-1, number))
                     # gram = tf.matmul(tf.transpose(features), features) / size
-                    gram = neural_util.gram_stacks(features)
+                    gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
                     style_features[i][layer] = gram
                     # ***** END TEST GRAM*****
 
@@ -207,7 +210,7 @@ def stylize(network, initial, content, styles, iterations,
                         #
                         # features = tf.reshape(features, (-1, number))
                         # gram = tf.matmul(tf.transpose(features), features) / size
-                        gram = neural_util.gram_stacks(features)
+                        gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
                         style_semantic_masks_features[i][layer] = gram
                         # ***** END TEST GRAM*****
 
@@ -251,13 +254,14 @@ def stylize(network, initial, content, styles, iterations,
                     # feats = tf.reshape(layer, (-1, number))
                     # gram = tf.matmul(tf.transpose(feats), feats) / size
 
-                    gram = neural_util.gram_stacks(layer)
+                    gram = neural_util.gram_stacks(layer, shift_size=SHIFT_SIZE)
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
 
                     # ***** END TEST GRAM*****
 
-                    style_gram_size = neural_util.get_tensor_num_elements(style_gram) / ((2 + 1) ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
-                    style_losses.append(2 * tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
+                    # style_gram_size = neural_util.get_tensor_num_elements(style_gram) / ((SHIFT_SIZE + 1) ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
+                    # style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
+                    style_losses.append(tf.nn.l2_loss(gram - style_gram))
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising
         tv_y_size = _tensor_size(image[:,1:,:,:])
@@ -269,8 +273,11 @@ def stylize(network, initial, content, styles, iterations,
                     tv_x_size))
         # overall loss
         # TODO: don't forget to change it back.
-        # loss = content_loss + style_loss + tv_loss
-        loss = style_loss + tv_loss
+        if content is None: # If we are doing style/texture regeration only.
+            loss = style_loss + tv_loss
+        else:
+            loss = content_loss + style_loss + tv_loss
+
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
@@ -278,7 +285,8 @@ def stylize(network, initial, content, styles, iterations,
         def print_progress(i, feed_dict, last=False):
             stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
             if last or (print_iterations and i % print_iterations == 0):
-                stderr.write('  content loss: %g\n' % content_loss.eval(feed_dict=feed_dict))
+                if content is not None:
+                    stderr.write('  content loss: %g\n' % content_loss.eval(feed_dict=feed_dict))
                 stderr.write('    style loss: %g\n' % style_loss.eval(feed_dict=feed_dict))
                 stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
                 stderr.write('    total loss: %g\n' % loss.eval(feed_dict=feed_dict))
@@ -287,7 +295,9 @@ def stylize(network, initial, content, styles, iterations,
         best_loss = float('inf')
         best = None
         with tf.Session() as sess:
-            feed_dict = {content_image: content_pre}
+            feed_dict = {}
+            if content is not None:
+                feed_dict[content_image] = content_pre
             for i in range(len(styles)):
                 feed_dict[style_images[i]] = style_pres[i]
             if use_semantic_masks:

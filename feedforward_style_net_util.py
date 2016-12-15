@@ -388,7 +388,7 @@ def gramian(layer):
     grams = []
     for single_layer in layer_unpacked:
         feats = tf.reshape(single_layer, (-1, number))
-        grams.append(tf.matmul(tf.transpose(feats), feats) / size)
+        grams.append(tf.matmul(tf.transpose(feats), feats) / size) # TODO: find out the right normalization. This might be wrong.
     return tf.pack(grams)
 
 

@@ -95,7 +95,7 @@ def gram_experiment(features, horizontal_shift = 0, vertical_shift = 0):
         shifted = tf.slice(current_feature, [0, vertical_shift, horizontal_shift, 0], [-1, -1, -1, -1])
         left_reshaped = tf.reshape(original, (-1, number))
         right_reshaped = tf.reshape(shifted, (-1, number))
-        gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / size
+        gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / (size ** 2)
         grams.append(gram)
     grams = tf.pack(grams)
     return grams
@@ -125,7 +125,7 @@ def gram_stacks(features, shift_size=2):
         for horizontal_shift in range(shift_size):
             shifted_gram = gram_experiment(features, horizontal_shift, vertical_shift)
             gram.append(shifted_gram)
-    gram_stack = tf.pack(gram) / len(gram)
+    gram_stack = tf.pack(gram)
     gram_stack = tf.transpose(gram_stack, (1,2,3,0)) # Shape = [batch_size, number, number, num_shifts]
 
     gram_stack_num_elements = get_tensor_num_elements(gram_stack)
