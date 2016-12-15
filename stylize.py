@@ -16,6 +16,7 @@ except NameError:
 
 CONTENT_LAYER = 'relu4_2'
 STYLE_LAYERS = ('relu3_1', 'relu4_1')
+STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 SHIFT_SIZE = 4 # The shift size for the new loss function.
@@ -36,6 +37,8 @@ def stylize(network, initial, content, styles, shape, iterations,
     :rtype: iterator[tuple[int|None,image]]
     """
     global STYLE_LAYERS
+    if content is not None:
+        STYLE_LAYERS = STYLE_LAYERS_WITH_CONTENT
     if use_mrf:
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
     if use_semantic_masks:
