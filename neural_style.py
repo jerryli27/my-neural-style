@@ -21,7 +21,7 @@ def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content', type=str,
             dest='content', help='content image. If left blank, it will switch to texture/style genration mode.',
-            metavar='CONTENT', default='')
+            metavar='CONTENT', default='', required=False)
     parser.add_argument('--styles',
             dest='styles',
             nargs='+', help='one or more style images',
@@ -119,7 +119,7 @@ def main():
         content_image =read_and_resize_images(options.content, options.height, options.width)
     style_images = read_and_resize_images(options.styles, options.height, options.width)
 
-    target_shape = content_image.shape
+    target_shape = (1, options.height, options.width, 3)
     for i in range(len(style_images)):
         style_scale = STYLE_SCALE
         if options.style_scales is not None:
@@ -171,6 +171,7 @@ def main():
         initial=initial,
         content=content_image,
         styles=style_images,
+        shape=target_shape,
         iterations=options.iterations,
         content_weight=options.content_weight,
         style_weight=options.style_weight,

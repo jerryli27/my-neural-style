@@ -21,7 +21,7 @@ STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/
 SHIFT_SIZE = 4 # The shift size for the new loss function.
 
 
-def stylize(network, initial, content, styles, iterations,
+def stylize(network, initial, content, styles, shape, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
             learning_rate, use_mrf = False, use_semantic_masks = False, mask_resize_as_feature = True,
             output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
@@ -43,7 +43,6 @@ def stylize(network, initial, content, styles, iterations,
         assert output_semantic_mask is not None
         assert style_semantic_masks is not None
 
-    shape = (1,) + content.shape
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
     style_shapes = [(1,) + style.shape for style in styles]
@@ -216,7 +215,10 @@ def stylize(network, initial, content, styles, iterations,
 
 
         if initial is None:
-            noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
+            if content is None:
+                noise = np.random.normal(size=shape, scale=0.1)
+            else:
+                noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
             initial = tf.random_normal(shape) * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, mean_pixel)])
@@ -259,9 +261,9 @@ def stylize(network, initial, content, styles, iterations,
 
                     # ***** END TEST GRAM*****
 
-                    # style_gram_size = neural_util.get_tensor_num_elements(style_gram) / ((SHIFT_SIZE + 1) ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
-                    # style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
-                    style_losses.append(tf.nn.l2_loss(gram - style_gram))
+                    style_gram_size = neural_util.get_tensor_num_elements(style_gram) / ((SHIFT_SIZE + 1) ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
+                    style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
+                    # style_losses.append(tf.nn.l2_loss(gram - style_gram))
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising
         tv_y_size = _tensor_size(image[:,1:,:,:])

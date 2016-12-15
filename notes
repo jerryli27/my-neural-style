@@ -272,5 +272,7 @@ Tasks not done yet:
     original style image. One small problem is: the layout seems to resemble the layout of the original style image
     a little (not noticeable unless you pay attention to it). Like the buildings are always on the left side,
     resembling the original style image.
+    Tried to fix normalization but ended up using the current one.. It works good while the other ones don't.
 
     I want to try this on content images. Style/texture regenration was successful.
+    Oh shit I was using the wrong masks.. I also need to increase the weight of the styles. TODO:

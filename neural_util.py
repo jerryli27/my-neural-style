@@ -95,7 +95,7 @@ def gram_experiment(features, horizontal_shift = 0, vertical_shift = 0):
         shifted = tf.slice(current_feature, [0, vertical_shift, horizontal_shift, 0], [-1, -1, -1, -1])
         left_reshaped = tf.reshape(original, (-1, number))
         right_reshaped = tf.reshape(shifted, (-1, number))
-        gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / (size ** 2)
+        gram = tf.matmul(tf.transpose(left_reshaped), right_reshaped) / (size)
         grams.append(gram)
     grams = tf.pack(grams)
     return grams
