@@ -215,11 +215,6 @@ Task 3: improving slow version.
     the "gram stack" and showed that it can reconstruct local structures to a good extent, given enough stacks. Can I
     use that? (like have stack = 5, 2 left, 1 center and 2 right?)
 
-                        # TODO: change it back, or make sure it is better than just concatenating.
-        # TODO: don't forget to change it back.
-
-
-TODO list for tomorrow:
 1. Fix resizing/dot/feed into network and append. Compare the three throughly.
 2. Find alternative loss function that gets the good side from both gram and mrf.
 
@@ -275,4 +270,6 @@ Tasks not done yet:
     Tried to fix normalization but ended up using the current one.. It works good while the other ones don't.
 
     I want to try this on content images. Style/texture regenration was successful.
-    Oh shit I was using the wrong masks.. I also need to increase the weight of the styles. TODO:
+    Oh shit I was using the wrong masks.. I also need to increase the weight of the styles.
+
+3. Pyramid genration network.

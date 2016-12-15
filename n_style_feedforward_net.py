@@ -112,7 +112,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 # Now we do not support feeding in content images as well as their masks.
                 # inputs = tf.placeholder(tf.float32,
                 #                         shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
-                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers * 3])
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
             else:
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
@@ -371,7 +371,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     if use_semantic_masks:
                         # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
                         #                                            semantic_masks_num_layers])
-                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers * 3])
+                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     image = johnson_feedforward_net_util.net(inputs, reuse=True)
@@ -437,8 +437,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         if use_semantic_masks:
                             # feed_dict[inputs] = mask_pre_list
                             # feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3])), mask_pre_list), axis=3)
-                            feed_dict[inputs] = np_image_dot_mask(np.random.uniform(
-                                size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3])), mask_pre_list)
+                            feed_dict[inputs] = mask_pre_list
 
                         elif style_only:
                             feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
@@ -548,9 +547,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 # feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1],
                                 #                                                    input_shape[2], input_shape[3])),
                                 #                                     mask_pre_list), axis=3)
-                                feed_dict[inputs] = np_image_dot_mask(np.random.uniform(
-                                    size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3])),
-                                    mask_pre_list)
+                                feed_dict[inputs] = mask_pre_list
 
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):

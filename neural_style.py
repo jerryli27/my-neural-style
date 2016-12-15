@@ -116,6 +116,7 @@ def main():
 
     content_image = None
     if options.content != '':
+        print('reading content image %s' %options.content)
         content_image =read_and_resize_images(options.content, options.height, options.width)
     style_images = read_and_resize_images(options.styles, options.height, options.width)
 
