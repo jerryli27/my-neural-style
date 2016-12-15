@@ -25,7 +25,7 @@ def stylize(network, initial, content, styles, shape, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
             learning_rate, use_mrf = False, use_semantic_masks = False, mask_resize_as_feature = True,
             output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
-            print_iterations=None, checkpoint_iterations=None):
+            print_iterations=None, checkpoint_iterations=None, new_gram = False):
     """
     Stylize images.
 
@@ -141,11 +141,13 @@ def stylize(network, initial, content, styles, shape, iterations,
 
                     # ***** TEST GRAM*****
                     # TODO: Testing new loss function.
-                    # _, height, width, number = map(lambda i: i.value, features.get_shape())
-                    # size = height * width * number
-                    # features = tf.reshape(features, (-1, number))
-                    # gram = tf.matmul(tf.transpose(features), features) / size
-                    gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
+                    if new_gram:
+                        gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
+                    else:
+                        _, height, width, number = map(lambda i: i.value, features.get_shape())
+                        size = height * width * number
+                        features = tf.reshape(features, (-1, number))
+                        gram = tf.matmul(tf.transpose(features), features) / size
                     style_features[i][layer] = gram
                     # ***** END TEST GRAM*****
 
@@ -204,12 +206,15 @@ def stylize(network, initial, content, styles, shape, iterations,
                         # ***** TEST GRAM*****
                         features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
                         # TODO: Testing new loss function
-                        # _, height, width, number = map(lambda i: i.value, features.get_shape())
-                        # size = height * width * number
-                        #
-                        # features = tf.reshape(features, (-1, number))
-                        # gram = tf.matmul(tf.transpose(features), features) / size
-                        gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
+                        if new_gram:
+                            gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
+                        else:
+                            _, height, width, number = map(lambda i: i.value, features.get_shape())
+                            size = height * width * number
+
+                            features = tf.reshape(features, (-1, number))
+                            gram = tf.matmul(tf.transpose(features), features) / size
+
                         style_semantic_masks_features[i][layer] = gram
                         # ***** END TEST GRAM*****
 
@@ -251,12 +256,14 @@ def stylize(network, initial, content, styles, shape, iterations,
                         layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
                     # ***** TEST GRAM*****
                     # TODO: Testing new loss function.
-                    # _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                    # size = height * width * number
-                    # feats = tf.reshape(layer, (-1, number))
-                    # gram = tf.matmul(tf.transpose(feats), feats) / size
+                    if new_gram:
+                        gram = neural_util.gram_stacks(layer, shift_size=SHIFT_SIZE)
+                    else:
+                        _, height, width, number = map(lambda i: i.value, layer.get_shape())
+                        size = height * width * number
+                        feats = tf.reshape(layer, (-1, number))
+                        gram = tf.matmul(tf.transpose(feats), feats) / size
 
-                    gram = neural_util.gram_stacks(layer, shift_size=SHIFT_SIZE)
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
 
                     # ***** END TEST GRAM*****

@@ -272,4 +272,7 @@ Tasks not done yet:
     I want to try this on content images. Style/texture regenration was successful.
     Oh shit I was using the wrong masks.. I also need to increase the weight of the styles.
 
+    ... Now I'm stuch again. With content image, the result looks worse than the previous generations. Let me try to
+    change the gram back and see what happens.
+
 3. Pyramid genration network.
