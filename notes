@@ -273,3 +273,10 @@ Tasks not done yet:
     Oh shit I was using the wrong masks.. I also need to increase the weight of the styles.
 
 3. Pyramid genration network.
+    It seems like the author did not use the pyrammid generation network in his github. He used a conv-deconv model,
+    similar to Johnson, but with small modifications. He added a skip layer and appended those after each conv step.
+    He also added a lot of noise layers along with each skip layer. The downsampling layers have 8 layers but the
+    noise layers have 16...
+
+    That one is guaranteed to work, but I still would like to figure out why mine didn't. Let me try to increase the
+    number of noise layers... Don't know if that will help.
