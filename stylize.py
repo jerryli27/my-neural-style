@@ -16,7 +16,7 @@ except NameError:
 
 CONTENT_LAYER = 'relu4_2'
 STYLE_LAYERS = ('relu3_1', 'relu4_1')
-STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')
+STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 SHIFT_SIZE = 4 # The shift size for the new loss function.
@@ -26,7 +26,7 @@ def stylize(network, initial, content, styles, shape, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
             learning_rate, use_mrf = False, use_semantic_masks = False, mask_resize_as_feature = True,
             output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
-            print_iterations=None, checkpoint_iterations=None, new_gram = False):
+            print_iterations=None, checkpoint_iterations=None, new_gram = True):
     """
     Stylize images.
 
@@ -270,8 +270,10 @@ def stylize(network, initial, content, styles, shape, iterations,
                     style_gram = style_semantic_masks_features[i][style_layer] if use_semantic_masks else style_features[i][style_layer]
 
                     # ***** END TEST GRAM*****
-
-                    style_gram_size = neural_util.get_tensor_num_elements(style_gram) / ((SHIFT_SIZE + 1) ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
+                    if new_gram:
+                        style_gram_size = neural_util.get_tensor_num_elements(style_gram) / (SHIFT_SIZE ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
+                    else:
+                        style_gram_size = neural_util.get_tensor_num_elements(style_gram)
                     style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
                     # style_losses.append(tf.nn.l2_loss(gram - style_gram))
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)

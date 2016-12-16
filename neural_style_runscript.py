@@ -21,15 +21,16 @@ contents_name = 'new_loss'# '256'
 styles = ['van_gogh/style256.jpg']
 style_name = 'van_gogh_starry_sky'
 
-learning_rate=1
-iterations=2000
+use_mrf = False
+use_mrf_string = '--use_mrf' if use_mrf else ''
+
+learning_rate=10 # larger lr seems to result in larger looking features (compared to lr = 1)
+iterations=1000
 batch_size=1
-style_weight=1
+style_weight=10 if not use_mrf else 5 # 100 for old gram loss works.
 content_weight=5
 checkpoint_iterations=100
 print_iteration = 100
-use_mrf = False
-use_mrf_string = '--use_mrf' if use_mrf else ''
 
 use_semantic_masks = False
 use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''

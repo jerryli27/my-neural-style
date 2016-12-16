@@ -275,5 +275,46 @@ Tasks not done yet:
     ... Now I'm stuch again. With content image, the result looks worse than the previous generations. Let me try to
     change the gram back and see what happens. Hum it looked different. Maybe it's the style layers. I'm only using two
     (3-4) where before I was using four (1-4)
+    Makes little difference. I'll try downloading one of those online repositories and compare mine to theirs.
 
 3. Pyramid genration network.
+
+2016/12/16
+Alternative loss function
+The loss with respect to the shift size is kind of wierd...
+6:1.80673e+08
+5:1.41603e+08
+4:1.05345e+08
+3:7.28106e+07
+2:4.48457e+07
+1:2.26033e+07
+I guess if we keep the shift size constant, it's not a big problem.
+Yesterday when I compared my new loss with the old one, I think I had some bugs
+and I should compare them again.
+
+My implementation results in image that is too detailed. (No interesting features on
+a grand scale, just local ones). I then tried to change the lr and it worked... I don't know why
+but the features now became of a larger scale. What I mean is the brushes looks larger and more
+coherent. This may be just an accident, because I don't think the system is designed that way. I need
+to find a way to make coherent brushes.
+
+I tested my new loss function. Although there is noticeable difference when I do texture generation,
+when I added the content image, there was essentially no difference between the new loss function and
+the gram loss. Maybe that is because we're using layer 1-5 and layer 1 is just too detailed? (So if we fit a layer that
+looks almost like the original image, then the result would look like the original image as well...) I'll try the
+layer 3-5.
+... Nah it is just hard to tell the difference. The old problem still exists and the variance in the result each time
+is just too large. The biggest problem is still the inability to recognize objects and paint them accordingly. If I
+want to paint the sky in some way, I don't want to paint the ocean in the same way as well (unless I want to do so
+intentionally) because now the person will have no idea where the boundary is. But that can be solved by adding masks,
+and the more detailed the mask is, the better the painting would be. One question would be: what if the thing i want to
+paint is not in the style image? Using neural network sort of solves that image but using masks won't. Also relying on
+a single image almost guarantees that you can't draw something that is not in that image.
+So the solution I can think of:
+1. Use a hierarchy of objects. If I want to paint a human, but there is no human in the kb, we find the next closest
+level: mammals, animals etc and paint the human like that. But that would require a kb of how to draw different things
+as well as their semantic relations.
+2. Enable training on lots of masked images, not just one. This is essentially building a kb. But I don't know how to
+even train one feed-forward network on one masked image yet... So this now becomes my priority...
+
+
