@@ -4,6 +4,8 @@
 
 import tensorflow as tf
 
+import neural_doodle_util
+from feedforward_style_net_util import gramian
 from general_util import *
 
 def concatenate_mask_layer_tf(mask_layer, original_layer):
@@ -68,3 +70,31 @@ def masks_average_pool(masks):
 
     assert len(ret) == len(layers)
     return ret
+
+
+def gramian_with_mask(layer, masks):
+    """TODO"""
+    mask_list = tf.unpack(masks, axis=3) # A list of masks with dimension (1,height, width)
+
+    gram_list = []
+
+    for mask in mask_list:
+        mask = tf.expand_dims(mask, dim=3)
+        layer_dotted_with_mask = neural_doodle_util.vgg_layer_dot_mask(mask, layer)
+        layer_dotted_with_mask_gram = gramian(layer_dotted_with_mask)
+        gram_list.append(layer_dotted_with_mask_gram)
+
+    grams=tf.pack(gram_list)
+
+    if isinstance(layer, np.ndarray):
+        _, _, _, num_features = layer.shape
+    else:
+        _,_,_,num_features  =  map(lambda i: i.value, layer.get_shape())
+
+    number_colors, _, gram_height, gram_width = map(lambda i: i.value, grams.get_shape())
+
+    assert num_features == gram_height
+    assert num_features == gram_width
+    assert number_colors == len(mask_list)
+
+    return grams

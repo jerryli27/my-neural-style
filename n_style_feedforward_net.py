@@ -229,11 +229,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             style_features[i][layer] = \
                                 neural_doodle_util.concatenate_mask_layer_tf(features, style_features[i][layer])
                         else:
-                            features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
-                            # TODO: testing gram stacks
-                            gram = gramian(features)
-                            # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                            # gram = neural_util.gram_stacks(features)
+                            # TODO :testing new gram with masks.
+                            gram = neural_doodle_util.gramian_with_mask(style_features[i][layer], features)
+                            #
+                            # features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
+                            # # TODO: testing gram stacks
+                            # gram = gramian(features)
+                            # # If we want to use gram stacks instead of simple gram, uncomment the line below.
+                            # # gram = neural_util.gram_stacks(features)
                             style_features[i][layer] = gram
 
 
@@ -266,13 +269,19 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             # features. The RAM required thus grows linearly with number of masks. This may cause
                             # a problem later because it essentially restricts how many different kinds of things we
                             # can label.
-                            layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer],
-                                                                          layer)
-                        # Use gramian loss.
-                        # TODO: testing gram stacks
-                        gram = gramian(layer)
-                        # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                        # gram = neural_util.gram_stacks(layer)
+                            # TODO: change this to follows: each color has one corresponding gram matrix (now all shares one large one).
+
+                            gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer])
+
+                            # layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer],
+                            #                                               layer)
+                            # gram = gramian(layer)
+                        else:
+                            # Use gramian loss.
+                            # TODO: testing gram stacks
+                            gram = gramian(layer)
+                            # If we want to use gram stacks instead of simple gram, uncomment the line below.
+                            # gram = neural_util.gram_stacks(layer)
                         style_gram = style_features[i][style_layer]
                         if use_semantic_masks:
                             # Dividing by semantic_masks_num_layers because the masks should have one 1 in each pixel

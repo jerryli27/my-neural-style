@@ -135,3 +135,4 @@ def gram_stacks(features, shift_size=2):
 def get_tensor_num_elements(tensor):
     tensor_shape = map(lambda i: i.value, tensor.get_shape())
     return reduce(mul, tensor_shape, 1)
+

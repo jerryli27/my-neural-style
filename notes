@@ -319,3 +319,11 @@ as well as their semantic relations.
 even train one feed-forward network on one masked image yet... So this now becomes my priority...
 
 
+Feed-forward texture generation with masks.
+    I read the source code in torch and compared against my code. One big difference I found was that it had one gram
+    matrix for each coloring. I had one huge gram matrix for all the coloring. Theoretically mine should not affect the
+    result (because no color overlaps so most of the gram matrix would be 0), but I'm going to rewrite mine just in
+    case.
+
+    Link to the torch source code: https://github.com/DmitryUlyanov/fast-neural-doodle/blob/master/fast_neural_doodle.lua
+    TODO: tomorrow test gramian_with_mask
