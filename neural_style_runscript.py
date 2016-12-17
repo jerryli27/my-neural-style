@@ -35,8 +35,8 @@ checkpoint_iterations=100
 print_iteration = 100
 
 
-output_semantic_mask = 'van_gogh/output_mask256.jpg'
-style_semantic_masks = ['van_gogh/style_mask256.jpg']
+output_semantic_mask = 'van_gogh/bw_masks/'
+style_semantic_masks = ['van_gogh/bw_masks/']
 
 checkpoint_output='output_checkpoint/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-style-%d-content-%d_%%s.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), style_weight, content_weight)
 output='output/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-style-%d-content-%d.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), style_weight, content_weight)
