@@ -10,7 +10,7 @@ CONTENT_WEIGHT = 5e0
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 1e2
 SEMANTIC_MASKS_WEIGHT = 1.0
-SEMANTIC_MASKS_NUM_LAYERS = 1
+SEMANTIC_MASKS_NUM_LAYERS = 4
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
@@ -158,8 +158,18 @@ def main():
         #         style_scale = options.style_scales[i]
         #     style_semantic_masks[i] = scipy.misc.imresize(style_semantic_masks[i], style_scale *
         #             target_shape[1] / style_semantic_masks[i].shape[1])
-        output_semantic_mask = read_and_resize_images(options.output_semantic_mask, options.height, options.width)
-        style_semantic_masks = read_and_resize_images(options.style_semantic_masks, options.height, options.width)
+        # output_semantic_mask = read_and_resize_images(options.output_semantic_mask, options.height, options.width)
+        # style_semantic_masks = read_and_resize_images(options.style_semantic_masks, options.height, options.width)
+
+        output_semantic_mask_paths = get_all_image_paths_in_dir(options.output_semantic_mask)
+        output_semantic_mask = read_and_resize_bw_mask_images(output_semantic_mask_paths, options.height, options.width, 1,
+                                                       options.semantic_masks_num_layers)
+
+        style_semantic_masks = []
+        for style_semantic_mask_dir in options.style_semantic_masks:
+            style_semantic_mask_paths = get_all_image_paths_in_dir(style_semantic_mask_dir)
+            style_semantic_masks.append(read_and_resize_bw_mask_images(style_semantic_mask_paths, options.height, options.width, 1,
+                                                           options.semantic_masks_num_layers))
 
 
 
