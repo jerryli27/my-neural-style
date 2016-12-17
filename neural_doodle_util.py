@@ -5,6 +5,7 @@
 import tensorflow as tf
 
 import neural_doodle_util
+import vgg
 from feedforward_style_net_util import gramian
 from general_util import *
 
@@ -98,3 +99,93 @@ def gramian_with_mask(layer, masks):
     assert number_colors == len(mask_list)
 
     return grams
+
+
+def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf):
+    # Variables to be returned.
+    output_semantic_mask_features = {}
+
+    content_semantic_mask = tf.placeholder(tf.float32, [batch_size, height, width,
+                                                        semantic_masks_num_layers],
+                                           name='content_semantic_mask')
+    if mask_resize_as_feature:
+        # TODO: According to http://dmitryulyanov.github.io/feed-forward-neural-doodle/,
+        # resizing might not be sufficient. "Use 3x3 mean filter for mask when the data goes through
+        # convolutions and average pooling along with pooling layers."
+        # But this is just a minor improvement that should not affect the final result too much.
+        # prev_layer = None
+
+        output_semantic_masks_for_each_layer = neural_doodle_util.masks_average_pool(content_semantic_mask)
+        for layer in style_layer_names:
+            # output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
+            #     net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
+            #
+
+
+            output_semantic_mask_feature = output_semantic_masks_for_each_layer[layer]
+
+            output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
+            if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (
+                net_layer_sizes[layer][1] != output_semantic_mask_shape[1]):
+                print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
+                      % (layer, str(net_layer_sizes[layer]), str(output_semantic_mask_shape)))
+                raise AssertionError
+
+            # Must be normalized (/ 255), otherwise the style loss just gets out of control.
+            output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
+            # prev_layer = layer
+    else:
+        content_semantic_mask_pre = vgg.preprocess(content_semantic_mask, mean_pixel)
+        semantic_mask_net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask_pre)
+        for layer in style_layer_names:
+            output_semantic_mask_feature = semantic_mask_net[layer] * semantic_masks_weight
+            output_semantic_mask_features[layer] = output_semantic_mask_feature
+
+    style_semantic_masks_pres = []
+    style_semantic_masks_images = []
+    style_semantic_masks_for_each_layer = []
+    for i in range(len(styles)):
+        style_semantic_masks_images.append(
+            tf.placeholder('float',
+                           shape=(1, height, width, semantic_masks_num_layers),
+                           name='style_mask_%d' % i))
+
+        if not mask_resize_as_feature:
+            style_semantic_masks_pres.append(
+                np.array([vgg.preprocess(style_semantic_masks[i], mean_pixel)]))
+            semantic_mask_net, _ = vgg.pre_read_net(vgg_data, style_semantic_masks_pres[-1])
+        else:
+            style_semantic_masks_for_each_layer.append(
+                neural_doodle_util.masks_average_pool(style_semantic_masks_images[-1]))
+
+        for layer in style_layer_names:
+            if mask_resize_as_feature:
+                # Must be normalized (/ 255), otherwise the style loss just gets out of control.
+                # features = tf.image.resize_images(style_semantic_masks_images[-1],
+                #                                   (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
+                features = style_semantic_masks_for_each_layer[-1][layer] / 255.0
+
+                features_shape = map(lambda i: i.value, features.get_shape())
+                if (net_layer_sizes[layer][1] != features_shape[1]) or (net_layer_sizes[layer][1] != features_shape[1]):
+                    print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
+                          % (layer, str(net_layer_sizes[layer]), str(features_shape)))
+                    raise AssertionError
+
+            else:
+                features = semantic_mask_net[layer]
+            features = features * semantic_masks_weight
+            if use_mrf:
+                style_features[i][layer] = \
+                    neural_doodle_util.concatenate_mask_layer_tf(features, style_features[i][layer])
+            else:
+                # TODO :testing new gram with masks.
+                gram = neural_doodle_util.gramian_with_mask(style_features[i][layer], features)
+                #
+                # features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
+                # # TODO: testing gram stacks
+                # gram = gramian(features)
+                # # If we want to use gram stacks instead of simple gram, uncomment the line below.
+                # # gram = neural_util.gram_stacks(features)
+                style_features[i][layer] = gram
+
+    return output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images

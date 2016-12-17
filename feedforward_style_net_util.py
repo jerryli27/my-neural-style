@@ -449,7 +449,7 @@ def total_variation(image_batch):
     return total_variation
 
 
-def compute_image_features(image_path,layers,shape,vgg_data,mean_pixel, use_mrf, use_semantic_masks):
+def precompute_image_features(image_path, layers, shape, vgg_data, mean_pixel, use_mrf, use_semantic_masks):
     features_dict = {}
     g = tf.Graph()
     # If using gpu, uncomment the following line.
