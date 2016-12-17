@@ -327,3 +327,11 @@ Feed-forward texture generation with masks.
 
     Link to the torch source code: https://github.com/DmitryUlyanov/fast-neural-doodle/blob/master/fast_neural_doodle.lua
     TODO: tomorrow test gramian_with_mask
+
+2016/12/17
+1.Testing gramian_with_mask
+2. New loss function.
+    Ok why my loss function didn't work? It worked perfectly without masks. Then it starts to break down a little after
+    I added the masks. Then it completely becomes the old gram loss after I added the content images. What happened in
+    between?
+Hum... How to
