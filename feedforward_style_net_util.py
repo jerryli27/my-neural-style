@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
 import neural_util
+import vgg
 from general_util import *
 
 
@@ -446,3 +447,25 @@ def total_variation(image_batch):
 
 
     return total_variation
+
+
+def compute_image_features(image_path,layers,shape,vgg_data,mean_pixel, use_mrf, use_semantic_masks):
+    features_dict = {}
+    g = tf.Graph()
+    # If using gpu, uncomment the following line.
+    # with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
+    with g.as_default(), tf.Session() as sess:
+        image = tf.placeholder('float', shape=shape)
+        net = vgg.pre_read_net(vgg_data, image)
+        style_pre = np.array([vgg.preprocess(image_path, mean_pixel)])
+        for layer in layers:
+            if use_mrf or use_semantic_masks:
+                features = net[layer].eval(feed_dict={image: style_pre})
+                features_dict[layer] = features
+            else:
+                # Calculate and store gramian.
+                features = net[layer].eval(feed_dict={image: style_pre})
+                features = np.reshape(features, (-1, features.shape[3]))
+                gram = np.matmul(features.T, features) / features.size
+                features_dict[layer] = gram
+    return features_dict

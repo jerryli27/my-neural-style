@@ -5,7 +5,7 @@ from general_util import *
 styles = ['van_gogh/style.png']
 style_folder = 'style_compressed/claude_monet_2/' # DUMMY
 style_name = 'van_gogh'
-style_semantic_mask_dirs=['van_gogh/style_mask_segmented_0.jpg', 'van_gogh/style_mask_segmented_1.jpg', 'van_gogh/style_mask_segmented_2.jpg', 'van_gogh/style_mask_segmented_3.jpg']
+style_semantic_mask_dirs=['van_gogh/bw_masks/style_mask_segmented_0.jpg', 'van_gogh/bw_masks/style_mask_segmented_1.jpg', 'van_gogh/bw_masks/style_mask_segmented_2.jpg', 'van_gogh/bw_masks/style_mask_segmented_3.jpg']
 mask_folder='4_color_masks/'
 
 learning_rate=0.001
@@ -14,8 +14,8 @@ batch_size=1 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 style_weight=200
 content_weight=5
 checkpoint_iterations=100
-width = 256
-height = 256
+width = 128
+height = 128
 print_iteration = 100
 use_mrf = False
 use_johnson = True # False
