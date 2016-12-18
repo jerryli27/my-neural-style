@@ -19,12 +19,12 @@ height = 256
 print_iteration = 100
 use_mrf = False
 use_johnson = False
-use_skip_noise_4 = False
+use_skip_noise_4 = True
 texture_synthesis_only = True # True
 do_restore_and_train = False
 do_restore_and_generate = False
 multi_style_offset_only = False
-use_semantic_masks = False # False
+use_semantic_masks = True # False
 semantic_masks_num_layers = 4
 
 test_img = 'test_masks/' if use_semantic_masks else 'source_compressed/chicago.jpg'
@@ -41,9 +41,9 @@ do_restore_and_generate_string = '--do_restore_and_generate' if do_restore_and_g
 multi_style_offset_only_string = '--multiple_styles_train_scale_offset_only' if multi_style_offset_only else ''
 use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''
 
-checkpoint_output='output_checkpoint/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-multi_style_offset_only-%s-style-%d-content-%d-stylenum-%%s_%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(multi_style_offset_only), style_weight, content_weight)
-output='output/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-multi_style_offset_only-%s-style-%d-content-%d-stylenum-%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(multi_style_offset_only), style_weight, content_weight)
-model_save_dir='model/genstyle-%s-%s-iter-batchsize-%d-%d-lr-%f-use_mrf-%s-%s-multi_style_offset_only-%s-style-%d-content-%d/' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(multi_style_offset_only), style_weight, content_weight)
+checkpoint_output='output_checkpoint/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-mask-%s-multi_style_offset_only-%s-style-%d-content-%d-stylenum-%%s_%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(use_semantic_masks), str(multi_style_offset_only), style_weight, content_weight)
+output='output/genstyle-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-%s-mask-%s-multi_style_offset_only-%s-style-%d-content-%d-stylenum-%%s.jpg' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(use_semantic_masks), str(multi_style_offset_only), style_weight, content_weight)
+model_save_dir='model/genstyle-%s-%s-iter-batchsize-%d-%d-lr-%f-use_mrf-%s-%s-mask-%s-multi_style_offset_only-%s-style-%d-content-%d/' % (style_or_texture_string, style_name, iterations, batch_size, learning_rate, str(use_mrf), johnson_or_pyramid_string, str(use_semantic_masks), str(multi_style_offset_only), style_weight, content_weight)
 if not os.path.exists(model_save_dir):
     os.makedirs(model_save_dir)
 

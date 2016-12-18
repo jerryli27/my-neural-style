@@ -587,6 +587,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         elif use_skip_noise_4:
                             if use_semantic_masks:
                                 feed_dict[inputs] = mask_pre_list
+                                feed_dict[content_semantic_mask] = mask_pre_list
+                                for styles_iter in range(len(styles)):
+                                    feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
+                                        style_semantic_masks[styles_iter], axis=0)
                             elif style_only:
                                 feed_dict[inputs] = np.random.uniform(
                                     size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
@@ -596,6 +600,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
                                 feed_dict[skip_noise] = np.random.uniform(size=skip_noise_shape)
                         else:
+                            raise NotImplementedError
                             if use_semantic_masks:
                                 mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
                                                                                mask_pre_list, num_features=semantic_masks_num_layers)

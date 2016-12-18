@@ -16,6 +16,7 @@ nums_3x3up = [16, 32, 64, 128,128]
 # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly by 4.
 def net(image, mirror_padding=True, reuse=False):
     # TODO: check if we need mirror padding
+    image_shape = image.get_shape().as_list()
     prev_layer = image
     prev_layer_list = [image]
     skip_noise_list = []
@@ -51,14 +52,15 @@ def net(image, mirror_padding=True, reuse=False):
             prev_layer = skip_deeper_concat
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init = _conv_init_vars(prev_layer, 3, 1, name='final_conv', reuse=reuse)
+        weights_init = _conv_init_vars(prev_layer, image_shape[3], 1, name='final_conv', reuse=reuse)
         strides_shape = [1, 1, 1, 1]
         final = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME')
 
         # Do sanity check.
-        image_shape = image.get_shape().as_list()
         final_shape = final.get_shape().as_list()
-        assert len(image_shape) == len(final_shape) and sorted(image_shape) == sorted(final_shape)
+        if not (len(image_shape) == len(final_shape) and sorted(image_shape) == sorted(final_shape)):
+            print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
+            raise AssertionError
 
     return final, skip_noise_list
 
