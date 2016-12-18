@@ -345,5 +345,6 @@ Feed-forward texture generation with masks.
 1. Testing gramian with mask
     Continued training from yesterday.
     Hum.. the network also failed... The result just looks super wierd.
+    Trying to repeat the experiment using content images... Will continue training..
 
 2. New loss function.
