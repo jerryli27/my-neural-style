@@ -84,6 +84,10 @@ def build_parser():
                         help='If true, we use the johnson generator net instead of pyramid net (default %(default)s).',
                         action='store_true')
     parser.set_defaults(use_johnson=False)
+    parser.add_argument('--use_skip_noise_4', dest='use_skip_noise_4',
+                        help='If true, we use the skip_noise_4 generator network (default %(default)s).',
+                        action='store_true')
+    parser.set_defaults(use_skip_noise_4=False)
     parser.add_argument('--multiple_styles_train_scale_offset_only', dest='multiple_styles_train_scale_offset_only',
                         help='If true, TODO (default %(default)s).',
                         action='store_true')
@@ -94,6 +98,7 @@ def build_parser():
                         help='If true, we use semantic masks to help training (default %(default)s).',
                         action='store_true')
     parser.set_defaults(use_semantic_masks=False)
+
     parser.add_argument('--mask_folder', dest='mask_folder',
                         help='Folder to a directory containing random mask images for training.',
                         metavar='MASK_FOLDER', default=MASK_FOLDER)
@@ -182,6 +187,8 @@ def main():
     if options.checkpoint_output and options.checkpoint_output.count("%s") != 2:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain only two `%s` (e.g. `foo_style_%s_iteration_%s.jpg`).")
+    if options.use_johnson and options.use_skip_noise_4:
+        parser.error("use_johnson and use_skip_noise_4 can't both be true. Please choose only one generator network.")
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
@@ -199,6 +206,7 @@ def main():
             multiple_styles_train_scale_offset_only= options.multiple_styles_train_scale_offset_only,
             use_mrf=options.use_mrf,
             use_johnson=options.use_johnson,
+            use_skip_noise_4=options.use_skip_noise_4,
             print_iterations=options.print_iterations,
             checkpoint_iterations=options.checkpoint_iterations,
             save_dir=options.model_save_dir,

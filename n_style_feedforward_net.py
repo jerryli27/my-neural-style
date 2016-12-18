@@ -29,7 +29,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         learning_rate, lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7,
                         style_only=False,
                         multiple_styles_train_scale_offset_only=False, use_mrf=False,
-                        use_johnson=False, use_skip_noise_4 = True, print_iterations=None,
+                        use_johnson=False, use_skip_noise_4 = False, print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
                         use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
@@ -100,8 +100,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             image = johnson_feedforward_net_util.net(inputs)  # Deleting the  / 255.0 because the network normalizes automatically.
         elif use_skip_noise_4:
             if use_semantic_masks:
-                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-                raise NotImplementedError
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
             else:
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
             image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs)
@@ -380,8 +379,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     image = johnson_feedforward_net_util.net(inputs, reuse=True)
                 elif use_skip_noise_4:
                     if use_semantic_masks:
-                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-                        raise NotImplementedError
+                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs, reuse=True)
@@ -456,7 +454,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[inputs] = content_pre
                     elif use_skip_noise_4:
                         if use_semantic_masks:
-                            raise NotImplementedError
+                            feed_dict[inputs] = mask_pre_list
                         elif style_only:
                             feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                         else:
@@ -588,7 +586,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     feed_dict[inputs] = content_pre_list
                         elif use_skip_noise_4:
                             if use_semantic_masks:
-                                raise NotImplementedError
+                                feed_dict[inputs] = mask_pre_list
                             elif style_only:
                                 feed_dict[inputs] = np.random.uniform(
                                     size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))

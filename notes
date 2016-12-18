@@ -331,9 +331,9 @@ Feed-forward texture generation with masks.
 1.Testing gramian_with_mask
     It works fine in back-propagation mode.
     The feed forward is still not working after training for 5000 rounds. This is fustrating...
-    TODO: check the result for texture generation without masks and contintue training? It seems to be working. More
+    check the result for texture generation without masks and contintue training? It seems to be working. More
     training will result in better result.
-    TODO: I will code the new feed-forward network and hope that saves the day.
+    I will code the new feed-forward network and hope that saves the day.
 2. New loss function.
     Ok why my loss function didn't work? It worked perfectly without masks. Then it starts to break down a little after
     I added the masks. Then it completely becomes the old gram loss after I added the content images. What happened in
@@ -345,6 +345,16 @@ Feed-forward texture generation with masks.
 1. Testing gramian with mask
     Continued training from yesterday.
     Hum.. the network also failed... The result just looks super wierd.
-    Trying to repeat the experiment using content images... Will continue training..
+    Trying to repeat the experiment using content images... TODO: Will continue training..
+    Ok The skip_noise_4 network is working. At least it is working when it generates the style without masks or content
+    images. *
+
+    Conclusion:
+        johnson network sort of works to generate styles. The boarder looks wierd though and the features are small,
+        probably because I trained using 128x128 instead of 256x256.
+        TODO: Train using 256x256 without masks or content.
+
+        skip_noise_4 generate styles successfully.
 
 2. New loss function.
+
