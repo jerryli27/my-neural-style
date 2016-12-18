@@ -8,7 +8,7 @@ import os
 
 
 
-content= ''   # ''#'source_compressed/256/sea.jpg'
+content= 'source_compressed/256/sea.jpg'   # ''#
 content_string = '--content ' if content != '' else ''
 texture_or_not = 'texture' if content == '' else 'content'
 #contents= ['source_compressed/my256/%d.jpg' % i for i in range(1,17)]
