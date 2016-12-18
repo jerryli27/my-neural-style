@@ -52,13 +52,13 @@ def net(image, mirror_padding=True, reuse=False):
             prev_layer = skip_deeper_concat
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init = _conv_init_vars(prev_layer, image_shape[3], 1, name='final_conv', reuse=reuse)
+        weights_init = _conv_init_vars(prev_layer, 3, 1, name='final_conv', reuse=reuse)
         strides_shape = [1, 1, 1, 1]
         final = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME')
 
         # Do sanity check.
         final_shape = final.get_shape().as_list()
-        if not (len(image_shape) == len(final_shape) and sorted(image_shape) == sorted(final_shape)):
+        if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
             print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
             raise AssertionError
 
