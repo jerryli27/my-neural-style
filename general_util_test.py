@@ -118,5 +118,13 @@ class TestDataUtilMethods(unittest.TestCase):
 
         np.testing.assert_array_equal(actual_output, expected_output)
 
+    def test_dumb(self):
+        content_dirs = get_all_image_paths_in_dir('4_color_masks/')
+
+        content_pre_list = read_and_resize_bw_mask_images(
+                get_batch(content_dirs, 0, 4),
+                256, 256, 1, 4)
+        print content_pre_list
+
 if __name__ == '__main__':
     unittest.main()

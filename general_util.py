@@ -166,3 +166,20 @@ def np_image_dot_mask(image, mask):
 
     ret = np.transpose(np.array(ret), axes=(1,2,3,0))
     return ret
+
+def resize_image_like_layers(image, shape):
+    """
+
+    :param image: An np array with shape batch, height, width, num_features
+    :param shape: a tuple with format (new_height, new_width)
+    :return: An np array with shape batch, new_height, new_width, num_features
+    """
+    resized_image = []
+    for batch in range(image.shape[0]):
+        resized_image.append([])
+        for num_features in range(image.shape[3]):
+            resized_image[-1].append(scipy.misc.imresize(image[batch,:,:,num_features], shape))
+
+    resized_image = np.transpose(np.array(resized_image), (0,2,3,1))
+    return resized_image
+

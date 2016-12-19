@@ -314,10 +314,10 @@ def stylize(network, initial, content, styles, shape, iterations,
         #                 # # If we want to use gram stacks instead of simple gram, uncomment the line below.
         #                 # # gram = neural_util.gram_stacks(features)
         #                 style_features[i][layer] = gram
-
-        output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
-            style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
-            STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf)
+        if use_semantic_masks:
+            output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
+                style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
+                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf)
 
         if initial is None:
             if content is None:

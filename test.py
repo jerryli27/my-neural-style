@@ -6,7 +6,7 @@ styles = ['van_gogh/style.png']
 style_folder = 'style_compressed/claude_monet_2/' # DUMMY
 style_name = 'van_gogh'
 style_semantic_mask_dirs=['van_gogh/bw_masks/style_mask_segmented_0.jpg', 'van_gogh/bw_masks/style_mask_segmented_1.jpg', 'van_gogh/bw_masks/style_mask_segmented_2.jpg', 'van_gogh/bw_masks/style_mask_segmented_3.jpg']
-mask_folder='4_color_masks/'
+mask_folder= 'test_masks/' # '4_color_masks/'
 
 learning_rate=0.001
 iterations=80000

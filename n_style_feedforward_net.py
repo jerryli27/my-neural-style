@@ -100,7 +100,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             image = johnson_feedforward_net_util.net(inputs)  # Deleting the  / 255.0 because the network normalizes automatically.
         elif use_skip_noise_4:
             if use_semantic_masks:
-                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
+                # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS])
+
             else:
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
             image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs)
@@ -130,8 +132,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         net = vgg.pre_read_net(vgg_data, image)
         net_layer_sizes = vgg.get_net_layer_sizes(net)
         if not do_restore_and_generate:
-            # global_step_init = tf.constant(0)
-            # global_step = tf.get_variable(name='global_step', trainable=False, initializer=global_step_init)
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
@@ -143,88 +143,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
 
             if use_semantic_masks:
-                # content_semantic_mask = tf.placeholder(tf.float32, [batch_size, input_shape[1], input_shape[2],
-                #                                                     semantic_masks_num_layers],
-                #                                        name='content_semantic_mask')
-                # if mask_resize_as_feature:
-                #     # TODO: According to http://dmitryulyanov.github.io/feed-forward-neural-doodle/,
-                #     # resizing might not be sufficient. "Use 3x3 mean filter for mask when the data goes through
-                #     # convolutions and average pooling along with pooling layers."
-                #     # But this is just a minor improvement that should not affect the final result too much.
-                #     # prev_layer = None
-                #
-                #     output_semantic_masks_for_each_layer = neural_doodle_util.masks_average_pool(content_semantic_mask)
-                #     for layer in STYLE_LAYERS:
-                #         # output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
-                #         #     net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
-                #         #
-                #
-                #
-                #         output_semantic_mask_feature = output_semantic_masks_for_each_layer[layer]
-                #
-                #         output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
-                #         if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) :
-                #             print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
-                #                   % (layer, str(net_layer_sizes[layer]), str(output_semantic_mask_shape)))
-                #             raise AssertionError
-                #
-                #         # Must be normalized (/ 255), otherwise the style loss just gets out of control.
-                #         output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
-                #         # prev_layer = layer
-                # else:
-                #     content_semantic_mask_pre = vgg.preprocess(content_semantic_mask, mean_pixel)
-                #     semantic_mask_net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask_pre)
-                #     for layer in STYLE_LAYERS:
-                #         output_semantic_mask_feature = semantic_mask_net[layer] * semantic_masks_weight
-                #         output_semantic_mask_features[layer] = output_semantic_mask_feature
-                #
-                # style_semantic_masks_pres = []
-                # style_semantic_masks_images = []
-                # style_semantic_masks_for_each_layer = []
-                # for i in range(len(styles)):
-                #     style_semantic_masks_images.append(
-                #         tf.placeholder('float',
-                #                        shape=(1, style_shapes[i][1], style_shapes[i][2], semantic_masks_num_layers),
-                #                        name='style_mask_%d' % i))
-                #
-                #     if not mask_resize_as_feature:
-                #         style_semantic_masks_pres.append(
-                #             np.array([vgg.preprocess(style_semantic_masks[i], mean_pixel)]))
-                #         semantic_mask_net, _ = vgg.pre_read_net(vgg_data, style_semantic_masks_pres[-1])
-                #     else:
-                #         style_semantic_masks_for_each_layer.append(neural_doodle_util.masks_average_pool(style_semantic_masks_images[-1]))
-                #
-                #
-                #     for layer in STYLE_LAYERS:
-                #         if mask_resize_as_feature:
-                #             # Must be normalized (/ 255), otherwise the style loss just gets out of control.
-                #             # features = tf.image.resize_images(style_semantic_masks_images[-1],
-                #             #                                   (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
-                #             features = style_semantic_masks_for_each_layer[-1][layer] / 255.0
-                #
-                #             features_shape = map(lambda i: i.value, features.get_shape())
-                #             if (net_layer_sizes[layer][1] != features_shape[1]) or (net_layer_sizes[layer][1] != features_shape[1]) :
-                #                 print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
-                #                       % (layer, str(net_layer_sizes[layer]), str(features_shape)))
-                #                 raise AssertionError
-                #
-                #         else:
-                #             features = semantic_mask_net[layer]
-                #         features = features * semantic_masks_weight
-                #         if use_mrf:
-                #             style_features[i][layer] = \
-                #                 neural_doodle_util.concatenate_mask_layer_tf(features, style_features[i][layer])
-                #         else:
-                #             # TODO :testing new gram with masks.
-                #             gram = neural_doodle_util.gramian_with_mask(style_features[i][layer], features)
-                #             #
-                #             # features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
-                #             # # TODO: testing gram stacks
-                #             # gram = gramian(features)
-                #             # # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                #             # # gram = neural_util.gram_stacks(features)
-                #             style_features[i][layer] = gram
-
                 output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers, STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf)
 
 
@@ -253,12 +171,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         print('mrfed %d %s' % (i, style_layer))
                     else:
                         if use_semantic_masks:
-                            # If we use gram loss, then calculate the dot product for each mask with the semantic
-                            # features. The RAM required thus grows linearly with number of masks. This may cause
-                            # a problem later because it essentially restricts how many different kinds of things we
-                            # can label.
-                            # TODO: change this to follows: each color has one corresponding gram matrix (now all shares one large one).
-
                             gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer])
 
                             # layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer],
@@ -379,7 +291,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     image = johnson_feedforward_net_util.net(inputs, reuse=True)
                 elif use_skip_noise_4:
                     if use_semantic_masks:
-                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
+                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs, reuse=True)
@@ -438,6 +350,15 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         if len(mask_dirs) > (batch_size * semantic_masks_num_layers):
                             mask_dirs = mask_dirs[:batch_size * semantic_masks_num_layers]
 
+                        for semantic_masks_i in range(semantic_masks_num_layers):
+                            expected_end_str=  '%d.jpg' %semantic_masks_i
+                            if mask_dirs[semantic_masks_i][-5:] != expected_end_str:
+                                print('%s did not end with %s' %(mask_dirs[semantic_masks_i],expected_end_str))
+                                raise AssertionError
+                            if semantic_masks_i != 0 and mask_dirs[semantic_masks_i - 1][:-5] != mask_dirs[semantic_masks_i][:-5]:
+                                print('%s did not start with %s' %(mask_dirs[semantic_masks_i],mask_dirs[semantic_masks_i - 1][:-5]))
+                                raise AssertionError
+
                         mask_pre_list = read_and_resize_bw_mask_images(mask_dirs, input_shape[1], input_shape[2],
                                                                        batch_size, semantic_masks_num_layers)
 
@@ -454,14 +375,46 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[inputs] = content_pre
                     elif use_skip_noise_4:
                         if use_semantic_masks:
-                            feed_dict[inputs] = mask_pre_list
+                            first_layers = mask_pre_list
+                            second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(
+                                size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
+                            third_layers = np.random.uniform(
+                                size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
+                            noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
+                            if noise_layers.shape != (batch_size, input_shape[1], input_shape[2],
+                                                      semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
+                                print(
+                                    'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
+                                        str((batch_size, input_shape[1], input_shape[2],
+                                             semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)),
+                                        str(noise_layers.shape)))
+                                raise AssertionError
+                            feed_dict[inputs] = noise_layers
+                            # feed_dict[inputs] = mask_pre_list
                         elif style_only:
                             feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                         else:
                             feed_dict[inputs] = content_pre
                         for skip_noise in skip_noise_list:
                             skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
-                            feed_dict[skip_noise] = np.random.uniform(size=skip_noise_shape)
+                            # # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
+                            # # The first # semantic_masks_num_layers layers will be filled with the mask itself
+                            # # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
+                            # # uniform noise
+                            # # And the last # num_mask_noise_times layers will be filled with uniform noise.
+                            # mask_pre_list_resized = resize_image_like_layers(mask_pre_list,
+                            #                                             (skip_noise_shape[1], skip_noise_shape[2]))
+                            # first_layers = mask_pre_list_resized
+                            # second_layers = np_image_dot_mask(mask_pre_list_resized, np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS)))
+                            # third_layers = np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
+                            # noise_layers = np.concatenate((first_layers,second_layers,third_layers), axis=3)
+                            # if not (noise_layers.shape != skip_noise_shape):
+                            #     print('The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' %(str(skip_noise_shape), str(noise_layers.shape)))
+                            #     raise AssertionError
+                            # feed_dict[skip_noise] = noise_layers
+
+                            feed_dict[skip_noise] = np.random.uniform(
+                                size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
                     else:
                         if use_semantic_masks:
                             mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
@@ -558,6 +511,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             if current_mask_dirs[semantic_masks_i][-5:] != expected_end_str:
                                 print('%s did not end with %s' %(current_mask_dirs[semantic_masks_i],expected_end_str))
                                 raise AssertionError
+                            if semantic_masks_i != 0 and current_mask_dirs[semantic_masks_i - 1][:-5] != current_mask_dirs[semantic_masks_i][:-5]:
+                                print('%s did not start with %s' %(current_mask_dirs[semantic_masks_i],current_mask_dirs[semantic_masks_i - 1][:-5]))
+                                raise AssertionError
 
                         mask_pre_list = read_and_resize_bw_mask_images(current_mask_dirs, input_shape[1],
                                                                        input_shape[2], batch_size,
@@ -586,7 +542,17 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     feed_dict[inputs] = content_pre_list
                         elif use_skip_noise_4:
                             if use_semantic_masks:
-                                feed_dict[inputs] = mask_pre_list
+                                first_layers = mask_pre_list
+                                second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
+                                third_layers = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
+                                noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
+                                if noise_layers.shape != (batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
+                                    print(
+                                    'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
+                                    str((batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)), str(noise_layers.shape)))
+                                    raise AssertionError
+                                feed_dict[inputs] = noise_layers
+                                # feed_dict[inputs] = mask_pre_list
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
                                     feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
@@ -596,9 +562,31 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                             else:
                                 feed_dict[inputs] = content_pre_list
+                            # for skip_noise in skip_noise_list:
+                            #     skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
+                            #     feed_dict[skip_noise] = np.random.uniform(size=skip_noise_shape)
+                            #     ...
                             for skip_noise in skip_noise_list:
                                 skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
-                                feed_dict[skip_noise] = np.random.uniform(size=skip_noise_shape)
+                                # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
+                                # The first # semantic_masks_num_layers layers will be filled with the mask itself
+                                # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
+                                # uniform noise
+                                # And the last # num_mask_noise_times layers will be filled with uniform noise.
+
+                                # mask_pre_list_resized = resize_image_like_layers(mask_pre_list, (skip_noise_shape[1], skip_noise_shape[2]))
+                                # first_layers = mask_pre_list_resized
+                                # second_layers = np_image_dot_mask(mask_pre_list_resized, np.random.uniform(size=(
+                                # skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS)))
+                                # third_layers = np.random.uniform(size=(
+                                # skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
+                                # noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
+                                # if noise_layers.shape != skip_noise_shape:
+                                #     print(
+                                #     'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
+                                #     str(skip_noise_shape), str(noise_layers.shape)))
+                                #     raise AssertionError
+                                feed_dict[skip_noise] = np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
                         else:
                             raise NotImplementedError
                             if use_semantic_masks:

@@ -345,7 +345,7 @@ Feed-forward texture generation with masks.
 1. Testing gramian with mask
     Continued training from yesterday.
     Hum.. the network also sort of failed... The result just looks super wierd.
-    Trying to repeat the experiment using content images... TODO: Will continue training..
+    Trying to repeat the experiment using content images...
     Ok The skip_noise_4 network is working. At least it is working when it generates the style without masks or content
     images. *
 
@@ -355,6 +355,31 @@ Feed-forward texture generation with masks.
         TODO: Train using 256x256 without masks or content.
 
         skip_noise_4 generate textures successfully (tested two times by accident)
-
 2. New loss function.
 
+2016/12/19
+1. Testing feed-forward with mask
+    I don't understand what's going on. The new skip_noise_4 network now had the same type of errors as johnson. The
+    masks seem to switch from training to training. The network applies this texture to this network during this round
+    and the other texture to the other network in the next round... I'm really lost and I don't understand what is
+    going on.
+
+    Tried to have input mask be constant... Still the texture generation didn't work. That doesn't make sense...
+
+    Style generation seems to work. But it looked different from the ones online. Maybe the style loss was too low.
+    I set it to 25 because 100 seemed too high. # TODO: test using style weight 50.
+
+    I guess it's time to download some repos online and see what they have.
+
+    No online repo found on fast neural doodle, except for the Dmitry one. I am planning to read his whole source code.
+    I found that the noise he feeds in has three parts: mask, mask times uniform noise, and noise. I only fed in noise.
+    That is fed into the network's very first layer.. He also have some additional noises in skip layers. I'm not sure
+    how those work yet. I assume that they're all uniform random.
+
+
+2. New loss function
+    No work done.
+
+3. Back prop MRF with style as real images.
+    According to https://github.com/jcjohnson/neural-style/wiki/Similar-to-Neural-Style it seems to work well when
+    style is real images. Trying that...
