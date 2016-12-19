@@ -46,10 +46,16 @@ def net(image, mirror_padding=True, reuse=False):
         for i in range(len(nums_3x3up)):
             skip_concat_height, skip_concat_width = skip_concat_list[-i - 1].get_shape().as_list()[1:3]
             upsampled = tf.image.resize_nearest_neighbor(prev_layer, [skip_concat_height, skip_concat_width])
-            deconv_1 = _conv_layer(upsampled, nums_3x3up[i], 3, 1, mirror_padding=mirror_padding, name='deconv_1_%d' %i, reuse=reuse)
-            deconv_2 = _conv_layer(deconv_1, nums_3x3up[i], 1, 1, mirror_padding=mirror_padding, name='deconv_2_%d' %i, reuse=reuse)
-            skip_deeper_concat = tf.concat(3, [skip_concat_list[-i - 1], deconv_2], name='skip_deeper_concat_%d' % i)
-            prev_layer = skip_deeper_concat
+            upsampled_normalized = _instance_norm(upsampled, 'upsampled_normalized_%d' %i, reuse=reuse)
+            skip_deeper_concat = tf.concat(3, [skip_concat_list[-i - 1], upsampled_normalized], name='skip_deeper_concat_%d' % i)
+            skip_deeper_concat_shape = skip_deeper_concat.get_shape().as_list()
+            skip_deeper_concat_shape_expected_last_dim = nums_1x1[-i-1] + (nums_3x3down[-1] if i == 0 else nums_3x3up[-i]) + nums_noise[-i-1]
+            if skip_deeper_concat_shape[3] != skip_deeper_concat_shape_expected_last_dim:
+                print('skip_deeper_concat_shape unexpected last dimension size. skip_deeper_concat_shape is %s and the last dimension should be %d' %(str(skip_deeper_concat_shape), skip_deeper_concat_shape_expected_last_dim))
+                raise AssertionError
+            deconv_1 = _conv_layer(skip_deeper_concat, nums_3x3up[-i-1], 3, 1, mirror_padding=mirror_padding, name='deconv_1_%d' %i, reuse=reuse)
+            deconv_2 = _conv_layer(deconv_1, nums_3x3up[-i-1], 1, 1, mirror_padding=mirror_padding, name='deconv_2_%d' %i, reuse=reuse)
+            prev_layer = deconv_2
 
         # Do a final convolution with output dimension = 3 and stride 1.
         weights_init = _conv_init_vars(prev_layer, 3, 1, name='final_conv', reuse=reuse)
