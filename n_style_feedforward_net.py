@@ -351,7 +351,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             mask_dirs = mask_dirs[:batch_size * semantic_masks_num_layers]
 
                         for semantic_masks_i in range(semantic_masks_num_layers):
-                            expected_end_str=  '%d.jpg' %semantic_masks_i
+                            expected_end_str=  '%d.png' %semantic_masks_i
                             if mask_dirs[semantic_masks_i][-5:] != expected_end_str:
                                 print('%s did not end with %s' %(mask_dirs[semantic_masks_i],expected_end_str))
                                 raise AssertionError
@@ -507,7 +507,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                       batch_size * semantic_masks_num_layers)
                         # DEBUG
                         for semantic_masks_i in range(semantic_masks_num_layers):
-                            expected_end_str=  '%d.jpg' %semantic_masks_i
+                            expected_end_str=  '%d.png' %semantic_masks_i
                             if current_mask_dirs[semantic_masks_i][-5:] != expected_end_str:
                                 print('%s did not end with %s' %(current_mask_dirs[semantic_masks_i],expected_end_str))
                                 raise AssertionError

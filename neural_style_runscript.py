@@ -6,7 +6,7 @@ import os
 # content= 'source_compressed/512/sea_512.jpg'
 # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
 
-for style_w in range(3,6,0.5):
+for style_w in range(7):
     for image_i in range(1,4):
 
         content= 'source_compressed/IMG_0677_1536.jpg'   # ''#
@@ -30,7 +30,7 @@ for style_w in range(3,6,0.5):
         learning_rate=10 # larger lr seems to result in larger looking features (compared to lr = 1)
         iterations=1000
         batch_size=1
-        style_weight=100 if not use_mrf else style_w # 100 for old gram loss works. The weight for mrf varies from picture to picture.
+        style_weight=100 if not use_mrf else (3 + style_w / 2.0) # 100 for old gram loss works. The weight for mrf varies from picture to picture.
         content_weight=5
         checkpoint_iterations=100
         print_iteration = 100

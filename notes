@@ -376,7 +376,7 @@ Feed-forward texture generation with masks.
     That is fed into the network's very first layer.. He also have some additional noises in skip layers. I'm not sure
     how those work yet. I assume that they're all uniform random.
 
-    Still didn't work after 30000 iterations... GG. There;s something else to the network. 
+    Still didn't work after 30000 iterations... GG. There;s something else to the network.
 
 
 2. New loss function
@@ -388,6 +388,11 @@ Feed-forward texture generation with masks.
     and the style image have similar contents (Mostly because then you can't tell if I replaced one object in the
     content with another object in the style image. Again, mrf does mostly copying but not learning.)
 
+    Trying to stylize some other image. I found that there were some wierd horizontal lines in the generated image.
+    I may need to fix that. I first thought that it was because of the resized style image. Then I resized them
+    manually and the problem was still there. So it must be caused by something else. Maybe the dimensions were not
+    divisible by 2?
+
 4. Future direction
     I was thinking about what to do next. I thought before that I can train a feed-forward network on multiple style
     images so that it can draw a wider range of stuff that might not be present in one single style image. But then I
@@ -395,3 +400,8 @@ Feed-forward texture generation with masks.
     man facing away from the sun" is another kind of mask. But then that requires too many masks in total. So I need
     some extra parameters to train... I need a semantic tree and I need a smarter way to represent the same object in
     different environments.
+
+
+2016/12/20
+1. Feed-forward with mask
+    Only works on the boarder line. Don't know why.
