@@ -367,7 +367,7 @@ Feed-forward texture generation with masks.
     Tried to have input mask be constant... Still the texture generation didn't work. That doesn't make sense...
 
     Style generation seems to work. But it looked different from the ones online. Maybe the style loss was too low.
-    I set it to 25 because 100 seemed too high. # TODO: test using style weight 50.
+    I set it to 25 because 100 seemed too high. Plan: test using style weight 50.
 
     I guess it's time to download some repos online and see what they have.
 
@@ -401,7 +401,54 @@ Feed-forward texture generation with masks.
     some extra parameters to train... I need a semantic tree and I need a smarter way to represent the same object in
     different environments.
 
+    Maybe also reimplement multiple styles feed-forward. But that's not so necesssary.
+
 
 2016/12/20
 1. Feed-forward with mask
     Only works on the boarder line. Don't know why.
+
+2016/12/21
+1. Feed-forward Style genration with johnson network.
+    style weight = 50 seems to work fine.
+
+2. feed-forward with mask
+    I thought it was working... I replaced .jpg with .png masks and at first it seemed to be working... Then it just
+    stopped becoming better after round 10000. The sky looks a little bit like the given style but the rest didn't
+    look anything like the original style image. I think I've met the same problem before when using johnson network.
+    So it has nothing to do with the network or the inputted mask images. Interesting. I tested feeding in masks
+    where only one mask is 255 and all others are 0. It outputted the same result as before when I used johnson
+    network...
+
+    If this still didn't work... I don't want to get stuck at the same place for a week. So I'm going to move on.
+    Maybe I should change the output so that it has not 3 channels, but 3 * num_masks channels and I manually dot
+    the output with each mask and combine the final result.
+    ...
+    Wait, how do I calculate the loss again? I dot the gram matrix with each mask... Hum... There must be a problem
+    there. That's one of the two possiblity. The other one is I'm not feeding in the right noise.
+    Nah there can't be a problem there because I'm using the same loss function in the slow version.
+
+    I just realized that the version online didn't use any other input except the mask themselves! The code is there
+    to support additional noises and noise dot mask but he didn't use them (he set the parameters to 0)... gg
+
+
+3. Back prop slow version
+    I want to try the non-mrf version and compare them. The biggest problem with mrf is: it is too aggressive and it
+    does not recognize objects well. It is agressive because it usually either does not change the object at all or
+    completely changes it to another objecct in the style image. It does not recognize objects well because, well, the
+    limits in vgg network. It does a poor job recognizing, say a black contour of a human compared to that of a tree.
+    We're helpless unless we label each part. But then most of the time the images are too complicated to mark what
+    objects are in there.
+4. Future direction
+    Since the feed-forward part is not going so well, I'm thinking things I can do with the slow version.
+    I thought of attention network. So I paint one area at a time or something like that. That can replace the need of
+    masks because masks are essentially manually added information on object recognition (which can be done by the
+    network itself in theory if the network is good enough.)
+    Now the bottle neck is that the vgg can't recognize objects well, and if it can't do that, I don't have any way to
+    improve the current model except to feed in manually labeled data...
+
+2016/12/22
+2. feed-forward with mask
+    I noticed that I did not normalize the gram matrix by the mean of mask values. maybe that is causing the problem
+    (how do you expect two gram to be the same when you don't even know the number of pixels marked by the mask?)
+    That's why the feed-forward network works without masks...

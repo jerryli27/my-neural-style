@@ -83,7 +83,10 @@ def gramian_with_mask(layer, masks):
         mask = tf.expand_dims(mask, dim=3)
         layer_dotted_with_mask = neural_doodle_util.vgg_layer_dot_mask(mask, layer)
         layer_dotted_with_mask_gram = gramian(layer_dotted_with_mask)
-        gram_list.append(layer_dotted_with_mask_gram)
+        # Normalization is very importantant here. Because otherwise there is no way to compare two gram matrices
+        # with different masks applied to them.
+        layer_dotted_with_mask_gram_normalized = layer_dotted_with_mask_gram / (tf.reduce_mean(mask) + 0.000001) # Avoid division by zero.
+        gram_list.append(layer_dotted_with_mask_gram_normalized)
 
     grams=tf.pack(gram_list)
 
