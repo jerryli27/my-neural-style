@@ -452,5 +452,27 @@ Feed-forward texture generation with masks.
     I noticed that I did not normalize the gram matrix by the mean of mask values. maybe that is causing the problem
     (how do you expect two gram to be the same when you don't even know the number of pixels marked by the mask?)
     That's why the feed-forward network works without masks...
-    Yep it's finally working... TODO: I still need to change the input back. The model probably isn't using the extra
+    Yep it's finally working... Plan: I still need to change the input back. The model probably isn't using the extra
     input anyway.
+
+2. Future direction
+    I thought about the style of an image. What does that mean? To me its meaning is two-fold. The first one is local
+    statistic relations. This one is well captured by the gram matrix. The other one is more logical. If I always paint
+    a man's face like that, then it must have some logic behind it (or not) and we can also call that "style". That's
+    why the current neural style need a 'content image' whereas in real life people don't need a real image and make
+    change on that. One is more on a small scale and the other one on a grand scale.
+
+    What I can then improve? I implement removing the grid-like noises in the generated image. That has been done
+    before.
+
+    I can improve the gram loss so that it is no longer just on a local scale. That had some progress but I stopped. I
+    should maybe continue that. I need to understand the gram matrix more. I mean I know how mathematically works, but
+    why it works? I have no idea.
+
+    I had an idea of how to generate masks for any image (as long as it is moving). There are object tracking
+    techniques that can mark one object in a stream of images. Ah I can think about this later. It depends largely on
+    object tracking. *
+
+     I know my final goal: to make programs that can draw like humans, with some instruction from human.
+
+    TODO: further test my new loss function. Make sure I understand why and when it works or doesn't work. 

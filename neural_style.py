@@ -44,6 +44,13 @@ def build_parser():
                         help='number of semantic masks (default %(default)s).',
                         metavar='SEMANTIC_MASKS_NUM_LAYERS', default=SEMANTIC_MASKS_NUM_LAYERS) # TODO: FOR FUTURE USE.
 
+
+    parser.add_argument('--new_gram',
+                        dest='new_gram', help='If true, it uses the new loss function instead of the gram loss. '
+                                                        '(FOR TESTING)(default %(default)s).', action='store_true')
+    parser.set_defaults(new_gram=False)
+
+
     parser.add_argument('--output',
             dest='output', help='output path',
             metavar='OUTPUT', required=True)
@@ -195,7 +202,8 @@ def main():
         style_semantic_masks= style_semantic_masks,
         semantic_masks_weight= options.semantic_masks_weight,
         print_iterations=options.print_iterations,
-        checkpoint_iterations=options.checkpoint_iterations
+        checkpoint_iterations=options.checkpoint_iterations,
+        new_gram=options.new_gram
     ):
         output_file = None
         if iteration is not None:

@@ -26,6 +26,8 @@ for style_w in range(25, 125, 25):
 
         use_mrf = False
         use_mrf_string = '--use_mrf' if use_mrf else ''
+        new_gram = False
+        new_gram_string = '--new_gram' if new_gram else ''
 
         learning_rate=10 # larger lr seems to result in larger looking features (compared to lr = 1)
         iterations=1000
@@ -41,12 +43,12 @@ for style_w in range(25, 125, 25):
         output_semantic_mask = 'van_gogh/bw_masks/'
         style_semantic_masks = ['van_gogh/bw_masks/']
 
-        checkpoint_output='output_checkpoint/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-style-%f-content-%f_%%s.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), style_weight, content_weight)
-        output='output/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-style-%f-content-%f.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), style_weight, content_weight)
+        checkpoint_output='output_checkpoint/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-new_loss_fn-%ss-style-%f-content-%f_%%s.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), str(new_gram), style_weight, content_weight)
+        output='output/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-new_loss_fn-%s-style-%f-content-%f.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), str(new_gram), style_weight, content_weight)
 
         # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
-        os.system('python ~/PycharmProjects/my-neural-style/neural_style.py %s%s --styles %s --learning-rate=%f --iterations=%d %s %s --output_semantic_mask=%s --style_semantic_masks %s --style-weight=%f --content-weight=%f --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d --width=%d --height=%d'
-                  % (content_string, content, ' '.join(styles), learning_rate, iterations, use_mrf_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration, width, height))
+        os.system('python ~/PycharmProjects/my-neural-style/neural_style.py %s%s --styles %s --learning-rate=%f --iterations=%d %s %s %s --output_semantic_mask=%s --style_semantic_masks %s --style-weight=%f --content-weight=%f --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d --width=%d --height=%d'
+                  % (content_string, content, ' '.join(styles), learning_rate, iterations, use_mrf_string, new_gram_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration, width, height))
 
 
 
@@ -75,26 +77,29 @@ styles = ['van_gogh/style256.jpg']
 style_name = 'van_gogh_starry_sky'
 use_semantic_masks = True
 use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''
-
 use_mrf = False
 use_mrf_string = '--use_mrf' if use_mrf else ''
+new_gram = False
+new_gram_string = '--new_gram' if new_gram else ''
 
 learning_rate=10 # larger lr seems to result in larger looking features (compared to lr = 1)
 iterations=1000
 batch_size=1
-style_weight=100 if not use_mrf else 5 # 100 for old gram loss works.
+style_weight=style_w if not use_mrf else (3 + style_w / 2.0) # 100 for old gram loss works. The weight for mrf varies from picture to picture.
 content_weight=5
 checkpoint_iterations=100
 print_iteration = 100
+width = 1536
+height = 352
 
 
 output_semantic_mask = 'van_gogh/bw_masks/'
 style_semantic_masks = ['van_gogh/bw_masks/']
 
-checkpoint_output='output_checkpoint/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-style-%d-content-%d_%%s.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), style_weight, content_weight)
-output='output/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-style-%d-content-%d.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), style_weight, content_weight)
+checkpoint_output='output_checkpoint/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-new_loss_fn-%ss-style-%f-content-%f_%%s.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), str(new_gram), style_weight, content_weight)
+output='output/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-new_loss_fn-%s-style-%f-content-%f.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), str(new_gram), style_weight, content_weight)
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
-os.system('python ~/PycharmProjects/my-neural-style/neural_style.py %s%s --styles %s --learning-rate=%f --iterations=%d %s %s --output_semantic_mask=%s --style_semantic_masks %s --style-weight=%d --content-weight=%d --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d'
-          % (content_string, content, ' '.join(styles), learning_rate, iterations, use_mrf_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration))
+os.system('python ~/PycharmProjects/my-neural-style/neural_style.py %s%s --styles %s --learning-rate=%f --iterations=%d %s %s %s --output_semantic_mask=%s --style_semantic_masks %s --style-weight=%f --content-weight=%f --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d --width=%d --height=%d'
+          % (content_string, content, ' '.join(styles), learning_rate, iterations, use_mrf_string, new_gram_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration, width, height))
 """
