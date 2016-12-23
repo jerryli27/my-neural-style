@@ -90,15 +90,17 @@ def gramian_with_mask(layer, masks, new_gram = False):
         # with different masks applied to them.
         layer_dotted_with_mask_gram_normalized = layer_dotted_with_mask_gram / (tf.reduce_mean(mask) + 0.000001) # Avoid division by zero.
         gram_list.append(layer_dotted_with_mask_gram_normalized)
-
-    grams=tf.pack(gram_list)
+    grams = tf.pack(gram_list)
 
     if isinstance(layer, np.ndarray):
         _, _, _, num_features = layer.shape
     else:
         _,_,_,num_features  =  map(lambda i: i.value, layer.get_shape())
 
-    number_colors, _, gram_height, gram_width = map(lambda i: i.value, grams.get_shape())
+    if new_gram:
+        number_colors, _, gram_height, gram_width, new_gram_num_additional_features = map(lambda i: i.value, grams.get_shape())
+    else:
+        number_colors,_, gram_height, gram_width,  = map(lambda i: i.value, grams.get_shape())
 
     assert num_features == gram_height
     assert num_features == gram_width

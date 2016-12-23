@@ -98,7 +98,7 @@ def stylize(network, initial, content, styles, shape, iterations,
         if use_semantic_masks:
             output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
                 style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
-                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf)
+                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram=new_gram)
 
         if initial is None:
             # if content is None:
@@ -136,20 +136,15 @@ def stylize(network, initial, content, styles, shape, iterations,
 
                     # ***** TEST GRAM*****
                     # TODO: Testing new loss function.
-                    if new_gram:
-                        if use_semantic_masks:
-                            layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer],
-                                                                          layer)
-                        gram = neural_util.gram_stacks(layer, shift_size=SHIFT_SIZE)
+
+                    if use_semantic_masks:
+                        gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer], new_gram=new_gram)
                     else:
-                        if use_semantic_masks:
-                            gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer])
-                        else:
-                            gram = feedforward_style_net_util.gramian(layer)
-                            # _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                            # size = height * width * number
-                            # feats = tf.reshape(layer, (-1, number))
-                            # gram = tf.matmul(tf.transpose(feats), feats) / size
+                        gram = feedforward_style_net_util.gramian(layer)
+                        # _, height, width, number = map(lambda i: i.value, layer.get_shape())
+                        # size = height * width * number
+                        # feats = tf.reshape(layer, (-1, number))
+                        # gram = tf.matmul(tf.transpose(feats), feats) / size
 
                     style_gram = style_features[i][style_layer]
 
