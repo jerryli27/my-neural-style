@@ -73,8 +73,9 @@ def masks_average_pool(masks):
     return ret
 
 
-def gramian_with_mask(layer, masks, new_gram = False):
+def gramian_with_mask(layer, masks, new_gram = False, shift_size = None):
     """TODO"""
+    assert new_gram is False or shift_size is not None
     mask_list = tf.unpack(masks, axis=3) # A list of masks with dimension (1,height, width)
 
     gram_list = []
@@ -83,7 +84,7 @@ def gramian_with_mask(layer, masks, new_gram = False):
         mask = tf.expand_dims(mask, dim=3)
         layer_dotted_with_mask = vgg_layer_dot_mask(mask, layer)
         if new_gram:
-            layer_dotted_with_mask_gram = neural_util.gram_stacks(layer_dotted_with_mask)
+            layer_dotted_with_mask_gram = neural_util.gram_stacks(layer_dotted_with_mask, shift_size)
         else:
             layer_dotted_with_mask_gram = gramian(layer_dotted_with_mask)
         # Normalization is very importantant here. Because otherwise there is no way to compare two gram matrices
@@ -109,7 +110,7 @@ def gramian_with_mask(layer, masks, new_gram = False):
     return grams
 
 
-def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram = False):
+def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram = False, shift_size = None):
     # Variables to be returned.
     output_semantic_mask_features = {}
 
@@ -187,7 +188,7 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
                     concatenate_mask_layer_tf(features, style_features[i][layer])
             else:
                 # TODO :testing new gram with masks.
-                gram = gramian_with_mask(style_features[i][layer], features, new_gram=new_gram)
+                gram = gramian_with_mask(style_features[i][layer], features, new_gram=new_gram, shift_size=shift_size)
                 #
                 # features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
                 # # TODO: testing gram stacks

@@ -475,4 +475,8 @@ Feed-forward texture generation with masks.
 
      I know my final goal: to make programs that can draw like humans, with some instruction from human.
 
-    TODO: further test my new loss function. Make sure I understand why and when it works or doesn't work. 
+    TODO: further test my new loss function. Make sure I understand why and when it works or doesn't work.
+
+3. Back prop slow version
+    After I fixed how to calculate the grams, the "stack grams" with the masks, the result looks super impressive. It's
+    even better than the mrf. The color looks more like the original and it definitely have some originality.
