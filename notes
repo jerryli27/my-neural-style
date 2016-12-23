@@ -452,3 +452,5 @@ Feed-forward texture generation with masks.
     I noticed that I did not normalize the gram matrix by the mean of mask values. maybe that is causing the problem
     (how do you expect two gram to be the same when you don't even know the number of pixels marked by the mask?)
     That's why the feed-forward network works without masks...
+    Yep it's finally working... TODO: I still need to change the input back. The model probably isn't using the extra
+    input anyway.

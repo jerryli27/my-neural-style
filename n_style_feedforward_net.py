@@ -20,7 +20,7 @@ STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # Accordi
 # STYLE_LAYERS = (
 #     'relu1_2', 'relu2_2', 'relu3_2', 'relu4_2')  # Set according to https://github.com/DmitryUlyanov/texture_nets
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
-NUM_NOISE_LAYERS = 16
+NUM_NOISE_LAYERS = 0  # This is for adding noise to the input to the generator network. Maybe I should delete this.
 
 
 # TODO: change rtype
@@ -91,9 +91,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 # so far.
 
 
-                # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
                 # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS])
-                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers * NUM_NOISE_LAYERS])
+                # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers * NUM_NOISE_LAYERS])
             else:
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
@@ -278,14 +278,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                 if use_johnson:
                     if use_semantic_masks:
-                        # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
-                        #                                            semantic_masks_num_layers])
+                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
+                                                                   semantic_masks_num_layers])
                         #
                         # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
                         #                                            semantic_masks_num_layers + NUM_NOISE_LAYERS])
 
-                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
-                                                                   semantic_masks_num_layers * NUM_NOISE_LAYERS])
+                        # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
+                        #                                            semantic_masks_num_layers * NUM_NOISE_LAYERS])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     image = johnson_feedforward_net_util.net(inputs, reuse=True)
@@ -364,9 +364,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     if use_johnson:
                         if use_semantic_masks:
-                            # feed_dict[inputs] = mask_pre_list
+                            feed_dict[inputs] = mask_pre_list
                             # feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)), mask_pre_list), axis=3)
-                            feed_dict[inputs] = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
+                            # feed_dict[inputs] = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
 
 
                         elif style_only:
@@ -375,46 +375,37 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[inputs] = content_pre
                     elif use_skip_noise_4:
                         if use_semantic_masks:
-                            first_layers = mask_pre_list
-                            second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(
-                                size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
-                            third_layers = np.random.uniform(
-                                size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
-                            noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
-                            if noise_layers.shape != (batch_size, input_shape[1], input_shape[2],
-                                                      semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
-                                print(
-                                    'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
-                                        str((batch_size, input_shape[1], input_shape[2],
-                                             semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)),
-                                        str(noise_layers.shape)))
-                                raise AssertionError
-                            feed_dict[inputs] = noise_layers
-                            # feed_dict[inputs] = mask_pre_list
-                        elif style_only:
-                            feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
-                        else:
-                            feed_dict[inputs] = content_pre
-                        for skip_noise in skip_noise_list:
-                            skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
                             # # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
                             # # The first # semantic_masks_num_layers layers will be filled with the mask itself
                             # # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
                             # # uniform noise
                             # # And the last # num_mask_noise_times layers will be filled with uniform noise.
-                            # mask_pre_list_resized = resize_image_like_layers(mask_pre_list,
-                            #                                             (skip_noise_shape[1], skip_noise_shape[2]))
-                            # first_layers = mask_pre_list_resized
-                            # second_layers = np_image_dot_mask(mask_pre_list_resized, np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS)))
-                            # third_layers = np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
-                            # noise_layers = np.concatenate((first_layers,second_layers,third_layers), axis=3)
-                            # if not (noise_layers.shape != skip_noise_shape):
-                            #     print('The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' %(str(skip_noise_shape), str(noise_layers.shape)))
+                            # first_layers = mask_pre_list
+                            # second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(
+                            #     size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
+                            # third_layers = np.random.uniform(
+                            #     size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
+                            # noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
+                            # if noise_layers.shape != (batch_size, input_shape[1], input_shape[2],
+                            #                           semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
+                            #     print(
+                            #         'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
+                            #             str((batch_size, input_shape[1], input_shape[2],
+                            #                  semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)),
+                            #             str(noise_layers.shape)))
                             #     raise AssertionError
-                            # feed_dict[skip_noise] = noise_layers
+                            # feed_dict[inputs] = noise_layers
+                            feed_dict[inputs] = mask_pre_list
+                        elif style_only:
+                            feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
+                        else:
+                            feed_dict[inputs] = content_pre
+                        for noise_i, skip_noise in enumerate(skip_noise_list):
+                            skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
+
 
                             feed_dict[skip_noise] = np.random.uniform(
-                                size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
+                                size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], skip_noise_4_feedforward_net.nums_noise[noise_i]))
                     else:
                         if use_semantic_masks:
                             mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
@@ -525,11 +516,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         feed_dict = {content_images: content_pre_list} if not style_only else {}
                         if use_johnson:
                             if use_semantic_masks:
-                                # feed_dict[inputs] = mask_pre_list
+                                feed_dict[inputs] = mask_pre_list
                                 # feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1],
                                 #                                                    input_shape[2], NUM_NOISE_LAYERS)),
                                 #                                     mask_pre_list), axis=3)
-                                feed_dict[inputs] = np_image_dot_mask(mask_pre_list,np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
+                                # feed_dict[inputs] = np_image_dot_mask(mask_pre_list,np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
 
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
@@ -542,17 +533,27 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     feed_dict[inputs] = content_pre_list
                         elif use_skip_noise_4:
                             if use_semantic_masks:
-                                first_layers = mask_pre_list
-                                second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
-                                third_layers = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
-                                noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
-                                if noise_layers.shape != (batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
-                                    print(
-                                    'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
-                                    str((batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)), str(noise_layers.shape)))
-                                    raise AssertionError
-                                feed_dict[inputs] = noise_layers
+
+                                # # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
+                                # # The first # semantic_masks_num_layers layers will be filled with the mask itself
+                                # # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
+                                # # uniform noise
+                                # # And the last # num_mask_noise_times layers will be filled with uniform noise.
+                                # first_layers = mask_pre_list
+                                # second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
+                                # third_layers = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
+                                # noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
+                                # if noise_layers.shape != (batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
+                                #     print(
+                                #     'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
+                                #     str((batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)), str(noise_layers.shape)))
+                                #     raise AssertionError
+                                # feed_dict[inputs] = noise_layers
                                 # feed_dict[inputs] = mask_pre_list
+
+                                # Now I realized that although that git repo implemented this feature, it did not
+                                # actually used it.
+                                feed_dict[inputs] = mask_pre_list
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
                                     feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
@@ -562,31 +563,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                             else:
                                 feed_dict[inputs] = content_pre_list
-                            # for skip_noise in skip_noise_list:
-                            #     skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
-                            #     feed_dict[skip_noise] = np.random.uniform(size=skip_noise_shape)
-                            #     ...
-                            for skip_noise in skip_noise_list:
+                            for noise_i, skip_noise in enumerate(skip_noise_list):
                                 skip_noise_shape = map(lambda i: i.value, skip_noise.get_shape())
-                                # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
-                                # The first # semantic_masks_num_layers layers will be filled with the mask itself
-                                # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
-                                # uniform noise
-                                # And the last # num_mask_noise_times layers will be filled with uniform noise.
-
-                                # mask_pre_list_resized = resize_image_like_layers(mask_pre_list, (skip_noise_shape[1], skip_noise_shape[2]))
-                                # first_layers = mask_pre_list_resized
-                                # second_layers = np_image_dot_mask(mask_pre_list_resized, np.random.uniform(size=(
-                                # skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS)))
-                                # third_layers = np.random.uniform(size=(
-                                # skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
-                                # noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
-                                # if noise_layers.shape != skip_noise_shape:
-                                #     print(
-                                #     'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
-                                #     str(skip_noise_shape), str(noise_layers.shape)))
-                                #     raise AssertionError
-                                feed_dict[skip_noise] = np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], NUM_NOISE_LAYERS))
+                                feed_dict[skip_noise] = np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], skip_noise_4_feedforward_net.nums_noise[noise_i]))
                         else:
                             raise NotImplementedError
                             if use_semantic_masks:
