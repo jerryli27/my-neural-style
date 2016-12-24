@@ -49,6 +49,10 @@ def build_parser():
                         dest='new_gram', help='If true, it uses the new loss function instead of the gram loss. '
                                                         '(FOR TESTING)(default %(default)s).', action='store_true')
     parser.set_defaults(new_gram=False)
+    
+
+    parser.add_argument('--content_img_style_weight_mask',
+            dest='content_img_style_weight_mask', help='one style weight masks for the content image.', required=False)
 
 
     parser.add_argument('--output',
@@ -178,6 +182,10 @@ def main():
             style_semantic_masks.append(read_and_resize_bw_mask_images(style_semantic_mask_paths, options.height, options.width, 1,
                                                            options.semantic_masks_num_layers))
 
+    content_img_style_weight_mask = None
+    if options.content_img_style_weight_mask:
+        content_img_style_weight_mask = (read_and_resize_bw_mask_images([options.content_img_style_weight_mask], options.height, options.width, 1, 1))
+
 
 
     if options.checkpoint_output and "%s" not in options.checkpoint_output:
@@ -203,7 +211,8 @@ def main():
         semantic_masks_weight= options.semantic_masks_weight,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations,
-        new_gram=options.new_gram
+        new_gram=options.new_gram,
+        content_img_style_weight_mask = content_img_style_weight_mask
     ):
         output_file = None
         if iteration is not None:

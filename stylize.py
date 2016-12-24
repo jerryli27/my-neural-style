@@ -27,7 +27,8 @@ def stylize(network, initial, content, styles, shape, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
             learning_rate, use_mrf = False, use_semantic_masks = False, mask_resize_as_feature = True,
             output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
-            print_iterations=None, checkpoint_iterations=None, new_gram = False, semantic_masks_num_layers=4):
+            print_iterations=None, checkpoint_iterations=None, new_gram = False, semantic_masks_num_layers=4,
+            content_img_style_weight_mask = None):
     """
     Stylize images.
 
@@ -46,6 +47,16 @@ def stylize(network, initial, content, styles, shape, iterations,
         assert semantic_masks_weight is not None
         assert output_semantic_mask is not None
         assert style_semantic_masks is not None
+    if content_img_style_weight_mask is not None:
+        if shape[1] != content_img_style_weight_mask.shape[1] and shape[2] != content_img_style_weight_mask.shape[2]:
+            print("The shape of style_weight_mask is incorrect. It must have the same height and width as the "
+                  "output image. The output image has shape: %s and the style weight mask has shape; %s"
+                  % (str(shape), str(content_img_style_weight_mask.shape)))
+            raise AssertionError
+        if content_img_style_weight_mask.dtype!=np.float32:
+            print('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
+            raise AssertionError
+
 
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
@@ -69,9 +80,17 @@ def stylize(network, initial, content, styles, shape, iterations,
         if content is not None:
             content_pre = np.array([vgg.preprocess(content, mean_pixel)])
 
+
+
         # compute style features in feedforward mode
         style_images = []
         style_pres = []
+        if content_img_style_weight_mask is not None:
+            # *** TESTING
+            # Compute style weight masks for each feature layer in vgg.
+            style_weight_mask_layer_dict = neural_doodle_util.masks_average_pool(content_img_style_weight_mask)
+            # *** END TESTING
+
         for i in range(len(styles)):
             style_images.append(tf.placeholder('float', shape=style_shapes[i], name='style_image_%d' % i))
             net = vgg.pre_read_net(vgg_data, style_images[-1])
@@ -79,6 +98,10 @@ def stylize(network, initial, content, styles, shape, iterations,
             style_pres.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
             for layer in STYLE_LAYERS:
                 features = net[layer]
+                # # *** TESTING
+                # # apply_style_weight_mask_to_feature_layer. But we don't need to do this to style image.
+                # features = neural_doodle_util.vgg_layer_dot_mask(style_weight_mask_layer_dict[layer], features)
+                # # *** END TESTING
                 if use_mrf or use_semantic_masks:
                     style_features[i][layer] = features  # Compute gram later if use semantic masks
                 else:
@@ -124,6 +147,15 @@ def stylize(network, initial, content, styles, shape, iterations,
             style_losses = []
             for style_layer in STYLE_LAYERS:
                 layer = net[style_layer]
+
+
+                # *** TESTING
+                if content_img_style_weight_mask is not None:
+                    # Apply_style_weight_mask_to_feature_layer, then normalize with average of that style weight mask.
+                    layer = neural_doodle_util.vgg_layer_dot_mask(style_weight_mask_layer_dict[style_layer], layer) \
+                            / (tf.reduce_mean(style_weight_mask_layer_dict[style_layer]) + 0.000001)
+                # *** END TESTING
+
 
                 if use_mrf:
                     if use_semantic_masks:

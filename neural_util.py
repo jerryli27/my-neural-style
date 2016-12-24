@@ -136,3 +136,5 @@ def get_tensor_num_elements(tensor):
     tensor_shape = map(lambda i: i.value, tensor.get_shape())
     return reduce(mul, tensor_shape, 1)
 
+def apply_style_weight_mask_to_feature_layer(feature_layer, style_weight_mask_for_that_layer):
+    return
