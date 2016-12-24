@@ -70,15 +70,28 @@ def read_and_resize_images(dirs, height, width):
 
 
 def read_and_resize_batch_images(dirs, height, width):
-    images = [imread(dir, shape=(height, width)) for dir in dirs]
+    if height is None and width is None:
+        shape = None
+    else:
+        assert height is not None and width is not None
+        shape = (height, width)
+    images = [imread(dir, shape=shape) for dir in dirs]
     return np.array(images)
 
 
 def read_and_resize_bw_mask_images(dirs, height, width, batch_size, semantic_masks_num_layers):
     # Assume now that there is no order difference.
-    images = [imread(dir, shape=(height, width), bw=True) for dir in dirs]
+    if height is None and width is None:
+        shape = None
+    else:
+        assert height is not None and width is not None
+        shape = (height, width)
+    images = [imread(dir, shape=shape, bw=True) for dir in dirs]
     np_images = np.array(images)
-    np_images = np.reshape(np_images, (batch_size, semantic_masks_num_layers, height, width))
+    if shape is None:
+        shape = (np_images.shape[1],np_images.shape[2])
+    # There will be batch_size * semantic_masks_num_layers images. We need to separate each batch.
+    np_images = np.reshape(np_images, (batch_size, semantic_masks_num_layers, shape[0], shape[1]))
     np_images = np.transpose(np_images, (0, 2, 3, 1))
     return np_images
 

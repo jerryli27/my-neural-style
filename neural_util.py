@@ -138,3 +138,8 @@ def get_tensor_num_elements(tensor):
 
 def apply_style_weight_mask_to_feature_layer(feature_layer, style_weight_mask_for_that_layer):
     return
+
+def add_content_img_style_weight_mask_to_input(input, content_img_style_weight_mask):
+    assert content_img_style_weight_mask is not None
+    input_concatenated = tf.concat(3,(input, content_img_style_weight_mask))
+    return input_concatenated

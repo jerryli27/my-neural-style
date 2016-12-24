@@ -34,7 +34,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         do_restore_and_train=False, content_folder=None,
                         use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
                         style_semantic_masks=None, semantic_masks_weight=1.0, semantic_masks_num_layers=1,
-                        from_screenshot=False, from_webcam=False, test_img_dir=None, ablation_layer=None):
+                        from_screenshot=False, from_webcam=False, test_img_dir=None, ablation_layer=None,
+                        content_img_style_weight_mask=None):
     """
     Stylize images.
 
@@ -55,11 +56,25 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
     # Before training, make sure everything is set correctly.
     global STYLE_LAYERS
+    if not use_johnson and not use_skip_noise_4:
+        print("Please select one generator network, either johnson or skip_noise_4.")
+        raise AssertionError
+
     if use_mrf:
         STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
     if use_semantic_masks:
         assert mask_folder is not None
     assert not (use_skip_noise_4 and use_johnson)
+
+    if content_img_style_weight_mask is not None:
+        if do_restore_and_generate and (height != content_img_style_weight_mask.shape[1] or width != content_img_style_weight_mask.shape[2]):
+            print("The shape of style_weight_mask is incorrect. It must have the same height and width as the "
+                  "output image. The output image has shape: %s and the style weight mask has shape: %s"
+                  % (str((height, width)), str(content_img_style_weight_mask.shape)))
+            raise AssertionError
+        if content_img_style_weight_mask.dtype!=np.float32:
+            print('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
+            raise AssertionError
 
     input_shape = (1, height, width, 3)
     print('The input shape is: %s' % (str(input_shape)))
@@ -85,44 +100,32 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     with tf.Graph().as_default():
         if use_johnson:
             if use_semantic_masks:
-                # The input can't be just the masks. The network can't learn with that input. INputting masks directly
-                # will cause the network to learn the styles on the boarder of masks, but not anything in the middle.
-                # I tried concatenating noise with the masks and tried dotting the noises with mask. None worked well
-                # so far.
-
-
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
                 # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS])
                 # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers * NUM_NOISE_LAYERS])
             else:
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-            image = johnson_feedforward_net_util.net(inputs)  # Deleting the  / 255.0 because the network normalizes automatically.
+            if content_img_style_weight_mask is not None:
+                content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
+                input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                image = johnson_feedforward_net_util.net(input_concatenated)
+            else:
+                image = johnson_feedforward_net_util.net(inputs)  # Deleting the  / 255.0 because the network normalizes automatically.
         elif use_skip_noise_4:
             if use_semantic_masks:
                 # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS])
-
             else:
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-            image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs)
-        else:
-            if style_only:
-                noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
-                                             with_content_image=False)
+            if content_img_style_weight_mask is not None:
+                content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
+                input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                image, skip_noise_list = skip_noise_4_feedforward_net.net(input_concatenated)
             else:
-                # TODO: confirm this part on github.
-                # If we use pyramid generator with semantic masks, then the input is a pyramid concatenating masks and
-                # random noise matrices together.
-                noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
-                                             with_content_image=True,
-                                             content_image_num_features=semantic_masks_num_layers if use_semantic_masks else 3)
-                if use_semantic_masks:
-                    raise NotImplementedError
-            # Input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
-            # different style images.
-            input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)], name='input_style_placeholder')
-            image = generator_net_n_styles(noise_inputs, input_style_placeholder)
+                image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs)
+        else:
+            raise AssertionError
         # To my understanding, preprocessing the images generated can make sure that their gram matrices will look
         # similar to the preprocessed content/style images. The image generated is in the normal rgb, not the
         # preprocessed/shifted version. Same reason applies to the other generator network below.
@@ -153,12 +156,22 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) /
                                              content_features_size)
 
+            if content_img_style_weight_mask is not None:
+                # *** TESTING
+                # Compute style weight masks for each feature layer in vgg.
+                style_weight_mask_layer_dict = neural_doodle_util.masks_average_pool(content_img_style_weight_mask_placeholder)
+                # *** END TESTING
+
             # style loss
             style_loss_for_each_style = []
             for i in range(len(styles)):
                 style_losses_for_each_style_layer = []
                 for style_layer in STYLE_LAYERS:
                     layer = net[style_layer]
+                    if content_img_style_weight_mask is not None:
+                        # Apply_style_weight_mask_to_feature_layer, then normalize with average of that style weight mask.
+                        layer = neural_doodle_util.vgg_layer_dot_mask(style_weight_mask_layer_dict[style_layer], layer) \
+                                / (tf.reduce_mean(style_weight_mask_layer_dict[style_layer]) + 0.000001)
                     if use_mrf:
                         if use_semantic_masks:
                             # If we use mrf for the style loss, we concatenate the mask layer to the features and
@@ -288,31 +301,27 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         #                                            semantic_masks_num_layers * NUM_NOISE_LAYERS])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-                    image = johnson_feedforward_net_util.net(inputs, reuse=True)
+
+                    if content_img_style_weight_mask is not None:
+                        content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
+                        input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                        image = johnson_feedforward_net_util.net(input_concatenated, reuse=True)
+                    else:
+                        image = johnson_feedforward_net_util.net(inputs, reuse=True)
                 elif use_skip_noise_4:
                     if use_semantic_masks:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
-                    image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs, reuse=True)
-                else:
-                    if style_only:
-                        noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
-                                                     with_content_image=False)
+                    if content_img_style_weight_mask is not None:
+                        content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
+                        input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                        image, skip_noise_list = skip_noise_4_feedforward_net.net(input_concatenated, reuse=True)
                     else:
-                        noise_inputs = input_pyramid("noise", input_shape[1], input_shape[2], batch_size,
-                                                     with_content_image=True,
-                                                     content_image_num_features=semantic_masks_num_layers if use_semantic_masks else 3)
-
-                    # input_style_placeholder is a one hot vector (1 x N tensor) with length N where N is the number of
-                    # different style images.
-                    input_style_placeholder = tf.placeholder(tf.float32, [1, len(styles)],
-                                                             name='input_style_placeholder')
-                    image = generator_net_n_styles(noise_inputs, input_style_placeholder, reuse=True)
+                        image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs, reuse=True)
+                else:
+                    raise AssertionError
                 image = vgg.preprocess(image, mean_pixel)
-                # FOR DEBUGGING:
-                # generator_layers = get_all_layers_generator_net_n_styles(noise_inputs, input_style_placeholder)
-                # END
                 iterator = 0
 
                 while from_screenshot or from_webcam or (iterator == 0):
@@ -375,26 +384,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[inputs] = content_pre
                     elif use_skip_noise_4:
                         if use_semantic_masks:
-                            # # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
-                            # # The first # semantic_masks_num_layers layers will be filled with the mask itself
-                            # # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
-                            # # uniform noise
-                            # # And the last # num_mask_noise_times layers will be filled with uniform noise.
-                            # first_layers = mask_pre_list
-                            # second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(
-                            #     size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
-                            # third_layers = np.random.uniform(
-                            #     size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
-                            # noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
-                            # if noise_layers.shape != (batch_size, input_shape[1], input_shape[2],
-                            #                           semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
-                            #     print(
-                            #         'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
-                            #             str((batch_size, input_shape[1], input_shape[2],
-                            #                  semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)),
-                            #             str(noise_layers.shape)))
-                            #     raise AssertionError
-                            # feed_dict[inputs] = noise_layers
                             feed_dict[inputs] = mask_pre_list
                         elif style_only:
                             feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
@@ -407,38 +396,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[skip_noise] = np.random.uniform(
                                 size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], skip_noise_4_feedforward_net.nums_noise[noise_i]))
                     else:
-                        if use_semantic_masks:
-                            mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                                           mask_pre_list, num_features=semantic_masks_num_layers)
-                            noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
-                                                                mask_image_pyramid, ablation_layer=ablation_layer)
-                        elif style_only:
-                            noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                  ablation_layer=ablation_layer)
-                        else:
-                            content_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                                           content_pre)
-                            noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
-                                                                content_image_pyramid, ablation_layer=ablation_layer)
+                        raise AssertionError
 
-                        for index, noise_frame in enumerate(noise_inputs):
-                            feed_dict[noise_frame] = noise[index]
-                        feed_dict[input_style_placeholder] = \
-                            np.array([[style_blend_weights[current_style_i]
-                                       for current_style_i in range(len(styles))]])
+                    if content_img_style_weight_mask is not None:
+                        feed_dict[content_img_style_weight_mask_placeholder] = content_img_style_weight_mask
                     generated_image = image.eval(feed_dict=feed_dict)
-
-                    # FOR DEBUGGING:
-                    # for generator_layer_name, generator_layer in generator_layers.iteritems():
-                    #
-                    #     try:
-                    #         generator_layer_eval = generator_layer.eval(feed_dict=feed_dict)
-                    #     except:
-                    #         generator_layer_eval = generator_layer.eval()
-                    #     generator_layer_contains_nan = np.isnan(np.sum(generator_layer_eval))
-                    #     print('%s - %s: %s' % (generator_layer_name, str(generator_layer_contains_nan), str(generator_layer_eval)))
-                    # raw_input()
-                    # END
                     iterator += 1
                     # Can't return because we are in a generator.
                     # yield (iterator, vgg.unprocess(
@@ -533,25 +495,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     feed_dict[inputs] = content_pre_list
                         elif use_skip_noise_4:
                             if use_semantic_masks:
-
-                                # # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
-                                # # The first # semantic_masks_num_layers layers will be filled with the mask itself
-                                # # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
-                                # # uniform noise
-                                # # And the last # num_mask_noise_times layers will be filled with uniform noise.
-                                # first_layers = mask_pre_list
-                                # second_layers = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
-                                # third_layers = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS))
-                                # noise_layers = np.concatenate((first_layers, second_layers, third_layers), axis=3)
-                                # if noise_layers.shape != (batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS):
-                                #     print(
-                                #     'The noise layers place holder shape and feed dict shape are different. Place holder shape is %s, but feed dict shape is %s' % (
-                                #     str((batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS)), str(noise_layers.shape)))
-                                #     raise AssertionError
-                                # feed_dict[inputs] = noise_layers
-                                # feed_dict[inputs] = mask_pre_list
-
-                                # Now I realized that although that git repo implemented this feature, it did not
+                                # Note: the following comment may not be directly related to the code. Please ignore
+                                # this unless you want to find out where I get the skip_noise_4 generator network.
+                                # According to github.com/DmitryUlyanov/online-neural-doodle/blob/master/src/utils.lua
+                                # The first # semantic_masks_num_layers layers will be filled with the mask itself
+                                # The second # semantic_masks_num_layers*num_mask_noise_times will be filled with mask dot
+                                # uniform noise
+                                # And the last # num_mask_noise_times layers will be filled with uniform noise.
+                                # Then I realized that although that git repo implemented this feature, it did not
                                 # actually used it.
                                 feed_dict[inputs] = mask_pre_list
                                 feed_dict[content_semantic_mask] = mask_pre_list
@@ -568,30 +519,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 feed_dict[skip_noise] = np.random.uniform(size=(skip_noise_shape[0], skip_noise_shape[1], skip_noise_shape[2], skip_noise_4_feedforward_net.nums_noise[noise_i]))
                         else:
                             raise NotImplementedError
-                            if use_semantic_masks:
-                                mask_image_pyramid = generate_image_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                                               mask_pre_list, num_features=semantic_masks_num_layers)
-                                noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
-                                                                    mask_image_pyramid, ablation_layer=ablation_layer)
-                                feed_dict[content_semantic_mask] = mask_pre_list
-                                for styles_iter in range(len(styles)):
-                                    feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
-                                        style_semantic_masks[styles_iter], axis=0)
-                            elif style_only:
-                                noise = noise_pyramid(input_shape[1], input_shape[2], batch_size,
-                                                      ablation_layer=ablation_layer)
-                            else:
-                                content_image_pyramids = generate_image_pyramid_from_content_list(input_shape[1],
-                                                                                                  input_shape[2],
-                                                                                                  content_pre_list)
-                                noise = noise_pyramid_w_content_img(input_shape[1], input_shape[2], batch_size,
-                                                                    content_image_pyramids)
 
-                            for index, noise_frame in enumerate(noise_inputs):
-                                feed_dict[noise_frame] = noise[index]
-                            feed_dict[input_style_placeholder] = \
-                                np.array([[1.0 if current_style_i == style_i else 0.0
-                                           for current_style_i in range(len(styles))]])
+                        if content_img_style_weight_mask is not None:
+                            # TODO: check if we can just feed in completely random tensor. because in real life
+                            # the tensor should be continuous, more like the heat map. So maybe I should use the
+                            # Diamond generator again, but with more output than just 0 and 255.
+                            content_img_style_weight_mask_shape = map(lambda i: i.value, content_img_style_weight_mask_placeholder.get_shape())
+                            feed_dict[content_img_style_weight_mask_placeholder] = \
+                                np.random.uniform(size=content_img_style_weight_mask_shape)
 
                         train_step_for_each_style[style_i].run(feed_dict=feed_dict)
                         if style_i == len(styles) - 1:
@@ -637,7 +572,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                                                   semantic_masks_weight=semantic_masks_weight,
                                                                                   semantic_masks_num_layers=semantic_masks_num_layers,
                                                                                   test_img_dir=test_img_dir,
-                                                                                  ablation_layer=ablation_layer):
+                                                                                  ablation_layer=ablation_layer,
+                                                                                  content_img_style_weight_mask=content_img_style_weight_mask):
                                         pass
 
                                     best_for_each_style[style_i] = generated_image

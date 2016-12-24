@@ -115,6 +115,10 @@ def build_parser():
     parser.add_argument('--semantic_masks_num_layers', type=int, dest='semantic_masks_num_layers',
                         help='number of semantic masks (default %(default)s).',
                         metavar='SEMANTIC_MASKS_NUM_LAYERS', default=SEMANTIC_MASKS_NUM_LAYERS)
+
+    parser.add_argument('--content_img_style_weight_mask',
+            dest='content_img_style_weight_mask', help='one style weight masks for the content image.', required=False)
+
     # TODO: delete content weight after we make sure we do not need tv weight.
     parser.add_argument('--content_weight', type=float, dest='content_weight',
                         help='Content weight (default %(default)s).',
@@ -181,6 +185,11 @@ def main():
 
     style_semantic_masks = read_and_resize_bw_mask_images(options.style_semantic_mask_dirs, options.height, options.width, len(options.styles), options.semantic_masks_num_layers) if options.use_semantic_masks else []
 
+    content_img_style_weight_mask = None
+    if options.content_img_style_weight_mask:
+        # Because we don't know the size of the content images yet, we assume that the mask is the same size as the content images.
+        content_img_style_weight_mask = (read_and_resize_bw_mask_images([options.content_img_style_weight_mask], None, None, 1, 1))
+
     if options.output and options.output.count("%s") != 1:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain only one `%s` (e.g. `foo_style_%s.jpg`).")
@@ -219,7 +228,8 @@ def main():
             style_semantic_masks=style_semantic_masks,
             semantic_masks_weight=options.semantic_masks_weight,
             semantic_masks_num_layers=options.semantic_masks_num_layers,
-            test_img_dir=options.test_img
+            test_img_dir=options.test_img,
+            content_img_style_weight_mask=content_img_style_weight_mask,
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)

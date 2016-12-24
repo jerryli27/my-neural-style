@@ -48,9 +48,9 @@ def stylize(network, initial, content, styles, shape, iterations,
         assert output_semantic_mask is not None
         assert style_semantic_masks is not None
     if content_img_style_weight_mask is not None:
-        if shape[1] != content_img_style_weight_mask.shape[1] and shape[2] != content_img_style_weight_mask.shape[2]:
+        if shape[1] != content_img_style_weight_mask.shape[1] or shape[2] != content_img_style_weight_mask.shape[2]:
             print("The shape of style_weight_mask is incorrect. It must have the same height and width as the "
-                  "output image. The output image has shape: %s and the style weight mask has shape; %s"
+                  "output image. The output image has shape: %s and the style weight mask has shape: %s"
                   % (str(shape), str(content_img_style_weight_mask.shape)))
             raise AssertionError
         if content_img_style_weight_mask.dtype!=np.float32:
