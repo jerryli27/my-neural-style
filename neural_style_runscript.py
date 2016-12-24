@@ -6,7 +6,7 @@ import os
 # content= 'source_compressed/512/sea_512.jpg'
 # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
 
-for style_w in range(25, 125, 25):
+for style_w in range(100, 125, 25):
     for image_i in range(4,11):
         if image_i == 9:
             continue

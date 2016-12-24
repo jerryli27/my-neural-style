@@ -447,7 +447,7 @@ Feed-forward texture generation with masks.
     Now the bottle neck is that the vgg can't recognize objects well, and if it can't do that, I don't have any way to
     improve the current model except to feed in manually labeled data...
 
-2016/12/22
+2016/12/23
 2. feed-forward with mask
     I noticed that I did not normalize the gram matrix by the mean of mask values. maybe that is causing the problem
     (how do you expect two gram to be the same when you don't even know the number of pixels marked by the mask?)
@@ -479,3 +479,25 @@ Feed-forward texture generation with masks.
     After I fixed how to calculate the grams, the "stack grams" with the masks, the result looks super impressive. It's
     even better than the mrf. The color looks more like the original and it definitely have some originality.
     After applying that to the content image, it lost its charm... TODO: figure out why.
+
+2016/12/24
+1. Back prop slow version
+    I tried a different mask for output. It still works :) I doubted that it tend to generate images similar to the
+    style image in terms of where objects are placed. Apparently when I'm using masks and generate only texture, that
+    is not the case. But I tested with texture generation without mask and that seems to be the case. The texture
+    generate had a similar layout as the original style image.
+
+    But a bigger problem is it no longer works on content image. If I set the style weight to be too high, then it no
+    longer looks anything like the content image. If I set it too low, then it is unable to generate those large-scale
+    features like it did in texture generation. It is a hard balance between the two... That can be solved by applying
+    different weights on different areas. The program is then instructed to be "more creative" in some areas and
+    adhere to the content image more in other areas. That may be achieved by adding a "weight" to each mask. Currently
+    all masks are treated equally.
+
+    Or I can just dot another mask with the current feature layers. That way I'm no longer confined to having a uniform
+    weight for one mask. I can apply as much/little style to one area as I want. This can also be used in the
+    fast-forward version. (Although I guess it's a little bit trickier.) I can imagine one having a brush and as they
+    put more "style paint" onto one area, the output changes accordingly. That would be amazing.
+
+    Hum that sounds like a plan. I'm doing it. i need another branch... It is not so related to improving the new loss
+    function (In theory it will make the new loss as well as the old one look better), but whatever.
