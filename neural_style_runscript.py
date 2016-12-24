@@ -7,8 +7,9 @@ import os
 # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
 
 for style_w in range(25, 125, 25):
-    for image_i in range(1,4):
-
+    for image_i in range(4,11):
+        if image_i == 9:
+            continue
         content= 'source_compressed/IMG_0677_1536.jpg'   # ''#
         content_string = '--content ' if content != '' else ''
         texture_or_not = 'texture' if content == '' else 'content'
@@ -19,7 +20,7 @@ for style_w in range(25, 125, 25):
         # style_name = 'van_gogh_starry_sky'
         # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
 
-        styles = ['style_compressed/test_toru/%d_352x1536.jpg' %image_i]
+        styles = ['style_compressed/test_toru/%d.jpg' %image_i]
         style_name = 'sunset_%d' %image_i
         use_semantic_masks = False
         use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''

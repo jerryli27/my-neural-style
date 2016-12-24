@@ -12,7 +12,6 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import OneHotEncoder
 
 import diamond_square as DS
-import general_util
 
 parser = argparse.ArgumentParser()
 
@@ -71,5 +70,5 @@ for i, mask in enumerate(gen_masks):
     for j in range(n_colors):
         mask_rgb = np.transpose(np.repeat(np.array([mask[j,:,:]]), 3, axis=0),(1,2,0))
         scipy.misc.imsave('%strain_mask_%d_%d.png' % (args.out_dir, i, j), mask_rgb)
-        result = general_util.imread('%strain_mask_%d_%d.png' % (args.out_dir, i, j), bw=True)
-        print(result)
+        # result = general_util.imread('%strain_mask_%d_%d.png' % (args.out_dir, i, j), bw=True)
+        # print(result)
