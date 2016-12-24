@@ -26,21 +26,25 @@ def imsave(path, img):
 
 def read_and_resize_images(dirs, height, width):
     if isinstance(dirs, list):
-        image_1 = imread(dirs[0])
-        # If there is no width and height, we automatically take the first image's width and height and apply to all the
-        # other ones.
-        if width is not None:
-            if height is not None:
-                target_shape = (height, width)
-            else:
-                target_shape = (int(math.floor(float(image_1.shape[0]) /
-                                               image_1.shape[1] * width)), width)
+        # image_1 = imread(dirs[0])
+        # # If there is no width and height, we automatically take the first image's width and height and apply to all the
+        # # other ones.
+        # if width is not None:
+        #     if height is not None:
+        #         target_shape = (height, width)
+        #     else:
+        #         target_shape = (int(math.floor(float(image_1.shape[0]) /
+        #                                        image_1.shape[1] * width)), width)
+        # else:
+        #     if height is not None:
+        #         target_shape = (height, int(math.floor(float(image_1.shape[1]) /
+        #                                                image_1.shape[0] * height)))
+        #     else:
+        #         target_shape = (image_1.shape[0], image_1.shape[1])
+        if height is not None and width is not None:
+            target_shape = (height, width)
         else:
-            if height is not None:
-                target_shape = (height, int(math.floor(float(image_1.shape[1]) /
-                                                       image_1.shape[0] * height)))
-            else:
-                target_shape = (image_1.shape[0], image_1.shape[1])
+            target_shape = None
         images = [imread(d, shape=target_shape) for d in dirs]
 
 

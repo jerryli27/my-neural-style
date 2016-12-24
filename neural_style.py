@@ -129,7 +129,8 @@ def main():
     if options.content != '':
         print('reading content image %s' %options.content)
         content_image =read_and_resize_images(options.content, options.height, options.width)
-    style_images = read_and_resize_images(options.styles, options.height, options.width)
+    # style_images = read_and_resize_images(options.styles, options.height, options.width)
+    style_images = read_and_resize_images(options.styles, None, None) # We don't need to resize style images... Testing...
 
     target_shape = (1, options.height, options.width, 3)
     for i in range(len(style_images)):

@@ -501,3 +501,22 @@ Feed-forward texture generation with masks.
 
     Hum that sounds like a plan. I'm doing it. i need another branch... It is not so related to improving the new loss
     function (In theory it will make the new loss as well as the old one look better), but whatever.
+
+    1.1 Style weight mask.
+        It worked almost as expected. There is no style applied to the area where the mask masks as 0. One thing about
+        that is: Since I do convolution on the mask, even if one area is masked as "do not apply style", after average
+        conv, it is still possible to apply style on that area. I don't know if that is desirable or not yet. if not I
+        can simply get rid of the average conv and do resizing. Anyway, so far it works with texture generation.
+        I'm checking if it still works with style generation.
+        Yes! It totally worked!!! It is almost unnoticeable that I applied different amount of styles to the same image.
+        It looked so nice (way nicer than the previous one). I now have control over exactly where and how much style
+        I'd like to apply to the content image. This is so nice.
+        Next step is probably do feed-forward version of that so that the user can see instantly how the change affect
+        the outcome. This is exciting work. :) Nice christmas present for myself I guess.
+
+        I probably shouldn't get so excited because this is just the simplest change... But nevertheless it is
+        effective.
+
+    1.2 No longer automatically resize style images.
+        Resizing them is causing some issues with style/texture generation. If the width:height ratio was changed, then
+        the generated style/texture will also change, making it look less like the style given.
