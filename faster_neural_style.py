@@ -26,6 +26,7 @@ STYLE_SCALE = 1.0
 ITERATIONS = 160000  # 40000 in https://arxiv.org/abs/1610.07629
 BATCH_SIZE = 4  # 16 in https://arxiv.org/abs/1610.07629, but higher value requires more memory.
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
+STYLE_WEIGHT_MASKS_FOR_TRAINING = 'style_weight_train_masks.npy'
 PRINT_ITERATIONS = 100
 MASK_FOLDER = 'random_masks/'
 SEMANTIC_MASKS_WEIGHT = 1.0
@@ -75,6 +76,9 @@ def build_parser():
     parser.add_argument('--network', dest='network',
                         help='Path to network parameters (default %(default)s).',
                         metavar='VGG_PATH', default=VGG_PATH)
+    parser.add_argument('--style_weight_mask_for_training', dest='style_weight_mask_for_training',
+                        help='Path to style_weight_mask_for_training (default %(default)s).',
+                        default=STYLE_WEIGHT_MASKS_FOR_TRAINING)
     parser.add_argument('--use_mrf', dest='use_mrf',
                         help='If true, we use Markov Random Fields loss instead of Gramian loss.'
                              ' (default %(default)s).',
@@ -199,6 +203,10 @@ def main():
     if options.use_johnson and options.use_skip_noise_4:
         parser.error("use_johnson and use_skip_noise_4 can't both be true. Please choose only one generator network.")
 
+    style_weight_mask_for_training = None
+    if options.style_weight_mask_for_training:
+        style_weight_mask_for_training = np.load(options.style_weight_mask_for_training)
+
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
             height=options.height,
@@ -230,6 +238,7 @@ def main():
             semantic_masks_num_layers=options.semantic_masks_num_layers,
             test_img_dir=options.test_img,
             content_img_style_weight_mask=content_img_style_weight_mask,
+            style_weight_mask_for_training=style_weight_mask_for_training
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)

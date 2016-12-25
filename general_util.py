@@ -150,7 +150,7 @@ def get_batch(dir_list, start_index, batch_size):
         end_index = (start_index + batch_size) % l
         return dir_list[start_index:] + dir_list[:end_index]
 
-def get_batch_indices(dir_list, start_index, batch_size):
+def get_batch_indices(dir_list_len, start_index, batch_size):
     """
 
     :param dir_list: a list of directories
@@ -159,7 +159,7 @@ def get_batch_indices(dir_list, start_index, batch_size):
     :return: An array with length = batch.
     """
 
-    l = len(dir_list)
+    l = dir_list_len
     assert batch_size < l
     start_index = start_index % l
     if start_index + batch_size < l:

@@ -35,7 +35,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
                         style_semantic_masks=None, semantic_masks_weight=1.0, semantic_masks_num_layers=1,
                         from_screenshot=False, from_webcam=False, test_img_dir=None, ablation_layer=None,
-                        content_img_style_weight_mask=None):
+                        content_img_style_weight_mask=None, style_weight_mask_for_training = None):
     """
     Stylize images.
 
@@ -67,6 +67,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     assert not (use_skip_noise_4 and use_johnson)
 
     if content_img_style_weight_mask is not None:
+        if do_restore_and_train or not do_restore_and_generate:
+            assert style_weight_mask_for_training is not None
         if do_restore_and_generate and (height != content_img_style_weight_mask.shape[1] or width != content_img_style_weight_mask.shape[2]):
             print("The shape of style_weight_mask is incorrect. It must have the same height and width as the "
                   "output image. The output image has shape: %s and the style weight mask has shape: %s"
@@ -524,9 +526,12 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             # TODO: check if we can just feed in completely random tensor. because in real life
                             # the tensor should be continuous, more like the heat map. So maybe I should use the
                             # Diamond generator again, but with more output than just 0 and 255.
-                            content_img_style_weight_mask_shape = map(lambda i: i.value, content_img_style_weight_mask_placeholder.get_shape())
-                            feed_dict[content_img_style_weight_mask_placeholder] = \
-                                np.random.uniform(size=content_img_style_weight_mask_shape)
+                            content_img_style_weight_mask_shape = map(lambda s: s.value, content_img_style_weight_mask_placeholder.get_shape())
+                            style_weight_mask_for_training_shape = style_weight_mask_for_training.shape
+                            if content_img_style_weight_mask_shape[1] != style_weight_mask_for_training_shape[1] or content_img_style_weight_mask_shape[2] != style_weight_mask_for_training_shape[2]:
+                                print("The training masks' shape does not correspond with the place holder's shape. The training mask shape is: %s and the place holder shape is: %s. They should have the same height and width." %(str(style_weight_mask_for_training_shape), str(content_img_style_weight_mask_shape)))
+                            content_img_style_weight_mask_batch_i = get_batch_indices(style_weight_mask_for_training_shape[0], i * batch_size, batch_size)
+                            feed_dict[content_img_style_weight_mask_placeholder] = style_weight_mask_for_training[content_img_style_weight_mask_batch_i, :, :, :]
 
                         train_step_for_each_style[style_i].run(feed_dict=feed_dict)
                         if style_i == len(styles) - 1:
