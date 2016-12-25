@@ -18,8 +18,8 @@ height = 256
 width = 256
 print_iteration = 100
 use_mrf = False
-use_johnson = True
-use_skip_noise_4 = False # TODO: Try generating styles with content image with skip noise 4 without style weight mask.
+use_johnson = False
+use_skip_noise_4 = True # TODO: Try generating styles with content image with skip noise 4 without style weight mask.
 texture_synthesis_only = False # True
 do_restore_and_train = False
 do_restore_and_generate = False
@@ -28,7 +28,7 @@ use_semantic_masks = False # False
 semantic_masks_num_layers = 4
 
 test_img = 'test_masks/' if use_semantic_masks else 'source_compressed/256/sea.jpg' #'source_compressed/chicago.jpg'
-content_img_style_weight_mask ='source_compressed/sea_test/sea_style_weight_mask_2.jpg'
+content_img_style_weight_mask = '' #'source_compressed/sea_test/sea_style_weight_mask_2.jpg'
 
 
 style_or_texture_string = 'texture' if texture_synthesis_only else 'nstyle'

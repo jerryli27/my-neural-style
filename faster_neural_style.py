@@ -204,7 +204,7 @@ def main():
         parser.error("use_johnson and use_skip_noise_4 can't both be true. Please choose only one generator network.")
 
     style_weight_mask_for_training = None
-    if options.style_weight_mask_for_training:
+    if options.style_weight_mask_for_training and options.style_weight_mask_for_training!='':
         style_weight_mask_for_training = np.load(options.style_weight_mask_for_training)
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
