@@ -517,9 +517,12 @@ Feed-forward texture generation with masks.
         I probably shouldn't get so excited because this is just the simplest change... But nevertheless it is
         effective.
 
-        TODO: add the style weight mask to the feed forward network.
-        TODO: delete the pyramid generation network. It's no longer useful. Everything else is working fine.
+        Plan: add the style weight mask to the feed forward network.
+        Plan: delete the pyramid generation network. It's no longer useful. Everything else is working fine.
 
     1.2 No longer automatically resize style images.
         Resizing them is causing some issues with style/texture generation. If the width:height ratio was changed, then
         the generated style/texture will also change, making it look less like the style given.
+
+TODO: Test the style weight mask in the feed forward network... Uh maybe the style weight 200 was too high. Or maybe the style weight mask was messing everything up.
+# TODO: Try generating styles with content image with skip noise 4 without style weight mask. It looks wierd for the first 3000 rounds
