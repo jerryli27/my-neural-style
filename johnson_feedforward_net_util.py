@@ -85,22 +85,12 @@ def _conv_init_vars(net, out_channels, filter_size, transpose=False,name = '', r
         return weights_init
     
 def get_johnson_scale_offset_var():
+    all_var = tf.all_variables()
     scale_offset_variables = []
-    for d in range(8, 48, 8):
-        for layer in range(1, 4):
-            scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
-                                                        scope='texture_nets/block_low_%d/layer%d/conditional_instance_norm/scale' % (
-                                                        d, layer))
-            scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
-                                                        scope='texture_nets/block_high_%d/layer%d/conditional_instance_norm/scale' % (
-                                                        d, layer))
-
-    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
-                                                scope='texture_nets/output_chain/layer1/conditional_instance_norm/scale')
-    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
-                                                scope='texture_nets/output_chain/layer2/conditional_instance_norm/scale')
-    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
-                                                scope='texture_nets/output_chain/layer3/conditional_instance_norm/scale')
-    scale_offset_variables += tf.get_collection(tf.GraphKeys.VARIABLES,
-                                                scope='texture_nets/output/conditional_instance_norm/scale')
+    for var in all_var:
+        if 'scale' in var.name or 'shift' in var.name:
+            scale_offset_variables.append(var)
+    if len(scale_offset_variables) !=  3 * 2 + 5 * 2 * 2 + 3 * 2:
+        print('The number of scale offset variables is wrong. ')
+        raise AssertionError
     return scale_offset_variables
