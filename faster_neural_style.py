@@ -250,6 +250,7 @@ def main():
                     else:
                         output_file = options.output % (style_i)  # TODO: add test for legal output.
                     if output_file:
+                        print(image)
                         imsave(output_file, image[style_i])
 
 if __name__ == '__main__':

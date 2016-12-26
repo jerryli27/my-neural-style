@@ -591,5 +591,5 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 yield (
                                     (None if last_step else i),
                                     [None if test_img_dir is None else
-                                     best_for_each_style[style_i] for style_i in range(len(styles))]
+                                     best_for_each_style[style_j] for style_j in range(len(styles))]
                                 )

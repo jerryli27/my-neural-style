@@ -540,3 +540,8 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     I realized that it may be done through just adjusting the scale and offset variables (according to the google paper)
     instead of feeding the entire mask as another layer of input besides rgb. Therefore I decided to test the
     multi-style training again.
+
+    Oh right I forgot. I need to have two sets of those variables and I'm only outputting one image currently...
+
+2016/12/26
+1. Scale_offset_only for multi-style feed forward network.
