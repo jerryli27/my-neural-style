@@ -93,6 +93,7 @@ def stylize(network, initial, content, styles, shape, iterations,
 
         for i in range(len(styles)):
             style_images.append(tf.placeholder('float', shape=style_shapes[i], name='style_image_%d' % i))
+            print(style_shapes[i])
             net = vgg.pre_read_net(vgg_data, style_images[-1])
             # net, _ = vgg.net(network, style_images[-1])
             style_pres.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))

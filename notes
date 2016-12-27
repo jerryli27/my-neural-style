@@ -545,3 +545,26 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
 2016/12/26
 1. Scale_offset_only for multi-style feed forward network.
+    I fixed the network. Now at least Johnson network works fine with multi style.
+    I re-read the google paper "A Learned Representation For Artistic Style". The pictures they provided for several
+    styles were not particularly satisfying. I think the slow back prop would do a much better job on those pictures.
+    The problem was still mainly on applying styles on places that it shouldn't. TODO: I will compare the feed-forward
+    model, the multi-style feed forward model, and the back prop models and see what's the difference between them.
+
+    It will take a while so i'll do that overnight through a script. style weight = 50 seems to be too low for some
+    styles so I'll increase it to 100. The network seems to work as expected (meaning it doesn't work so well yet. lol)
+    and the styles can be nicely described by only the normalization factors. I still need to understand why before I
+    move on though. The two biggest question I have is: why Gram matrix work? Why normalization work as separating
+    between styles?
+
+2. back prop.
+    TODO: Will test between the new and old loss systematically.
+
+2016/12/27
+1. Back prop New loss.
+    There is no noticeable difference between the new one and the old one when it comes to applying styles to content
+    image. As noted before, there is a huge difference when I use it to do texture generation.
+
+2. More meaningful parameters:
+    I read an article on GAN yesterday and they mentioned a way to make the "noise parameters" fed into the model mean
+    something.

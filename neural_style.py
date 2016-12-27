@@ -133,12 +133,13 @@ def main():
     style_images = read_and_resize_images(options.styles, None, None) # We don't need to resize style images... Testing...
 
     target_shape = (1, options.height, options.width, 3)
-    for i in range(len(style_images)):
-        style_scale = STYLE_SCALE
-        if options.style_scales is not None:
-            style_scale = options.style_scales[i]
-        style_images[i] = scipy.misc.imresize(style_images[i], style_scale *
-                target_shape[1] / style_images[i].shape[1])
+    # Again.. probably no need to resize style images... unless we're doing mrf loss?? Dunno.
+    # for i in range(len(style_images)):
+    #     style_scale = STYLE_SCALE
+    #     if options.style_scales is not None:
+    #         style_scale = options.style_scales[i]
+    #     style_images[i] = scipy.misc.imresize(style_images[i], style_scale *
+    #             target_shape[1] / style_images[i].shape[1])
 
     style_blend_weights = options.style_blend_weights
     if style_blend_weights is None:

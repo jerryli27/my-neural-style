@@ -154,9 +154,10 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
     style_semantic_masks_images = []
     style_semantic_masks_for_each_layer = []
     for i in range(len(styles)):
+        current_style_shape = styles[i].shape # Shape has format : height width rgb
         style_semantic_masks_images.append(
             tf.placeholder('float',
-                           shape=(1, height, width, semantic_masks_num_layers),
+                           shape=(1, current_style_shape[0], current_style_shape[1], semantic_masks_num_layers),
                            name='style_mask_%d' % i))
 
         if not mask_resize_as_feature:
@@ -174,11 +175,12 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
                 #                                   (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
                 features = style_semantic_masks_for_each_layer[-1][layer] / 255.0
 
-                features_shape = map(lambda i: i.value, features.get_shape())
-                if (net_layer_sizes[layer][1] != features_shape[1]) or (net_layer_sizes[layer][1] != features_shape[1]):
-                    print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
-                          % (layer, str(net_layer_sizes[layer]), str(features_shape)))
-                    raise AssertionError
+                # TODO: fix this. The shapes of content masks and style masks are different.
+                # features_shape = map(lambda i: i.value, features.get_shape())
+                # if (net_layer_sizes[layer][1] != features_shape[1]) or (net_layer_sizes[layer][1] != features_shape[1]):
+                #     print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
+                #           % (layer, str(net_layer_sizes[layer]), str(features_shape)))
+                #     raise AssertionError
 
             else:
                 features = semantic_mask_net[layer]
@@ -188,6 +190,7 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
                     concatenate_mask_layer_tf(features, style_features[i][layer])
             else:
                 # TODO :testing new gram with masks.
+                style_feature_size = map(lambda i: i.value, style_features[i][layer].get_shape())
                 gram = gramian_with_mask(style_features[i][layer], features, new_gram=new_gram, shift_size=shift_size)
                 #
                 # features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
