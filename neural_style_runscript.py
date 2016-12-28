@@ -6,7 +6,7 @@ import os
 # content= 'source_compressed/512/sea_512.jpg'
 # styles = ['style_compressed/claude_monet/512/1.jpg','style_compressed/claude_monet/512/2.jpg','style_compressed/claude_monet/512/3.jpg','style_compressed/claude_monet/512/4.jpg']
 
-for epoch in range(2):
+for epoch in range(1):
 
     style_w = 100
     image_i=7
@@ -15,7 +15,7 @@ for epoch in range(2):
     content_string = '--content ' if content != '' else ''
     texture_or_not = 'texture' if content == '' else 'content'
     #contents= ['source_compressed/my256/%d.jpg' % i for i in range(1,17)]
-    contents_name = 'toru%d' %epoch# '256'
+    contents_name = 'toru_wgoingon_%d' %epoch# '256'
     # styles = ['style_compressed/van_gogh/self_portrait.jpg', 'style_compressed/van_gogh/starry_sky.jpg']
     # styles = ['style_compressed/van_gogh/starry_sky256.jpg']
     # style_name = 'van_gogh_starry_sky'
@@ -42,9 +42,9 @@ for epoch in range(2):
     height = 352
 
 
-    output_semantic_mask = 'source_compressed/IMG_0677_1536_masks_ver2/'
+    output_semantic_mask = 'source_compressed/IMG_0677_1536_masks_ver4/'
     style_semantic_masks = ['style_compressed/test_ff_multistyle/7_masks/']
-    content_img_style_weight_mask = 'source_compressed/IMG_0677_1536_style_weight_mask.png' if epoch == 0 else 'source_compressed/IMG_0677_1536_style_weight_mask_2.png'
+    content_img_style_weight_mask = ''# 'source_compressed/IMG_0677_1536_style_weight_mask.png' if epoch == 0 else 'source_compressed/IMG_0677_1536_style_weight_mask_2.png'
     print(content_img_style_weight_mask)
     content_img_style_weight_mask_name = 'swmask-test_mask-' if content_img_style_weight_mask!='' else ''
 

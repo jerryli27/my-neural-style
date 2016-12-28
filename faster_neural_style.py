@@ -159,6 +159,10 @@ def build_parser():
                              'Otherwise it does training and generate a model.',
                         action='store_true')
     parser.set_defaults(do_restore_and_generate=False)
+    parser.add_argument('--restore_and_generate_style_num', type=int, dest='restore_and_generate_style_num',
+                        help='Specifies which style to generate. Will auto populate the one hot style vector',
+                        default=-1)
+    parser.set_defaults(do_restore_and_generate=False)
     parser.add_argument('--do_restore_and_train', dest='do_restore_and_train',
                         help='If set, we read the model at model_save_dir and start training from there. '
                              'The overall setting and structure must be the same.',
@@ -207,6 +211,12 @@ def main():
     if options.style_weight_mask_for_training and options.style_weight_mask_for_training!='':
         style_weight_mask_for_training = np.load(options.style_weight_mask_for_training)
 
+    one_hot_vector_for_restore_and_generate = None
+    if options.do_restore_and_generate:
+        assert options.restore_and_generate_style_num >=0 and options.restore_and_generate_style_num < len(style_images)
+        one_hot_vector_for_restore_and_generate = np.array([[1.0 if options.restore_and_generate_style_num == style_j else 0.0 for style_j in range(len(style_images))]])
+
+
     for iteration, image in n_style_feedforward_net.style_synthesis_net(
             path_to_network=options.network,
             height=options.height,
@@ -238,7 +248,8 @@ def main():
             semantic_masks_num_layers=options.semantic_masks_num_layers,
             test_img_dir=options.test_img,
             content_img_style_weight_mask=content_img_style_weight_mask,
-            style_weight_mask_for_training=style_weight_mask_for_training
+            style_weight_mask_for_training=style_weight_mask_for_training,
+            one_hot_vector_for_restore_and_generate=one_hot_vector_for_restore_and_generate
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image)

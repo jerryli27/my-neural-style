@@ -590,11 +590,21 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     For both setting, there are artifacts in the generated image. Sometimes it's an completely black area and
     sometimes it's completely white (the color is consistent for each setting). I think it may have something to do
     with the scale and offset. I knew that there are some bugs in tensorflow's standard deviation calculation.
-    Maybe I should try to add the absolute value. It is consistantly appearing for every single training.
+    Maybe I should try to add the absolute value. It is consistantly appearing for every single training. Maybe the
+    learning rate is still too large. I'm guessing what can cause such artifacts with usually an oval shape. The
+    artifact appears at the same place and shape for all styles so it has nothing to do with scale and offset.
+    Maybe I should print all variables and see their values? Find the abnormal one? I'm guessing there might be a
+    nan somewhere.
 
     Also the feature size seems to be too small compared to the picture. Maybe I should do training first with small
     image size then increase that??? I've seen people do it in one git repo.
     TODO: fix the feature size and the artifacts (artifacts first)
+     # TODO: test the effect of style image with different size on the output result.
 
 2. Study the model.
     TODO: read the GAN article on making meaningful noise parameters.
+
+3. back prop
+    I thought the masks were not working. but it turns out that the backprop is not working on only one part of the
+    content image. I'm testing the effect of other masks, but this is really wierd.
+
