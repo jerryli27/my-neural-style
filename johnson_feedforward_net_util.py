@@ -68,8 +68,9 @@ def _instance_norm(net, name = '', one_hot_style_vector = None, reuse = False):
         else:
             num_styles = one_hot_style_vector.get_shape().as_list()[1]
             var_shape = [num_styles, channels]
-        # Todo: Try applying an abs on the sigma_sq. in theory it should always be positive but in practice due to inaccuracy in float calculation, it may be negative when the actual sigma is very small, which causes the output to be NaN sometimes.
         mu, sigma_sq = tf.nn.moments(net, [1,2], keep_dims=True)
+        # Try applying an abs on the sigma_sq. in theory it should always be positive but in practice due to inaccuracy in float calculation, it may be negative when the actual sigma is very small, which causes the output to be NaN sometimes.
+        sigma_sq = tf.abs(sigma_sq)
         shift_init = tf.zeros(var_shape)
         shift = tf.get_variable('shift', initializer= shift_init)
         scale_init = tf.ones(var_shape)

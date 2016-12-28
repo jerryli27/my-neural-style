@@ -122,7 +122,7 @@ def stylize(network, initial, content, styles, shape, iterations,
         if use_semantic_masks:
             output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
                 style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
-                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram=new_gram, shift_size=SHIFT_SIZE)
+                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram=new_gram, shift_size=SHIFT_SIZE, average_pool=False) # TODO: average pool is not working so well in practice??
 
         if initial is None:
             # if content is None:

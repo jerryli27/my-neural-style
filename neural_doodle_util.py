@@ -110,7 +110,7 @@ def gramian_with_mask(layer, masks, new_gram = False, shift_size = None):
     return grams
 
 
-def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram = False, shift_size = None):
+def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram = False, shift_size = None, average_pool = False):
     # Variables to be returned.
     output_semantic_mask_features = {}
 
@@ -123,15 +123,14 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
         # convolutions and average pooling along with pooling layers."
         # But this is just a minor improvement that should not affect the final result too much.
         # prev_layer = None
-
-        output_semantic_masks_for_each_layer = masks_average_pool(content_semantic_mask)
+        if average_pool:
+            output_semantic_masks_for_each_layer = masks_average_pool(content_semantic_mask)
         for layer in style_layer_names:
-            # output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
-            #     net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
-            #
-
-
-            output_semantic_mask_feature = output_semantic_masks_for_each_layer[layer]
+            if average_pool:
+                output_semantic_mask_feature = output_semantic_masks_for_each_layer[layer]
+            else:
+                output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
+                    net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
 
             output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
             if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (

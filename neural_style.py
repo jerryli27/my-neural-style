@@ -179,9 +179,9 @@ def main():
                                                        options.semantic_masks_num_layers)
 
         style_semantic_masks = []
-        for style_semantic_mask_dir in options.style_semantic_masks:
+        for style_i, style_semantic_mask_dir in enumerate(options.style_semantic_masks):
             style_semantic_mask_paths = get_all_image_paths_in_dir(style_semantic_mask_dir)
-            style_semantic_masks.append(read_and_resize_bw_mask_images(style_semantic_mask_paths, options.height, options.width, 1,
+            style_semantic_masks.append(read_and_resize_bw_mask_images(style_semantic_mask_paths, style_images[style_i].shape[0], style_images[style_i].shape[1], 1,
                                                            options.semantic_masks_num_layers))
 
     content_img_style_weight_mask = None
