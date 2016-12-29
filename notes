@@ -654,10 +654,19 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 3. back prop
     I think the bug I met yesterday was caused by .png masks. Although invisible, there are layers covered by the top
     layer and those are messing around things. If I change it to jpg it should be fine.
+    Ok it's definitely something wierd with the mask for content image. If I make a brand new one then it's fine. But
+    if I try to reuse the old one in any way it breaks.
+    yep that's the bug... I still don't know what caused it but well. I found the solution. It took me a whole day
+    to figure out...
 
 4. New loss function
     I kind of knows now how I can get a larger pattern. (rather than a local one). That lies in the correlation between
     one feature and the features in nearby cells.
+    #TODO: testing the effect of stride and shift on the new loss.
+    ** Larger stride results in textures becoming more and more like the style image itself. That is probably
+    due to the fact that we used lower layers as well as upper ones. What if we only apply the larger stride on upper
+    layer? (The reason behind that is: lower layers represent local details and overall layout. If I use large strides
+    on lower layers, then the overall layout will be also set as the same as style image... Let me test this.
 
 
 5. nijigen
