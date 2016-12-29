@@ -32,7 +32,7 @@ new_gram = False
 new_gram_string = '--new_gram' if new_gram else ''
 
 learning_rate=10 # larger lr seems to result in larger looking features (compared to lr = 1)
-iterations=1000
+iterations=100
 batch_size=1
 style_weight=style_w if not use_mrf else (3 + style_w / 2.0) # 100 for old gram loss works. The weight for mrf varies from picture to picture.
 content_weight=5
@@ -42,7 +42,7 @@ width = 1536
 height = 352
 
 
-output_semantic_mask = 'source_compressed/IMG_0677_1536_masks_ver5/'#'source_compressed/IMG_0677_1536_masks_ver4/'
+output_semantic_mask = 'source_compressed/IMG_0677_1536_masks_ver6/'#'source_compressed/IMG_0677_1536_masks_ver4/'
 style_semantic_masks = ['style_compressed/test_ff_multistyle/7_masks/']
 content_img_style_weight_mask = ''# 'source_compressed/IMG_0677_1536_style_weight_mask.png' if epoch == 0 else 'source_compressed/IMG_0677_1536_style_weight_mask_2.png'
 print(content_img_style_weight_mask)

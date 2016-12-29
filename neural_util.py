@@ -102,7 +102,7 @@ def gram_experiment(features, horizontal_shift = 0, vertical_shift = 0):
 
 
 
-def gram_stacks(features, shift_size=2):
+def gram_stacks(features, shift_size=2, stride = 1):
     # This is the first attempt. It shifts the layers by n pixels vertically and horizontally according to the height
     # and width and compute gram for each shift.
     # _, height, width, number = map(lambda i: i.value, features.get_shape())
@@ -120,10 +120,11 @@ def gram_stacks(features, shift_size=2):
     # This is the second attempt. It shifts the gram in a m x n range and calculate gram for each shift.
     batch_size, height, width, number = map(lambda i: i.value, features.get_shape())
     gram = []
+    assert shift_size * stride < height and shift_size * stride < width
 
     for vertical_shift in range(shift_size):
         for horizontal_shift in range(shift_size):
-            shifted_gram = gram_experiment(features, horizontal_shift, vertical_shift)
+            shifted_gram = gram_experiment(features, horizontal_shift * stride, vertical_shift * stride)
             gram.append(shifted_gram)
     gram_stack = tf.pack(gram)
     gram_stack = tf.transpose(gram_stack, (1,2,3,0)) # Shape = [batch_size, number, number, num_shifts]

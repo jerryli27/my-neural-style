@@ -20,14 +20,14 @@ STYLE_LAYERS = ('relu3_1', 'relu4_1')
 STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
-SHIFT_SIZE = 4 # The shift size for the new loss function.
 
 
 def stylize(network, initial, content, styles, shape, iterations,
             content_weight, style_weight, style_blend_weights, tv_weight,
             learning_rate, use_mrf = False, use_semantic_masks = False, mask_resize_as_feature = True,
             output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
-            print_iterations=None, checkpoint_iterations=None, new_gram = False, semantic_masks_num_layers=4,
+            print_iterations=None, checkpoint_iterations=None, new_gram = False, new_gram_shift_size = 4,
+            new_gram_stride = 1, semantic_masks_num_layers=4,
             content_img_style_weight_mask = None):
     """
     Stylize images.
@@ -56,7 +56,6 @@ def stylize(network, initial, content, styles, shape, iterations,
         if content_img_style_weight_mask.dtype!=np.float32:
             print('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
             raise AssertionError
-
 
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
@@ -110,7 +109,7 @@ def stylize(network, initial, content, styles, shape, iterations,
                     # ***** TEST GRAM*****
                     # TODO: Testing new loss function.
                     if new_gram:
-                        gram = neural_util.gram_stacks(features, shift_size=SHIFT_SIZE)
+                        gram = neural_util.gram_stacks(features, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
                         gram = feedforward_style_net_util.gramian(features)
                         # _, height, width, number = map(lambda i: i.value, features.get_shape())
@@ -122,7 +121,7 @@ def stylize(network, initial, content, styles, shape, iterations,
         if use_semantic_masks:
             output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
                 style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
-                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram=new_gram, shift_size=SHIFT_SIZE, average_pool=False) # TODO: average pool is not working so well in practice??
+                STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram=new_gram, shift_size=new_gram_shift_size, stride=new_gram_stride, average_pool=False) # TODO: average pool is not working so well in practice??
 
         if initial is None:
             # if content is None:
@@ -171,10 +170,10 @@ def stylize(network, initial, content, styles, shape, iterations,
                     # TODO: Testing new loss function.
 
                     if use_semantic_masks:
-                        gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer], new_gram=new_gram, shift_size=SHIFT_SIZE)
+                        gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer], new_gram=new_gram, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
                         if new_gram:
-                            gram = neural_util.gram_stacks(layer, shift_size=SHIFT_SIZE)
+                            gram = neural_util.gram_stacks(layer, shift_size=new_gram_shift_size, stride=new_gram_stride)
                         else:
                             gram = feedforward_style_net_util.gramian(layer)
                         # _, height, width, number = map(lambda i: i.value, layer.get_shape())
@@ -186,7 +185,7 @@ def stylize(network, initial, content, styles, shape, iterations,
 
                     # ***** END TEST GRAM*****
                     if new_gram:
-                        style_gram_size = neural_util.get_tensor_num_elements(style_gram) / (SHIFT_SIZE ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
+                        style_gram_size = neural_util.get_tensor_num_elements(style_gram) / (new_gram_shift_size ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
                     else:
                         style_gram_size = neural_util.get_tensor_num_elements(style_gram)
                     style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two

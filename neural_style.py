@@ -49,7 +49,10 @@ def build_parser():
                         dest='new_gram', help='If true, it uses the new loss function instead of the gram loss. '
                                                         '(FOR TESTING)(default %(default)s).', action='store_true')
     parser.set_defaults(new_gram=False)
-    
+    parser.add_argument('--new_gram_shift_size', type=int,
+            dest='new_gram_shift_size', help='TODO', default=4)
+    parser.add_argument('--new_gram_stride', type=int,
+            dest='new_gram_stride', help='TODO', default=1)
 
     parser.add_argument('--content_img_style_weight_mask',
             dest='content_img_style_weight_mask', help='one style weight masks for the content image.', required=False)
@@ -214,6 +217,8 @@ def main():
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations,
         new_gram=options.new_gram,
+        new_gram_shift_size=options.new_gram_shift_size,
+        new_gram_stride=options.new_gram_stride,
         content_img_style_weight_mask = content_img_style_weight_mask
     ):
         output_file = None

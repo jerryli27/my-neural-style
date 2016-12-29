@@ -639,7 +639,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
 2016/12/29
 1. Scale_offset_only
-    Artifacts: TODO: trying elu instead of relu... Don't think it will help though.
+    Artifacts: TODO: trying elu instead of relu... Don't think it will help though. Hum it seems elu fixed it. (or it could be I decreased the number of style images, but in the past i've seen those artifacts even when I only have two style images.)
 
 
 2. Study the model
@@ -647,6 +647,9 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     size those patterns should be.
 
     TODO: figure out what controls the size of patterns using back prop first then generalize to feed forward
+    (like the size of brush or size of triangles etc.)... Wait the back prop and the feed forward are different.
+    Feed forward seems to be more dependent on the size of content image fed in during training. Dunno,,,
+
 
 3. back prop
     I think the bug I met yesterday was caused by .png masks. Although invisible, there are layers covered by the top
@@ -655,5 +658,6 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 4. New loss function
     I kind of knows now how I can get a larger pattern. (rather than a local one). That lies in the correlation between
     one feature and the features in nearby cells.
+
 
 5. nijigen
