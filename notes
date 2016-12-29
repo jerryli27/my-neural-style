@@ -597,14 +597,63 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     nan somewhere.
 
     Also the feature size seems to be too small compared to the picture. Maybe I should do training first with small
-    image size then increase that??? I've seen people do it in one git repo.
+    image size then increase that??? I've seen people do it in one git repo. Ok the feature size has nothing to do with
+    the size of the style image. I was mistaken. I thought because the convolution kernel size and stride are fixed,
+    the interpretation of the cnn on style image of different style would be different. I was wrong. But why???
+
+    Also the artifacts are still there... It's not the mean and standard deviation...
+    Maybe it's relu!! Maybe I should use leaky relu or elu or something. But the same artifact did not exist in
+    feed forward texture generation.
+
+    Hum... I think the artifact is somewhere in the convolution part. It can't be caused by having a large learning
+    rate (because then it would also be a problem in texture synthesis). Also it's probably not dividing by zero
+    because you can see non-white pixels in the artifact area.
+
+    but there is no such problem before I made the multi-style change... So... the problem must be in the multi-style
+    part that is shared by all styles...
+
+
     TODO: fix the feature size and the artifacts (artifacts first)
-     # TODO: test the effect of style image with different size on the output result.
+    Plan(done): test the effect of style image with different size on the output result. TODO: WHY?
+    TODO: test the effect of changing output size and see if the patterns generated become bigger... I don't think so
 
 2. Study the model.
-    TODO: read the GAN article on making meaningful noise parameters.
+    Plan: read the GAN article on making meaningful noise parameters. I read it. The math was pretty complicated but
+    I got a broad picture of how it works. It is inspiring. However I don't see how to connect that to my current work
+    yet.
+    I can't find an explaination of why gram matrix works. It's magic.
+    TODO: Can we build an even better loss function? Can we build a neural network that basically classify styles and hope
+    that it automatically contains enough information to build a better loss function?
 
 3. back prop
     I thought the masks were not working. but it turns out that the backprop is not working on only one part of the
     content image. I'm testing the effect of other masks, but this is really wierd.
+    It's definitely the output mask or the style mask... Even if I change the image, the same part/area is still not working...
+    But even if I change the content semantic mask it's still not working...
+    If I change the size then it's working...Something wierd is going on... it must be something stupid I'm doing wrong.
 
+4. new loss function
+    No progress made.
+
+5. Read nijigen stuff
+
+2016/12/29
+1. Scale_offset_only
+    Artifacts: TODO: trying elu instead of relu... Don't think it will help though.
+
+
+2. Study the model
+    I need more control over the generation process. I have no control over how the patterns are generated or what
+    size those patterns should be.
+
+    TODO: figure out what controls the size of patterns using back prop first then generalize to feed forward
+
+3. back prop
+    I think the bug I met yesterday was caused by .png masks. Although invisible, there are layers covered by the top
+    layer and those are messing around things. If I change it to jpg it should be fine.
+
+4. New loss function
+    I kind of knows now how I can get a larger pattern. (rather than a local one). That lies in the correlation between
+    one feature and the features in nearby cells.
+
+5. nijigen

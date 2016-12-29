@@ -33,7 +33,8 @@ def _conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_paddin
             net = tf.nn.conv2d(net, weights_init, strides_shape, padding='SAME')
         net = _instance_norm(net,name=name, one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         if relu:
-            net = tf.nn.relu(net)
+            # net = tf.nn.relu(net)
+            net = tf.nn.elu(net)
 
         return net
 
@@ -54,7 +55,7 @@ def _conv_tranpose_layer(net, num_filters, filter_size, strides, mirror_padding 
         else:
             net = tf.nn.conv2d_transpose(net, weights_init, tf_shape, strides_shape, padding='SAME')
         net = _instance_norm(net,name=name, one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        return tf.nn.relu(net)
+        return tf.nn.elu(net)  # tf.nn.relu(net)
 
 def _residual_block(net, filter_size=3, mirror_padding = True, name = '', one_hot_style_vector = None, reuse = False):
     tmp = _conv_layer(net, 128, filter_size, 1, mirror_padding = mirror_padding, name=name + '_first', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
