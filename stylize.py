@@ -16,7 +16,7 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu3_1', 'relu4_1') # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
+STYLE_LAYERS = ('relu3_1', 'relu4_1', ) # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
 STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
@@ -159,9 +159,9 @@ def stylize(network, initial, content, styles, shape, iterations,
 
                 if use_mrf:
                     if use_semantic_masks:
-                        # TODO: change it back, or make sure it is better than just concatenating.
-                        # layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
-                        layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
+                        # TODO: change it back, or make sure it is better than just concatenating. Also if you change this to dot, don't forget to also change that in neural_doodle_util.
+                        layer = neural_doodle_util.concatenate_mask_layer_tf(output_semantic_mask_features[style_layer], layer)
+                        # layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
                     style_losses.append(mrf_loss(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
                 else:
 

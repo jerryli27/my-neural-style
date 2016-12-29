@@ -40,6 +40,7 @@ checkpoint_iterations=20
 print_iteration = 100
 width = 1536
 height = 352
+semantic_masks_num_layers=4
 
 
 output_semantic_mask = 'source_compressed/IMG_0677_1536_masks_ver7/'#'source_compressed/IMG_0677_1536_masks_ver4/'
@@ -52,8 +53,8 @@ checkpoint_output='output_checkpoint/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf
 output='output/%s-%s-%s-iter-%d-batchsize-%d-lr-%f-use_mrf-%s-use_masks-%s-new_loss_fn-%s-%s-style-%f-content-%f.jpg' % (contents_name, style_name, texture_or_not, iterations, batch_size, learning_rate, str(use_mrf), str(use_semantic_masks), str(new_gram), content_img_style_weight_mask_name, style_weight, content_weight)
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
-os.system('python ~/PycharmProjects/my-neural-style/neural_style.py %s%s --styles %s --learning-rate=%f --iterations=%d %s %s %s --output_semantic_mask=%s --style_semantic_masks %s --content_img_style_weight_mask=%s --style-weight=%f --content-weight=%f --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d --width=%d --height=%d'
-          % (content_string, content, ' '.join(styles), learning_rate, iterations, use_mrf_string, new_gram_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), content_img_style_weight_mask, style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration, width, height))
+os.system('python ~/PycharmProjects/my-neural-style/neural_style.py %s%s --styles %s --learning-rate=%f --iterations=%d %s %s %s --output_semantic_mask=%s --style_semantic_masks %s --content_img_style_weight_mask=%s --style-weight=%f --content-weight=%f --checkpoint-iterations=%d --checkpoint-output=%s --output=%s --print-iterations=%d --width=%d --height=%d --semantic_masks_num_layers=%d'
+          % (content_string, content, ' '.join(styles), learning_rate, iterations, use_mrf_string, new_gram_string, use_semantic_masks_string ,output_semantic_mask, ' '.join(style_semantic_masks), content_img_style_weight_mask, style_weight, content_weight, checkpoint_iterations, checkpoint_output, output, print_iteration, width, height, semantic_masks_num_layers))
 
 
 

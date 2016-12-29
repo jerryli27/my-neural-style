@@ -159,7 +159,7 @@ with random content/mask takes a while to train. Ok there's definitely something
 changed their meanings in the middle of training, so we're definitely loading them wrong. If I'm lucky, it might just
 be the output but not the training (judging from the quality of generated images).
 I tested the output. The output's order is correct. So it's the training process... But I don't get what part went
-wrong. I tested getting the files. That part was correct. ... TODO: debug this. I don't know what it will look like
+wrong. I tested getting the files. That part was correct. ... Plan: debug this. I don't know what it will look like
 after more training, but now it's not so satisfactory yet.
 It is interesting to see how each mask acts. when value of a mask is 0, it doesn't mean that it will be black. Instead
 since it indicates that it is not a certain mask, it becomes the color of other masks.
@@ -207,7 +207,7 @@ Task 3: improving slow version.
     other layers: the style of the eye has nothing to do with the style of say the hair. On the other hand, appending
     means that: it is still possible in nearest neighbor that: although one pixel belongs to another semantic mask,
     it can use the style of the other semantic mask if vgg thinks it is similar enough to another pixel... Considering
-    the inaccuracy of human labeling and the ram, the second one is more preferrable. #TODO: I will make the change
+    the inaccuracy of human labeling and the ram, the second one is more preferrable. #Plan: I will make the change
     and basically delete resizing. (before that, I need to test if appending is really preferrable to the dot product.)
 
     Another problem is: Since we can't use nn in feed-forward nn (It's probably too hard for a generator network to
@@ -352,7 +352,6 @@ Feed-forward texture generation with masks.
     Conclusion:
         johnson network sort of works to generate textures. The boarder looks wierd though and the features are small,
         probably because I trained using 128x128 instead of 256x256.
-        TODO: Train using 256x256 without masks or content.
 
         skip_noise_4 generate textures successfully (tested two times by accident)
 2. New loss function.
@@ -478,7 +477,7 @@ Feed-forward texture generation with masks.
 3. Back prop slow version
     After I fixed how to calculate the grams, the "stack grams" with the masks, the result looks super impressive. It's
     even better than the mrf. The color looks more like the original and it definitely have some originality.
-    After applying that to the content image, it lost its charm... TODO: figure out why.
+    After applying that to the content image, it lost its charm... Plan: figure out why.
 
 2016/12/24
 1. Back prop slow version
@@ -534,7 +533,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     algorithm.
     Nah. skip_noise_4 can't even learn the content image. Or it's learning it super slowly compared to how fast it's
     learning the style.
-    # TODO: figure out a solution.
+    # Plan: figure out a solution.
 
 2. Scale_offset_only
     I realized that it may be done through just adjusting the scale and offset variables (according to the google paper)
@@ -614,7 +613,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
 
     Plan: fix the feature size and the artifacts (artifacts first)
-    Plan(done): test the effect of style image with different size on the output result. TODO: WHY?
+    Plan(done): test the effect of style image with different size on the output result.
     Plan: test the effect of changing output size and see if the patterns generated become bigger... I don't think so
 
 2. Study the model.
@@ -651,6 +650,21 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     Feed forward seems to be more dependent on the size of content image fed in during training.Need more testing to
     confirm that.
 
+    I tested the effect of content and style images with different styles. I'm now 100% certain that *The size of
+    content and style images does not matter. The features generated have the same features sizes.
+
+    I realized that it may be related to the kernel size of the vgg layers. The style comes from dotting each pixel in
+    feature layers with the same pixel in another feature layer. The value of that pixel is determined by the algebraic
+    computations in the vgg layer. I thought the vgg layer will get activated differently if i change the size of the
+    style image or the content image, but it seems that it is largely the same (this may be explained by saying that
+    if you draw a square and change its size, then no matter how you change it, unless you change it to a tiny 3x3 size,
+    a conv layer with kernel size = 3 will have the same activation for most of the pixels no matter how you shrink it.
+
+    So the feature size is dependent only on the size of the kernels in the vgg network and that's why no matter how we
+    change the image size, the resulting texture won't change a lot.
+
+    Hum...
+
 
 3. back prop
     I think the bug I met yesterday was caused by .png masks. Although invisible, there are layers covered by the top
@@ -670,5 +684,32 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     on lower layers, then the overall layout will be also set as the same as style image... Let me test this.
     I was wrong. I was only using layers 3 and 4. Now I'm trying layers 1 and 2.
 
+    Using layers 1 to 4, it seems that smaller stride will result in slightly smaller features/objects. Larger shift
+    and larger shift will result in textures looking more and more like the style image in terms of layout (stride more
+    than shift) This is a pretty large draw back...
+
+    # TODO: use layer 1-3, 1-2, 1...
+
+    Also I haven't yet figured out why the patterns disappeared when I use a content image. But that's probably less
+    important now. The new loss function is just too buggy.
+
 
 5. nijigen
+    I haven't read the article, but I started to think how to use my stuff to draw something given a sketch.
+    So let's say I want to draw a tree. I marks where the leaves should be and where the trunk should be. Then I let
+    the program to do the rest for me. Does that sound like a reasonable goal? Yes and I've already accomplished it I
+    think. I haven't tested on how well it works on more complicated styles (like drawing a human), but if it works,
+    then I should start building the website to let people mark their own masks and use their own images...
+    I should also if it works as well in feed forward mode.
+
+    Also, it comes to me that: what happens if I choose my training data for the feed forward net according to the
+    content of the style image. So if the style image is a human face, then most of the training data would also be
+    human faces. Would that make the result look better than training the style for a human face on any random image?
+    This is just a random thought.
+
+    #TODO: testing mia.
+6. From previous todos:
+    The skip_noise_4 network can't learn style generation with content image.
+
+
+
