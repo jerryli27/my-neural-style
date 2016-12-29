@@ -16,7 +16,7 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
+STYLE_LAYERS = ('relu3_1', 'relu4_1') # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
 STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.

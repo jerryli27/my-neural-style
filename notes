@@ -613,9 +613,9 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     part that is shared by all styles...
 
 
-    TODO: fix the feature size and the artifacts (artifacts first)
+    Plan: fix the feature size and the artifacts (artifacts first)
     Plan(done): test the effect of style image with different size on the output result. TODO: WHY?
-    TODO: test the effect of changing output size and see if the patterns generated become bigger... I don't think so
+    Plan: test the effect of changing output size and see if the patterns generated become bigger... I don't think so
 
 2. Study the model.
     Plan: read the GAN article on making meaningful noise parameters. I read it. The math was pretty complicated but
@@ -648,7 +648,8 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
     TODO: figure out what controls the size of patterns using back prop first then generalize to feed forward
     (like the size of brush or size of triangles etc.)... Wait the back prop and the feed forward are different.
-    Feed forward seems to be more dependent on the size of content image fed in during training. Dunno,,,
+    Feed forward seems to be more dependent on the size of content image fed in during training.Need more testing to
+    confirm that.
 
 
 3. back prop
@@ -667,6 +668,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     due to the fact that we used lower layers as well as upper ones. What if we only apply the larger stride on upper
     layer? (The reason behind that is: lower layers represent local details and overall layout. If I use large strides
     on lower layers, then the overall layout will be also set as the same as style image... Let me test this.
+    I was wrong. I was only using layers 3 and 4. Now I'm trying layers 1 and 2.
 
 
 5. nijigen
