@@ -1,7 +1,5 @@
 from argparse import ArgumentParser
 
-import scipy.misc
-
 from general_util import *
 from stylize import stylize
 
@@ -155,7 +153,22 @@ def main():
 
     initial = options.initial
     if initial is not None:
-        initial = scipy.misc.imresize(imread(initial), content_image.shape[:2])
+        # TESTING intialize as the average of pixels in each mask.
+        if options.use_semantic_masks:
+            style_semantic_mask_paths = get_all_image_paths_in_dir(options.style_semantic_masks[0])
+            style_semantic_masks_tmp = read_and_resize_bw_mask_images(style_semantic_mask_paths, style_images[0].shape[0], style_images[0].shape[1], 1,
+                                                                  options.semantic_masks_num_layers)
+            style_semantic_masks_tmp = (style_semantic_masks_tmp != 0).astype(np.float32) # Turn all non-zeros to 1.
+            dotted = np_image_dot_mask(np.array([style_images[0]]), style_semantic_masks_tmp)
+
+            sum_for_each_mask_rgb = np.repeat(np.sum(style_semantic_masks_tmp, axis=(1,2)), 3, axis=1)
+            sum_for_each_dotted_rgb = np.sum(dotted, axis=(1,2)) /sum_for_each_mask_rgb
+            averaged_masks = np.multiply(sum_for_each_dotted_rgb, np.repeat(style_semantic_masks_tmp, 3, axis=3))
+            averaged_masks = np.reshape(averaged_masks, (averaged_masks.shape[1], averaged_masks.shape[2], averaged_masks.shape[3] / 3, 3))
+            initial = np.max(averaged_masks, axis = 2)
+        else:
+            initial = imread(initial, shape=(options.height, options.width))
+
 
     output_semantic_mask = None
     style_semantic_masks = None

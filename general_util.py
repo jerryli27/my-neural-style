@@ -177,8 +177,8 @@ def np_image_dot_mask(image, mask):
     mask_layer_num = mask.shape[3]
 
     ret = []
-    for i in range(image_layer_num):
-        for j in range(mask_layer_num):
+    for j in range(mask_layer_num):
+        for i in range(image_layer_num):
             ret.append(np.multiply(image[...,i], mask[...,j]))
 
     ret = np.transpose(np.array(ret), axes=(1,2,3,0))

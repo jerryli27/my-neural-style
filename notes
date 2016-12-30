@@ -677,7 +677,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 4. New loss function
     I kind of knows now how I can get a larger pattern. (rather than a local one). That lies in the correlation between
     one feature and the features in nearby cells.
-    #TODO: testing the effect of stride and shift on the new loss.
+    Plan: testing the effect of stride and shift on the new loss.
     ** Larger stride results in textures becoming more and more like the style image itself. That is probably
     due to the fact that we used lower layers as well as upper ones. What if we only apply the larger stride on upper
     layer? (The reason behind that is: lower layers represent local details and overall layout. If I use large strides
@@ -688,10 +688,12 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     and larger shift will result in textures looking more and more like the style image in terms of layout (stride more
     than shift) This is a pretty large draw back...
 
-    # TODO: use layer 1-3, 1-2, 1...
+    Plan: use layer 1-3, 1-2, 1... and look at the difference between them while using different shift and strides.
+    It turns out that using more layers (especially the upper layer) is better for generating larger patterns.
 
     Also I haven't yet figured out why the patterns disappeared when I use a content image. But that's probably less
-    important now. The new loss function is just too buggy.
+    important now. The new loss function is just too buggy and hard to control.
+
 
 
 5. nijigen
@@ -708,6 +710,12 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     This is just a random thought.
 
     #TODO: testing mia.
+
+    Neither mrf nor gram loss is perfect... gram loss is more flexible but too crude. The mrf has higher quality but
+    looks too much like the original one without the content loss. I would try guiding the image with the result from
+    mrf. First let me try to guide it with the style image (since I'm using the same masks for style and output and the
+    best result mrf can get is to be exactly the same as the style image).
+    # TODO: guide gram.
 6. From previous todos:
     The skip_noise_4 network can't learn style generation with content image.
 
