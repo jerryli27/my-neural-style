@@ -163,7 +163,15 @@ def main():
 
             sum_for_each_mask_rgb = np.repeat(np.sum(style_semantic_masks_tmp, axis=(1,2)), 3, axis=1)
             sum_for_each_dotted_rgb = np.sum(dotted, axis=(1,2)) /sum_for_each_mask_rgb
-            averaged_masks = np.multiply(sum_for_each_dotted_rgb, np.repeat(style_semantic_masks_tmp, 3, axis=3))
+            # Now we know what the average color of each mask is, apply that color to the masks of the content image.
+
+            output_semantic_mask_paths = get_all_image_paths_in_dir(options.output_semantic_mask)
+            output_semantic_mask = read_and_resize_bw_mask_images(output_semantic_mask_paths, options.height,
+                                                                  options.width, 1,
+                                                                  options.semantic_masks_num_layers)
+            output_semantic_mask = (output_semantic_mask != 0).astype(np.float32) # Turn all non-zeros to 1.
+
+            averaged_masks = np.multiply(sum_for_each_dotted_rgb, np.repeat(output_semantic_mask, 3, axis=3))
             averaged_masks = np.reshape(averaged_masks, (averaged_masks.shape[1], averaged_masks.shape[2], averaged_masks.shape[3] / 3, 3))
             initial = np.max(averaged_masks, axis = 2)
         else:

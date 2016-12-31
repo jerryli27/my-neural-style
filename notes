@@ -720,4 +720,14 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     The skip_noise_4 network can't learn style generation with content image.
 
 
+2016/12/31
+1. Nijigen
+    I tested the grided loss functions. With guidance mrf performed a lot better than gram. I'll try a different mask
+    (different from the mask of the style image) and see if mrf still does well. I don't think it will though.
+    Nope just as expected. lol.
 
+    Also If I want to generate genuine looking faces instead of just copying the current style, I probably need
+    feed forward network. Maybe I need GAN? That seems a little more promising than using style generation to generate
+    contents...
+
+    I found a blog that had amazing result for coloring sketches. I'll probably spend lots of time on that...
