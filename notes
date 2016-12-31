@@ -731,3 +731,10 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     contents...
 
     I found a blog that had amazing result for coloring sketches. I'll probably spend lots of time on that...
+
+    # TODO: what is deconv layer (or conv_transpose) ?http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf
+
+2. Scale_offset_only
+    Testing if elu really worked. Also testing at the same time the effect of training first on smaller images then
+    on larger ones.
+    Shit it's giving the artifacts again... So it's not the elu that's causing the problem. 
