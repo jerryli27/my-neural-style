@@ -7,8 +7,8 @@ class UnetTest(tf.test.TestCase):
     def test_unet(self):
         with self.test_session() as sess:
             batch_size = 1
-            height = 32
-            width = 32
+            height = 53
+            width = 67
             num_features = 3
 
             input_layer = tf.placeholder(dtype=tf.float32, shape=(batch_size, height, width, num_features))

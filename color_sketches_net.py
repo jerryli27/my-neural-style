@@ -17,7 +17,7 @@ from general_util import *
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7,print_iterations=None,
+                        learning_rate, lr_decay_steps=5000, min_lr=0.0001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
                         from_screenshot=False, from_webcam=False, test_img_dir=None):
@@ -40,6 +40,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     """
 
     # Before training, make sure everything is set correctly.
+    with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
+        pass  # Clear the loss file before appending to it.
 
     input_shape = (1, height, width, 3)
     print('The input shape is: %s' % (str(input_shape)))
@@ -177,12 +179,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                     train_step.run(feed_dict=feed_dict)
                     print_progress(i, feed_dict=feed_dict, last=last_step)
-                    # Record loss after each training round.
-                    with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                        loss_record_file.write('%d\t%g\n' % (i, overall_loss.eval(feed_dict=feed_dict)))
 
                     if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                         saver.save(sess, save_dir + 'model.ckpt', global_step=i)
+                        # Record loss after each checkpoint.
+                        with open(save_dir + 'loss.tsv','a') as loss_record_file:
+                            loss_record_file.write('%d\t%g\n' % (i, overall_loss.eval(feed_dict=feed_dict)))
 
                         if test_img_dir is not None:
                             test_image = imread(test_img_dir)
@@ -196,7 +198,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         from_screenshot=False, from_webcam=False, test_img_dir=None):
                         """
 
-
+                        # TODO: change back to test_image_shape. Now non divisible dimensions are causing problems.
                         # The for loop will run once and terminate. Can't use return and yield in the same function so this is a hacky way to do it.
                         for _, generated_image in color_sketches_net(test_image_shape[0],
                                                                       test_image_shape[1],
@@ -210,6 +212,18 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       from_screenshot=False,
                                                                       from_webcam=False,
                                                                       test_img_dir=test_img_dir):
+                        # for _, generated_image in color_sketches_net(input_shape[1],
+                        #                                               input_shape[2],
+                        #                                               iterations,
+                        #                                               1,
+                        #                                               content_weight, tv_weight,
+                        #                                               learning_rate,
+                        #                                               save_dir=save_dir,
+                        #                                               do_restore_and_generate=True,
+                        #                                               do_restore_and_train=False,
+                        #                                               from_screenshot=False,
+                        #                                               from_webcam=False,
+                        #                                               test_img_dir=test_img_dir):
                             pass
 
                             best_image = generated_image

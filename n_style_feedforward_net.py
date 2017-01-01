@@ -428,6 +428,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     yield (iterator, scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])))
 
             else:
+                # Clear the loss file.
+                with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
+                    pass
                 # Do Training.
                 iter_start = 0
                 if do_restore_and_train:

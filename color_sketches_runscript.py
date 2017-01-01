@@ -11,10 +11,10 @@ checkpoint_iterations=500
 height = 128
 width = 128
 print_iteration = 100
-do_restore_and_train = False
+do_restore_and_train = True
 do_restore_and_generate = False
 
-test_img = 'source_compressed/256/sea.jpg' #'source_compressed/chicago.jpg'
+test_img = '/home/ubuntu/animeface-character-dataset/animeface-character-dataset/face_36_566_115.png' #'source_compressed/chicago.jpg'
 
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
 do_restore_and_generate_string = '--do_restore_and_generate' if do_restore_and_generate else ''

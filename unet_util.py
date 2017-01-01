@@ -34,6 +34,13 @@ def net(image, mirror_padding=False, reuse=False):
         for i in range(len(CONV_UP_NUM_FILTERS) - 1):
 
             if i % 2 == 0:
+                # The size of the prev_layer may be different from prev_layer_list[-i-1] due to height or width being
+                # not divisible by powers of 2. In that case, we should use the size of the prev_layer_list[-i-1]
+                # Because that will lead to the correct output dimensions.
+                layer_to_be_concatenated_shape = map(lambda i: i.value, prev_layer_list[-i-1].get_shape())
+                prev_layer_shape = map(lambda i: i.value, prev_layer.get_shape())
+                if prev_layer_shape[1] != layer_to_be_concatenated_shape[1] or prev_layer_shape[2] != layer_to_be_concatenated_shape[2]:
+                    prev_layer = tf.image.resize_nearest_neighbor(prev_layer, [layer_to_be_concatenated_shape[1], layer_to_be_concatenated_shape[2]])
                 concat_layer = tf.concat(3, [prev_layer_list[-i-1], prev_layer])
                 current_layer = conv_tranpose_layer(concat_layer, num_filters=CONV_UP_NUM_FILTERS[i],
                                                     filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
@@ -53,6 +60,9 @@ def net(image, mirror_padding=False, reuse=False):
 
         # Do sanity check.
         final_shape = final.get_shape().as_list()
+        if not (image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
+            final = tf.image.resize_nearest_neighbor(final, [image_shape[1], image_shape[2]])
+            final_shape = final.get_shape().as_list()
         if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
             print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
             raise AssertionError
