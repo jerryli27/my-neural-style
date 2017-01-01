@@ -35,6 +35,10 @@ def build_parser():
                         help='The checkpoint output format. It must contain 2 %s, the first one for content index '
                              'and the second one for style index.',
                         metavar='OUTPUT')
+    parser.add_argument('--use_adversarial_net', dest='use_adversarial_net',
+                        help='If set, TODO:',
+                        action='store_true')
+    parser.set_defaults(do_restore_and_train=False)
     parser.add_argument('--iterations', type=int, dest='iterations',
                         help='Iterations (default %(default)s).',
                         metavar='ITERATIONS', default=ITERATIONS)
@@ -95,6 +99,7 @@ def main():
             content_weight=options.content_weight,
             tv_weight=options.tv_weight,
             learning_rate=options.learning_rate,
+            use_adversarial_net=options.use_adversarial_net,
             print_iterations=options.print_iterations,
             checkpoint_iterations=options.checkpoint_iterations,
             save_dir=options.model_save_dir,

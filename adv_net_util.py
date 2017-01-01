@@ -1,8 +1,6 @@
 """
-This is the advisor net that give hints about the colors of the original image. It is used with the unet. For more
-information, please check http://qiita.com/taizan/items/cf77fd37ec3a0bef5d9d.
-# TODO: is this really necessary to have a deep neural net just to give hints? It looks like it's working well, but
-is there other ways that requires less training perhaps?
+This is the adversarial net that tries to distinguish the original image from the generated one. It is used with the
+unet. For more information, please check http://qiita.com/taizan/items/cf77fd37ec3a0bef5d9d.
 """
 
 from conv_util import *
@@ -14,13 +12,12 @@ CONV_DOWN_STRIDES=[2, 1, 2, 1, 2, 1, 2]
 
 
 # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly by 4.
-def net(image, mirror_padding=True, reuse=False):
+def net(image, mirror_padding=False, reuse=False):
     # TODO: check if we need mirror padding
-    image_shape = image.get_shape().as_list()
     prev_layer = image
     prev_layer_list = [image]
 
-    with tf.variable_scope('unet', reuse=reuse):
+    with tf.variable_scope('adv_net', reuse=reuse):
         for i in range(len(CONV_DOWN_NUM_FILTERS)):
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
                                        filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
@@ -29,14 +26,12 @@ def net(image, mirror_padding=True, reuse=False):
             prev_layer_list.append(current_layer)
 
 
-        final = fully_connected(prev_layer, 2, name='fc', reuse=reuse) # The initial weight here might be a little bit tricky. The original specified the wscale.
-
-        # # Do sanity check.
-        # final_shape = final.get_shape().as_list()
-        # if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
-        #     print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
-        #     raise AssertionError
-
+        fc = fully_connected(prev_layer, 2, name='fc', reuse=reuse) # The initial weight here might be a little bit tricky. The original specified the wscale.
+        # TODO: here's one layer I added versus the original version described. As of my understanding, the output
+        # is an indicator vector indicating whether it is original or fake. So I added a softmax layer.
+        final = tf.nn.softmax(fc)
     return final
 
 
+def get_net_all_variables():
+    return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='adv_net')

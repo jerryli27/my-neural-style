@@ -5,19 +5,22 @@ https://arxiv.org/abs/1603.03417.
 """
 
 # import gtk.gdk
+import random
 from sys import stderr
 
 import cv2
 import scipy
 import tensorflow as tf
 
+import adv_net_util
 import image_to_sketches_util
 import unet_util
 from general_util import *
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, lr_decay_steps=5000, min_lr=0.0001, lr_decay_rate=0.7,print_iterations=None,
+                        learning_rate, use_adversarial_net = False, adv_net_weight = 10000.0, lr_decay_steps=5000,
+                        min_lr=0.0001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
                         from_screenshot=False, from_webcam=False, test_img_dir=None):
@@ -40,8 +43,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     """
 
     # Before training, make sure everything is set correctly.
-    with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
-        pass  # Clear the loss file before appending to it.
 
     input_shape = (1, height, width, 3)
     print('The input shape is: %s' % (str(input_shape)))
@@ -49,27 +50,51 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
         input_sketches = tf.placeholder(tf.float32,
-                                shape=[batch_size, input_shape[1], input_shape[2], 1])
+                                shape=[batch_size, input_shape[1], input_shape[2], 1], name='input_sketches')
 
-        output = unet_util.net(input_sketches)
+        generator_output = unet_util.net(input_sketches)
         expected_output = tf.placeholder(tf.float32,
-                                shape=[batch_size, input_shape[1], input_shape[2], 3])
+                                shape=[batch_size, input_shape[1], input_shape[2], 3], name='expected_output')
+
+        if use_adversarial_net:
+            adv_net_input = tf.placeholder(tf.float32,
+                                             shape=[batch_size, input_shape[1], input_shape[2], 3], name='adv_net_input')
+            adv_net_prediction = adv_net_util.net(adv_net_input)
+            adv_net_prediction_generator_input = adv_net_util.net(generator_output, reuse=True)
+            # adv_net_expected_output = tf.placeholder(tf.float32, shape=[2], name='adv_net_expected_output')
 
         if not do_restore_and_generate:
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
 
-            content_loss = tf.nn.l2_loss(output - expected_output)
+            generator_loss = tf.nn.l2_loss(generator_output - expected_output)
             # tv_loss = tv_weight * total_variation(image)
 
-            overall_loss = content_loss
-            # optimizer setup
-            # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
-            train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                   beta2=0.999).minimize(overall_loss)
+            if use_adversarial_net:
+                adv_net_all_var = adv_net_util.get_net_all_variables()
+                adv_net_expected_output_real =  np.array([0,1])
+                adv_loss = tf.nn.l2_loss(adv_net_prediction - adv_net_expected_output_real) * adv_net_weight
+                adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
+                # I think the generator loss also changes? It should be optimizing 1-log(D(G(x)) instead of the
+                # t2 loss.
+                generator_all_var = unet_util.get_net_all_variables()
+                adv_net_expected_output_generator_input = np.array([1,0])
+                adv_loss_generator_input = tf.nn.l2_loss(adv_net_prediction_generator_input - adv_net_expected_output_generator_input) * adv_net_weight
+                adv_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(adv_loss_generator_input, var_list=adv_net_all_var)
+                generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(-adv_loss_generator_input, var_list=generator_all_var)
 
-            def print_progress(i, feed_dict, last=False):
+            else:
+                # optimizer setup
+                # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
+                generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(generator_loss)
+
+
+            def print_progress(i, feed_dict, adv_feed_dict, last=False):
                 stderr.write(
                     'Iteration %d/%d\n' % (i + 1, iterations))
                 if last or (print_iterations and i % print_iterations == 0):
@@ -77,7 +102,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     # Assume that the feed_dict is for the last content and style.
                     # stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
                     # stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
-                    stderr.write('    total loss: %g\n' % overall_loss.eval(feed_dict=feed_dict))
+                    stderr.write('generator loss: %g\n' % generator_loss.eval(feed_dict=feed_dict))
+                    if use_adversarial_net:
+                        stderr.write(' adv_real loss: %g\n' % adv_loss.eval(feed_dict=adv_feed_dict))
+                        stderr.write(' adv_fake loss: %g\n' % adv_loss_generator_input.eval(feed_dict=feed_dict))
+
 
         # Optimization
         # It used to track and record only the best one with lowest loss. This is no longer necessary and I think
@@ -131,7 +160,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     # Now generate an image using the style_blend_weights given.
                     feed_dict = {expected_output:content_image, input_sketches:image_sketches}
 
-                    generated_image = output.eval(feed_dict=feed_dict)
+                    generated_image = generator_output.eval(feed_dict=feed_dict)
                     iterator += 1
                     # Can't return because we are in a generator.
                     # yield (iterator, vgg.unprocess(
@@ -141,6 +170,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     yield (iterator, generated_image)
 
             else:
+
+                with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
+                    pass  # Clear the loss file before appending to it.
+                if use_adversarial_net:
+                    with open(save_dir + 'adv_loss.tsv', 'w') as loss_record_file:
+                        pass
                 # Do Training.
                 iter_start = 0
                 if do_restore_and_train:
@@ -177,14 +212,29 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches}
                     last_step = (i == iterations - 1)
 
-                    train_step.run(feed_dict=feed_dict)
-                    print_progress(i, feed_dict=feed_dict, last=last_step)
+                    generator_train_step.run(feed_dict=feed_dict)
+                    if use_adversarial_net:
+                        adv_feed_dict = {adv_net_input: content_pre_list}
+                        adv_random_number = random.random()
+                        if adv_random_number < 0.5:
+                            adv_train_step_generator_input.run(feed_dict=feed_dict)
+                        else:
+                            adv_train_step.run(feed_dict=adv_feed_dict)
+                    else:
+                        adv_feed_dict = None
+                    print_progress(i, feed_dict=feed_dict, adv_feed_dict= adv_feed_dict, last=last_step)
 
                     if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                         saver.save(sess, save_dir + 'model.ckpt', global_step=i)
                         # Record loss after each checkpoint.
                         with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                            loss_record_file.write('%d\t%g\n' % (i, overall_loss.eval(feed_dict=feed_dict)))
+                            loss_record_file.write('%d\t%g\n' % (i, generator_loss.eval(feed_dict=feed_dict)))
+                        if use_adversarial_net:
+                            with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
+                                current_adv_loss = adv_loss.eval(feed_dict=adv_feed_dict)
+                                current_adv_loss_generator_input = adv_loss_generator_input.eval(feed_dict=feed_dict)
+                                current_adv_overall_loss = current_adv_loss + current_adv_loss_generator_input
+                                loss_record_file.write('%d\t%g\n' % (i, current_adv_overall_loss))
 
                         if test_img_dir is not None:
                             test_image = imread(test_img_dir)
@@ -206,24 +256,13 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       1,
                                                                       content_weight, tv_weight,
                                                                       learning_rate,
+                                                                      use_adversarial_net=use_adversarial_net,
                                                                       save_dir=save_dir,
                                                                       do_restore_and_generate=True,
                                                                       do_restore_and_train=False,
                                                                       from_screenshot=False,
                                                                       from_webcam=False,
                                                                       test_img_dir=test_img_dir):
-                        # for _, generated_image in color_sketches_net(input_shape[1],
-                        #                                               input_shape[2],
-                        #                                               iterations,
-                        #                                               1,
-                        #                                               content_weight, tv_weight,
-                        #                                               learning_rate,
-                        #                                               save_dir=save_dir,
-                        #                                               do_restore_and_generate=True,
-                        #                                               do_restore_and_train=False,
-                        #                                               from_screenshot=False,
-                        #                                               from_webcam=False,
-                        #                                               test_img_dir=test_img_dir):
                             pass
 
                             best_image = generated_image

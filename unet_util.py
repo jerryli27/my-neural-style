@@ -68,3 +68,7 @@ def net(image, mirror_padding=False, reuse=False):
             raise AssertionError
 
     return final
+
+
+def get_net_all_variables():
+    return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='unet')

@@ -20,7 +20,12 @@ class AdvNetTest(tf.test.TestCase):
             #     print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
             #     raise AssertionError
 
-            self.assertAllEqual(image_shape, final_shape)
+            self.assertEqual(image_shape[0], final_shape[0])
+            self.assertEqual(2, final_shape[1])
+
+            all_var = get_net_all_variables()
+            expected_var_number = 3*7+2
+            self.assertEqual(len(all_var), expected_var_number )
 
 if __name__ == '__main__':
     tf.test.main()
