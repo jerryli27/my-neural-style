@@ -27,7 +27,7 @@ def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the content images for training. In the papers they use the Microsoft COCO dataset.',
-                        metavar='CONTENT_FOLDER', default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
+                        metavar='CONTENT_FOLDER', default='~/animeface-character-dataset/')
     parser.add_argument('--output', dest='output',
                         help='Output path.',
                         metavar='OUTPUT', required=True)
