@@ -34,4 +34,7 @@ def net(image, mirror_padding=False, reuse=False):
 
 
 def get_net_all_variables():
-    return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='adv_net')
+    if '0.12.0' in tf.__version__:
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='adv_net')
+    else:
+        return tf.get_collection(tf.GraphKeys.VARIABLES, scope='adv_net')

@@ -21,9 +21,9 @@ test_img = '/home/ubuntu/animeface-character-dataset/animeface-character-dataset
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
 do_restore_and_generate_string = '--do_restore_and_generate' if do_restore_and_generate else ''
 
-checkpoint_output='output_checkpoint/colorsketches-adv_net-%s-iter-%d-batchsize-%d-lr-%f-content-%d_%%s.jpg' % (iterations, str(use_adversarial_net), batch_size, learning_rate, content_weight)
-output='output/colorsketches-adv_net-%s-iter-%d-batchsize-%d-lr-%f-content-%d.jpg' % (iterations, str(use_adversarial_net), batch_size, learning_rate, content_weight)
-model_save_dir='model/colorsketches-adv_net-%s-iter-batchsize-%d-%d-lr-%f-content-%d/' % (iterations, str(use_adversarial_net), batch_size, learning_rate, content_weight)
+checkpoint_output='output_checkpoint/colorsketches-adv_net-%s-iter-%d-batchsize-%d-lr-%f-content-%d_%%s.jpg' % (str(use_adversarial_net), iterations, batch_size, learning_rate, content_weight)
+output='output/colorsketches-adv_net-%s-iter-%d-batchsize-%d-lr-%f-content-%d.jpg' % (str(use_adversarial_net), iterations, batch_size, learning_rate, content_weight)
+model_save_dir='model/colorsketches-adv_net-%s-iter-batchsize-%d-%d-lr-%f-content-%d/' % (str(use_adversarial_net), iterations, batch_size, learning_rate, content_weight)
 if not os.path.exists(model_save_dir):
     os.makedirs(model_save_dir) # TODO: add %s content_img_style_weight_mask_string to the model_save_dir
 
