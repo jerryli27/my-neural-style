@@ -26,10 +26,13 @@ def net(image, mirror_padding=False, reuse=False):
             prev_layer_list.append(current_layer)
 
 
-        fc = fully_connected(prev_layer, 2, name='fc', reuse=reuse) # The initial weight here might be a little bit tricky. The original specified the wscale.
+        # fc = fully_connected(prev_layer, 2, name='fc', reuse=reuse) # The initial weight here might be a little bit tricky. The original specified the wscale.
         # TODO: here's one layer I added versus the original version described. As of my understanding, the output
-        # is an indicator vector indicating whether it is original or fake. So I added a softmax layer.
-        final = tf.nn.softmax(fc)
+        # is an indicator vector indicating whether it is original or fake. So I changed the output dimension from 2
+        # to 1 and added a sigmoid function.
+        fc = fully_connected(prev_layer, 1, name='fc',
+                             reuse=reuse)
+        final = tf.nn.sigmoid(fc)
     return final
 
 

@@ -17,6 +17,7 @@ import image_to_sketches_util
 import unet_util
 from general_util import *
 
+
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
                         learning_rate, use_adversarial_net = False, adv_net_weight = 10000.0, lr_decay_steps=5000,
@@ -56,13 +57,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
         expected_output = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 3], name='expected_output')
 
-        if use_adversarial_net:
-            adv_net_input = tf.placeholder(tf.float32,
-                                             shape=[batch_size, input_shape[1], input_shape[2], 3], name='adv_net_input')
-            adv_net_prediction = adv_net_util.net(adv_net_input)
-            adv_net_prediction_generator_input = adv_net_util.net(generator_output, reuse=True)
-            # adv_net_expected_output = tf.placeholder(tf.float32, shape=[2], name='adv_net_expected_output')
-
         if not do_restore_and_generate:
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
@@ -72,15 +66,20 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             # tv_loss = tv_weight * total_variation(image)
 
             if use_adversarial_net:
+                adv_net_input = tf.placeholder(tf.float32,
+                                                 shape=[batch_size, input_shape[1], input_shape[2], 3], name='adv_net_input')
+                adv_net_prediction = adv_net_util.net(adv_net_input)
+                adv_net_prediction_generator_input = adv_net_util.net(generator_output, reuse=True)
+                # adv_net_expected_output = tf.placeholder(tf.float32, shape=[2], name='adv_net_expected_output')
                 adv_net_all_var = adv_net_util.get_net_all_variables()
-                adv_net_expected_output_real =  np.array([0,1])
+                adv_net_expected_output_real =  np.array([1.0])
                 adv_loss = tf.nn.l2_loss(adv_net_prediction - adv_net_expected_output_real) * adv_net_weight
                 adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
                 # I think the generator loss also changes? It should be optimizing 1-log(D(G(x)) instead of the
                 # t2 loss.
                 generator_all_var = unet_util.get_net_all_variables()
-                adv_net_expected_output_generator_input = np.array([1,0])
+                adv_net_expected_output_generator_input = np.array([0.0])
                 adv_loss_generator_input = tf.nn.l2_loss(adv_net_prediction_generator_input - adv_net_expected_output_generator_input) * adv_net_weight
                 adv_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(adv_loss_generator_input, var_list=adv_net_all_var)
