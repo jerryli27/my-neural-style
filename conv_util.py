@@ -2,6 +2,8 @@
 This file contains utility functions for creating a convolution neural network.
 """
 
+import math
+
 import tensorflow as tf
 
 from neural_util import conv2d_mirror_padding, conv2d_transpose_mirror_padding
@@ -78,7 +80,7 @@ def conv_init_vars(net, out_channels, filter_size, transpose=False, name ='', re
         weights_init = tf.get_variable('weights_init', dtype=tf.float32, initializer=weights_initializer)
         return weights_init
 
-def fully_connected(net, out_channels, name ='', reuse = False):
+def fully_connected(net, out_channels, activation_fn = None, name ='', reuse = False):
     with tf.variable_scope('fully_connected_' + name, reuse=reuse):
         # Fully connected layer
         # Reshape conv2 output to fit fully connected layer input
@@ -86,16 +88,16 @@ def fully_connected(net, out_channels, name ='', reuse = False):
         batch_size, rows, cols, in_channels = [i.value for i in net.get_shape()]
 
         weights_shape = [rows*cols*in_channels, out_channels]
-        weights_initializer = tf.truncated_normal(weights_shape, stddev=WEIGHTS_INIT_STDEV, seed=1)
+        weights_init_stdv = math.sqrt(1.0/(rows*cols*in_channels))
+        weights_initializer = tf.truncated_normal(weights_shape, stddev=weights_init_stdv, seed=1)
         weights_init = tf.get_variable('weights_init', dtype=tf.float32, initializer=weights_initializer)
 
         bias_shape = [out_channels]
-        bias_initializer = tf.truncated_normal(bias_shape, stddev=WEIGHTS_INIT_STDEV, seed=1)
-        bias_init = tf.get_variable('bias_init', dtype=tf.float32, initializer=bias_initializer)
+        bias_init = tf.get_variable('bias_init', shape=bias_shape, dtype=tf.float32, initializer=tf.constant_initializer())
 
         fc1 = tf.reshape(net, [-1, rows*cols*in_channels])
         fc1 = tf.add(tf.matmul(fc1, weights_init), bias_init)
 
-        fc1 = tf.nn.elu(fc1)
-
+        if activation_fn is not None:
+            fc1 = activation_fn(fc1)
         return fc1

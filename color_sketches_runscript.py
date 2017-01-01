@@ -4,7 +4,7 @@
 from general_util import *
 
 learning_rate=0.001
-iterations=80000
+iterations=800000
 batch_size=1 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 content_weight=5
 checkpoint_iterations=500
@@ -13,7 +13,7 @@ width = 128
 print_iteration = 100
 do_restore_and_train = False
 do_restore_and_generate = False
-use_adversarial_net = True
+use_adversarial_net = False
 use_adversarial_net_string = '--use_adversarial_net' if use_adversarial_net else ''
 
 test_img = '/home/ubuntu/animeface-character-dataset/animeface-character-dataset/face_36_566_115.png' #'source_compressed/chicago.jpg'

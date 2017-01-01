@@ -58,6 +58,10 @@ def net(image, mirror_padding=False, reuse=False):
         strides_shape = [1, CONV_UP_STRIDES[-1], CONV_UP_STRIDES[-1], 1]
         final = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME')
 
+        # TODO: Maybe I should add this to make training a little bit easier?
+        final = tf.nn.tanh(final) * 150 + 255. / 2
+
+
         # Do sanity check.
         final_shape = final.get_shape().as_list()
         if not (image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
