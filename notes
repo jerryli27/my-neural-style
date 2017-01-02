@@ -741,3 +741,18 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     Testing if elu really worked. Also testing at the same time the effect of training first on smaller images then
     on larger ones.
     Shit it's giving the artifacts again... So it's not the elu that's causing the problem.
+
+2017/01/01
+1. Nijigen
+    Uh it sort of works but not really. The color was not 'vivid looking' at all. Low contrast is the technical word.
+    Also adversarial net wasn't working so well either. I changed some parameters around but I don't think that will
+    really fix things. I'm also downloading more training data.
+
+    After training the net for a while (without adversarial net), it seems to be doing well at least on the training
+    data. If I feed it brand new data, it can at least tell the background apart from the rest... But it didn't do much
+    other than that...
+    I forgot to separate the training from the test so I did that. I probably will try the new training data
+    tomorrow if I finish downloading them tonight.
+
+    # TODO: I also need to ask the author what he used for the training data of inputs with addtional "helper
+    information"

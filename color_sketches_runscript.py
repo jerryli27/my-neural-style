@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # This file is for running code that has already finished debugging. This way we don't need to change pycharm
 # configuration and/or type the command each time.
 
@@ -8,15 +10,15 @@ iterations=800000
 batch_size=1 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 content_weight=5
 checkpoint_iterations=500
-height = 128
-width = 128
+height = 512
+width = 512
 print_iteration = 100
 do_restore_and_train = False
 do_restore_and_generate = False
 use_adversarial_net = False
 use_adversarial_net_string = '--use_adversarial_net' if use_adversarial_net else ''
 
-test_img = '/home/ubuntu/animeface-character-dataset/animeface-character-dataset/face_36_566_115.png' #'source_compressed/chicago.jpg'
+test_img = u'/home/ubuntu/pixiv/pixiv_testing/骨董屋・三千世界の女主人_12746957.jpg' #'source_compressed/chicago.jpg'
 
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
 do_restore_and_generate_string = '--do_restore_and_generate' if do_restore_and_generate else ''

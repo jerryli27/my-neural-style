@@ -27,7 +27,7 @@ def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the content images for training. In the papers they use the Microsoft COCO dataset.',
-                        metavar='CONTENT_FOLDER', default='/home/ubuntu/animeface-character-dataset/animeface-character-dataset/')
+                        metavar='CONTENT_FOLDER', default='/home/ubuntu/pixiv/pixiv_training/')
     parser.add_argument('--output', dest='output',
                         help='Output path.',
                         metavar='OUTPUT', required=True)
@@ -109,7 +109,7 @@ def main():
             test_img_dir=options.test_img
     ):
         if options.do_restore_and_generate:
-            imsave(options.output, image)
+            imsave(options.output, image[0,...])
         else:
             if options.test_img:
                 if iteration is not None:
