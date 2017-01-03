@@ -5,7 +5,6 @@ https://arxiv.org/abs/1603.03417.
 """
 
 # import gtk.gdk
-import random
 from sys import stderr
 
 import cv2
@@ -20,7 +19,8 @@ from general_util import *
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 100000000.0, lr_decay_steps=5000,
+                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,# 100000000.0,
+                       lr_decay_steps=5000,
                         min_lr=0.0001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
@@ -81,19 +81,24 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 # adv_net_expected_output = tf.placeholder(tf.float32, shape=[2], name='adv_net_expected_output')
                 adv_net_all_var = adv_net_util.get_net_all_variables()
                 adv_net_expected_output_real =  np.array([1.0])
-                adv_loss = tf.nn.l2_loss(adv_net_prediction - adv_net_expected_output_real) * adv_net_weight
-                adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
+                # adv_loss = tf.nn.l2_loss(adv_net_prediction - adv_net_expected_output_real) * adv_net_weight
+                # adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                #                        beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
                 # I think the generator loss also changes? It should be optimizing 1-log(D(G(x)) instead of the
                 # t2 loss.
                 generator_all_var = unet_util.get_net_all_variables()
-                adv_net_expected_output_generator_input = np.array([0.0])
-                adv_loss_generator_input = tf.nn.l2_loss(adv_net_prediction_generator_input - adv_net_expected_output_generator_input) * adv_net_weight
+                # adv_net_expected_output_generator_input = np.array([0.0])
+                # adv_loss_generator_input = tf.nn.l2_loss(adv_net_prediction_generator_input - adv_net_expected_output_generator_input) * adv_net_weight
+
+                adv_diff =  tf.reduce_sum(1 - (adv_net_prediction - adv_net_prediction_generator_input)) * adv_net_weight
+
                 # ADV is trying to maximize the probability, so minimize -(p-0)^2
                 adv_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(-adv_loss_generator_input, var_list=adv_net_all_var)
+                                       beta2=0.999).minimize(-adv_diff, var_list=adv_net_all_var)
                 generator_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(adv_loss_generator_input, var_list=generator_all_var)
+                                       beta2=0.999).minimize(generator_loss+adv_diff, var_list=generator_all_var)
+                # generator_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                #                        beta2=0.999).minimize(adv_diff, var_list=generator_all_var)
 
             # else:
             #     # optimizer setup
@@ -117,8 +122,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     # stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
                     stderr.write('generator loss: %g\n' % generator_loss.eval(feed_dict=feed_dict))
                     if use_adversarial_net:
-                        stderr.write(' adv_real loss: %g\n' % adv_loss.eval(feed_dict=adv_feed_dict))
-                        stderr.write(' adv_fake loss: %g\n' % adv_loss_generator_input.eval(feed_dict=feed_dict))
+                        stderr.write(' adv_diff loss: %g\n' % adv_diff.eval(feed_dict=adv_feed_dict))
 
 
         # Optimization
@@ -243,16 +247,14 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
 
                     if use_adversarial_net:
-                        adv_feed_dict = {adv_net_input: content_pre_list}
+                        adv_feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches, adv_net_input: content_pre_list}
+                        if use_hint:
+                            adv_feed_dict[input_hint] = image_hint
                         if generators_turn:
-                            generator_train_step.run(feed_dict=feed_dict)
-                            generator_train_step_generator_input.run(feed_dict=feed_dict)
+                            # generator_train_step.run(feed_dict=feed_dict)
+                            generator_train_step_generator_input.run(feed_dict=adv_feed_dict)
                         else:
-                            adv_random_number = random.random()
-                            if adv_random_number < 0.5:
-                                adv_train_step_generator_input.run(feed_dict=feed_dict)
-                            else:
-                                adv_train_step.run(feed_dict=adv_feed_dict)
+                            adv_train_step_generator_input.run(feed_dict=adv_feed_dict)
                         #     ORIGINAL
                         # adv_feed_dict = {adv_net_input: content_pre_list}
                         # adv_random_number = random.random()
@@ -265,20 +267,18 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         adv_feed_dict = None
                     print_progress(i, feed_dict=feed_dict, adv_feed_dict= adv_feed_dict, last=last_step)
                     # TODO:
-                    if i%100==0 and use_adversarial_net:
+                    if i%10==0 and use_adversarial_net:
                         with open(save_dir + 'loss.tsv','a') as loss_record_file:
                             current_general_loss = generator_loss.eval(feed_dict=feed_dict)
                             loss_record_file.write('%d\t%g\n' % (i, current_general_loss))
                         with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
-                            current_adv_loss = adv_loss.eval(feed_dict=adv_feed_dict)
-                            current_adv_loss_generator_input = adv_loss_generator_input.eval(feed_dict=feed_dict)
-                            current_adv_overall_loss = current_adv_loss + current_adv_loss_generator_input
-                            loss_record_file.write('%d\t%g\t%g\t%g\t%g\t%s\n' % (
-                            i, current_adv_overall_loss, current_adv_loss, current_adv_loss_generator_input,
+                            current_adv_diff = adv_diff.eval(feed_dict=adv_feed_dict)
+                            loss_record_file.write('%d\t%g\t%g\t%s\n' % (
+                            i, current_adv_diff,
                             current_general_loss, str(generators_turn)))
 
                             # Test training GAN differently***
-                            if current_adv_loss_generator_input < current_adv_loss:
+                            if current_adv_diff <= 1 * batch_size * adv_net_weight:
                                 generators_turn = False
                             else:
                                 generators_turn = True
