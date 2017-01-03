@@ -99,12 +99,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                        beta2=0.999).minimize(generator_loss+adv_diff, var_list=generator_all_var)
                 # generator_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                 #                        beta2=0.999).minimize(adv_diff, var_list=generator_all_var)
-
-            # else:
-            #     # optimizer setup
-            #     # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
-            #     generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-            #                            beta2=0.999).minimize(generator_loss)
+            else:
+                # optimizer setup
+                # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
+                generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(generator_loss)
 
             # optimizer setup
             # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
@@ -265,6 +264,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         #     adv_train_step.run(feed_dict=adv_feed_dict)
                     else:
                         adv_feed_dict = None
+                        generator_train_step.run(feed_dict=feed_dict)
+                    generator_train_step_generator_input.run(feed_dict=adv_feed_dict)
                     print_progress(i, feed_dict=feed_dict, adv_feed_dict= adv_feed_dict, last=last_step)
                     # TODO:
                     if i%10==0 and use_adversarial_net:
@@ -296,15 +297,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                             test_image = imread(test_img_dir)
                             test_image_shape = test_image.shape
 
-                        """
-                        def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7,print_iterations=None,
-                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
-                        do_restore_and_train=False, content_folder=None,
-                        from_screenshot=False, from_webcam=False, test_img_dir=None):
-                        """
-
-                        # TODO: change back to test_image_shape. Now non divisible dimensions are causing problems.
                         # The for loop will run once and terminate. Can't use return and yield in the same function so this is a hacky way to do it.
                         for _, generated_image in color_sketches_net(test_image_shape[0],
                                                                       test_image_shape[1],
