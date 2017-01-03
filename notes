@@ -756,3 +756,9 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
     # TODO: I also need to ask the author what he used for the training data of inputs with addtional "helper
     information"
+
+2017/01/02
+1. Nijigen
+    I finished translating it to Chinese. The color was still a problem, even after I added the hint. The hint doesn't
+    seem to be working as it was supposed to. It had the kind of "old photo" color.
+    I'm trying the adversarial network...
