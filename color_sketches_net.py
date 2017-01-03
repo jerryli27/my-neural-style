@@ -20,7 +20,7 @@ from general_util import *
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
                         learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,# 100000000.0,
-                       lr_decay_steps=5000,
+                       lr_decay_steps=50000,
                         min_lr=0.0001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
