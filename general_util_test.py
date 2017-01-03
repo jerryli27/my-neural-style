@@ -126,5 +126,31 @@ class TestDataUtilMethods(unittest.TestCase):
                 256, 256, 1, 4)
         print content_pre_list
 
+    def test_imread_rgba(self):
+        height = 256
+        width = 256
+
+        content_folder = tempfile.mkdtemp()
+        # DO NOT NOT NOT TEST WITH .jpg... There's a compression process. I debugged on this for half an hour.
+        # Also refrain from using completely random image. There's a normalization or whatever process when I save
+        # the image.
+        image_path = content_folder + ('/image.png')
+        # current_image = np.random.rand(height, width, 3)
+        # current_image = current_image / np.max(current_image) * 255.0
+        current_image = np.ones((height, width, 4)) * 255.0
+        current_image[0,0,0] = 0
+        scipy.misc.imsave(image_path, current_image)
+
+        # Get path to all content images.
+
+        content_pre_list = imread(image_path, rgba=True)
+
+        expected_answer = current_image
+        np.testing.assert_almost_equal(expected_answer, content_pre_list)
+
+        shutil.rmtree(content_folder)
+
+
+
 if __name__ == '__main__':
     unittest.main()

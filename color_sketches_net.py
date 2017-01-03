@@ -13,18 +13,18 @@ import scipy
 import tensorflow as tf
 
 import adv_net_util
-import image_to_sketches_util
+import sketches_util
 import unet_util
 from general_util import *
 
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, use_adversarial_net = False, adv_net_weight = 1000000.0, lr_decay_steps=5000,
+                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1000000.0, lr_decay_steps=5000,
                         min_lr=0.0001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
-                        from_screenshot=False, from_webcam=False, test_img_dir=None):
+                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
 
@@ -44,16 +44,24 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     """
 
     # Before training, make sure everything is set correctly.
+    if use_hint:
+        assert test_img_hint is not None
 
     input_shape = (1, height, width, 3)
     print('The input shape is: %s' % (str(input_shape)))
 
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
+
         input_sketches = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 1], name='input_sketches')
-
-        generator_output = unet_util.net(input_sketches)
+        if use_hint:
+            input_hint = tf.placeholder(tf.float32,
+                                shape=[batch_size, input_shape[1], input_shape[2], 4], name='input_hint')
+            input_concatenated = tf.concat(3, (input_sketches, input_hint))
+            generator_output = unet_util.net(input_concatenated)
+        else:
+            generator_output = unet_util.net(input_sketches)
         expected_output = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 3], name='expected_output')
 
@@ -120,6 +128,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
         saver = tf.train.Saver()
         with tf.Session() as sess:
             if do_restore_and_generate:
+                assert batch_size == 1
                 ckpt = tf.train.get_checkpoint_state(save_dir)
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
@@ -158,11 +167,15 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     else:
                         content_image = imread(test_img_dir, (input_shape[1], input_shape[2]))
                     content_image = np.array([content_image])
-                    image_sketches = image_to_sketches_util.image_to_sketch(content_image)
+                    image_sketches = sketches_util.image_to_sketch(content_image)
                     image_sketches = np.expand_dims(image_sketches, axis=3)
 
                     # Now generate an image using the style_blend_weights given.
                     feed_dict = {expected_output:content_image, input_sketches:image_sketches}
+
+                    if use_hint:
+                        image_hint = imread(test_img_hint, (input_shape[1], input_shape[2]), rgba=True)
+                        feed_dict[input_hint] = np.array([image_hint])
 
                     generated_image = generator_output.eval(feed_dict=feed_dict)
                     iterator += 1
@@ -209,11 +222,16 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
                                                                     input_shape[2])
 
-                    image_sketches = image_to_sketches_util.image_to_sketch(content_pre_list)
+                    image_sketches = sketches_util.image_to_sketch(content_pre_list)
                     image_sketches = np.expand_dims(image_sketches, axis=3)
 
                     # Now generate an image using the style_blend_weights given.
                     feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches}
+
+                    if use_hint:
+                        image_hint = sketches_util.generate_hint_from_image(content_pre_list)
+                        feed_dict[input_hint] = image_hint
+
                     last_step = (i == iterations - 1)
 
                     generator_train_step.run(feed_dict=feed_dict)
@@ -263,12 +281,14 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       content_weight, tv_weight,
                                                                       learning_rate,
                                                                       use_adversarial_net=use_adversarial_net,
+                                                                      use_hint=use_hint,
                                                                       save_dir=save_dir,
                                                                       do_restore_and_generate=True,
                                                                       do_restore_and_train=False,
                                                                       from_screenshot=False,
                                                                       from_webcam=False,
-                                                                      test_img_dir=test_img_dir):
+                                                                      test_img_dir=test_img_dir,
+                                                                      test_img_hint=test_img_hint):
                             pass
 
                             best_image = generated_image

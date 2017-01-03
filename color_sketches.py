@@ -36,9 +36,18 @@ def build_parser():
                              'and the second one for style index.',
                         metavar='OUTPUT')
     parser.add_argument('--use_adversarial_net', dest='use_adversarial_net',
-                        help='If set, TODO:',
+                        help='If set, we train an adversarial network to distinguish between the image generated and '
+                             'the real image. This will help the generator to generate more real looking images.',
                         action='store_true')
-    parser.set_defaults(do_restore_and_train=False)
+    parser.set_defaults(use_adversarial_net=False)
+
+    parser.add_argument('--use_hint', dest='use_hint',
+                        help='If set, hints are given to the generator network about the color used at various parts '
+                             'of the image.',
+                        action='store_true')
+    parser.set_defaults(use_hint=False)
+
+
     parser.add_argument('--iterations', type=int, dest='iterations',
                         help='Iterations (default %(default)s).',
                         metavar='ITERATIONS', default=ITERATIONS)
@@ -71,6 +80,8 @@ def build_parser():
     parser.add_argument('--test_img', type=str,
                         dest='test_img', help='test image path',
                         metavar='TEST_IMAGE')
+    parser.add_argument('--test_img_hint', type=str,
+                        dest='test_img_hint', help='test image path')
     parser.add_argument('--model_save_dir', dest='model_save_dir',
                         help='The directory to save trained model and its checkpoints.',
                         metavar='MODEL_SAVE_DIR', default='models/')
@@ -100,13 +111,15 @@ def main():
             tv_weight=options.tv_weight,
             learning_rate=options.learning_rate,
             use_adversarial_net=options.use_adversarial_net,
+            use_hint=options.use_hint,
             print_iterations=options.print_iterations,
             checkpoint_iterations=options.checkpoint_iterations,
             save_dir=options.model_save_dir,
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
             content_folder=options.content_folder,
-            test_img_dir=options.test_img
+            test_img_dir=options.test_img,
+            test_img_hint=options.test_img_hint
     ):
         if options.do_restore_and_generate:
             imsave(options.output, image[0,...])

@@ -7,16 +7,23 @@ import scipy.misc
 from PIL import Image
 
 
-def imread(path, shape = None, bw = False):
+def imread(path, shape = None, bw = False, rgba = False):
     """
     :param path: path to the image
     :param shape: (Height, width)
     :return: np array with shape (height, width, 3)
     """
-    if shape is None:
-        return np.asarray(Image.open(path).convert('L' if bw else 'RGB'), np.float32)
+    if bw:
+        convert_format = 'L'
+    elif rgba:
+        convert_format = 'RGBA'
     else:
-        return np.asarray(Image.open(path).convert('L' if bw else 'RGB').resize((shape[1], shape[0])), np.float32)
+        convert_format = 'RGB'
+
+    if shape is None:
+        return np.asarray(Image.open(path).convert(convert_format), np.float32)
+    else:
+        return np.asarray(Image.open(path).convert(convert_format).resize((shape[1], shape[0])), np.float32)
     # return scipy.misc.imread(path).astype(np.float)
 
 
