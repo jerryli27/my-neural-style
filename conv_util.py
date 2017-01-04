@@ -9,7 +9,7 @@ import tensorflow as tf
 from neural_util import conv2d_mirror_padding, conv2d_transpose_mirror_padding
 
 WEIGHTS_INIT_STDEV = .1
-def conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_padding = True, one_hot_style_vector = None, name ='', reuse = False):
+def conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_padding = True, one_hot_style_vector = None, norm='instance_norm', name ='', reuse = False):
     with tf.variable_scope('conv_layer' + name, reuse=reuse):
         weights_init = conv_init_vars(net, num_filters, filter_size, name=name, reuse = reuse)
         strides_shape = [1, strides, strides, 1]
@@ -17,7 +17,15 @@ def conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_padding
             net = conv2d_mirror_padding(net, weights_init, None, filter_size, stride=strides)
         else:
             net = tf.nn.conv2d(net, weights_init, strides_shape, padding='SAME')
-        net = instance_norm(net, name=name, one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        if norm == 'instance_norm':
+            net = instance_norm(net, name=name, one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        elif norm == 'batch_norm':
+            net = batch_norm(net, name=name, reuse = reuse)
+        elif norm == '' or norm == None:
+            pass
+        else:
+            print('Please specify a valid normalization method: "instance_norm", "batch_norm", or simply leave it blank')
+            raise NotImplementedError
         if relu:
             # net = tf.nn.relu(net)
             net = tf.nn.elu(net)
@@ -69,6 +77,23 @@ def instance_norm(net, name ='', one_hot_style_vector = None, reuse = False):
         normalized = (net-mu)/(sigma_sq + epsilon)**(.5)
         return scale * normalized + shift
 
+
+def batch_norm(input_layer, name='', reuse=False):
+    """
+    Batch-normalizes the layer as in http://arxiv.org/abs/1502.03167
+    This is important since it allows the different scales to talk to each other when they get joined.
+    """
+    with tf.variable_scope('spatial_batch_norm' + name, reuse=reuse):
+        mean, variance = tf.nn.moments(input_layer, [0, 1, 2])
+        # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+        variance = tf.abs(variance)
+        variance_epsilon = 0.001
+        num_channels = input_layer.get_shape().as_list()[3]
+        scale = tf.get_variable('scale', [num_channels], tf.float32, tf.random_uniform_initializer())
+        offset = tf.get_variable('offset', [num_channels], tf.float32, tf.constant_initializer())
+        return_val = tf.nn.batch_normalization(input_layer, mean, variance, offset, scale, variance_epsilon, name=name)
+        return return_val
+
 def conv_init_vars(net, out_channels, filter_size, transpose=False, name ='', reuse = False):
     with tf.variable_scope('conv_init_vars' + name, reuse=reuse):
         _, rows, cols, in_channels = [i.value for i in net.get_shape()]
@@ -96,7 +121,7 @@ def fully_connected(net, out_channels, activation_fn = None, name ='', reuse = F
         bias_init = tf.get_variable('bias_init', shape=bias_shape, dtype=tf.float32, initializer=tf.constant_initializer())
 
         fc1 = tf.reshape(net, [-1, rows*cols*in_channels])
-        fc1 = tf.add(tf.matmul(fc1, weights_init), bias_init)
+        fc1 = tf.nn.bias_add(tf.matmul(fc1, weights_init), bias_init)
 
         if activation_fn is not None:
             fc1 = activation_fn(fc1)

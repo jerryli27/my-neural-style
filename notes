@@ -621,7 +621,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     I got a broad picture of how it works. It is inspiring. However I don't see how to connect that to my current work
     yet.
     I can't find an explaination of why gram matrix works. It's magic.
-    TODO: Can we build an even better loss function? Can we build a neural network that basically classify styles and hope
+    Plan: Can we build an even better loss function? Can we build a neural network that basically classify styles and hope
     that it automatically contains enough information to build a better loss function?
 
 3. back prop
@@ -638,14 +638,16 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
 2016/12/29
 1. Scale_offset_only
-    Artifacts: TODO: trying elu instead of relu... Don't think it will help though. Hum it seems elu fixed it. (or it could be I decreased the number of style images, but in the past i've seen those artifacts even when I only have two style images.)
+    Artifacts: Plan: trying elu instead of relu... Don't think it will help though. Hum it seems elu fixed it.
+    (or it could be I decreased the number of style images, but in the past i've seen those artifacts even when I only
+    have two style images.)
 
 
 2. Study the model
     I need more control over the generation process. I have no control over how the patterns are generated or what
     size those patterns should be.
 
-    TODO: figure out what controls the size of patterns using back prop first then generalize to feed forward
+    Plan: figure out what controls the size of patterns using back prop first then generalize to feed forward
     (like the size of brush or size of triangles etc.)... Wait the back prop and the feed forward are different.
     Feed forward seems to be more dependent on the size of content image fed in during training.Need more testing to
     confirm that.
@@ -709,13 +711,13 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     human faces. Would that make the result look better than training the style for a human face on any random image?
     This is just a random thought.
 
-    #TODO: testing mia.
+    #Plan: testing mia.
 
     Neither mrf nor gram loss is perfect... gram loss is more flexible but too crude. The mrf has higher quality but
     looks too much like the original one without the content loss. I would try guiding the image with the result from
     mrf. First let me try to guide it with the style image (since I'm using the same masks for style and output and the
     best result mrf can get is to be exactly the same as the style image).
-    # TODO: guide gram.
+    # Plan: guide gram.
 6. From previous todos:
     The skip_noise_4 network can't learn style generation with content image.
 
@@ -732,7 +734,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
     I found a blog that had amazing result for coloring sketches. I'll probably spend lots of time on that...
 
-    # TODO: what is deconv layer (or conv_transpose) ?http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf
+    TODO: what is deconv layer (or conv_transpose) ?http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf
 
     Ok the majority of the implementations are done. The only thing left is training data. I tried it on real life
     images. it turns out it is too hard for it to learn (understandably. There are way too many edges...)
@@ -754,7 +756,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     I forgot to separate the training from the test so I did that. I probably will try the new training data
     tomorrow if I finish downloading them tonight.
 
-    # TODO: I also need to ask the author what he used for the training data of inputs with addtional "helper
+    Plan: I also need to ask the author what he used for the training data of inputs with addtional "helper
     information"
 
 2017/01/02
@@ -762,3 +764,9 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     I finished translating it to Chinese. The color was still a problem, even after I added the hint. The hint doesn't
     seem to be working as it was supposed to. It had the kind of "old photo" color.
     I'm trying the adversarial network...
+
+2017/01/03
+ 1. Nijigen
+    I confirmed that no matter if I use the discriminator or not, it will not color thing correctly. Everything looks
+    like old photos. Maybe the adversarial network is not set up correctly? I should take a look at other
+    implementations of gan and its relatives.

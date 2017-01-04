@@ -19,20 +19,24 @@ def net(image, mirror_padding=False, reuse=False):
 
     with tf.variable_scope('adv_net', reuse=reuse):
         for i in range(len(CONV_DOWN_NUM_FILTERS)):
+            # Do not normalize the first layer. According to https://arxiv.org/abs/1511.06434.
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
                                        filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
-                                       mirror_padding=mirror_padding, name='conv_down_%d' %i, reuse=reuse)
+                                       mirror_padding=mirror_padding, norm='instance_norm' if i != 0 else '', name='conv_down_%d' %i, reuse=reuse)
             prev_layer = current_layer
             prev_layer_list.append(current_layer)
 
 
-        # fc = fully_connected(prev_layer, 2, name='fc', reuse=reuse) # The initial weight here might be a little bit tricky. The original specified the wscale.
+        final = fully_connected(prev_layer, 2, name='fc', reuse=reuse)
+
+
         # TODO: here's one layer I added versus the original version described. As of my understanding, the output
         # is an indicator vector indicating whether it is original or fake. So I changed the output dimension from 2
-        # to 1 and added a sigmoid function.
-        fc = fully_connected(prev_layer, 1, name='fc',
-                             reuse=reuse)
-        final = tf.nn.sigmoid(fc)
+        # to 1 and added a sigmoid function. But according to https://arxiv.org/abs/1511.06434, the loss should be
+        # sparse_softmax_cross_entropy_with_logits so we don't need sigmoid. I didn't understand this part fully.
+        # fc = fully_connected(prev_layer, 1, name='fc',
+        #                      reuse=reuse)
+        # final = tf.nn.sigmoid(fc)
     return final
 
 

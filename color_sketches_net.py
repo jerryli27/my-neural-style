@@ -70,45 +70,36 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
 
-            generator_loss = tf.nn.l2_loss(generator_output - expected_output)
+            generator_loss_l2 = tf.nn.l2_loss(generator_output - expected_output)
             # tv_loss = tv_weight * total_variation(image)
 
             if use_adversarial_net:
                 adv_net_input = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], 3], name='adv_net_input')
-                adv_net_prediction = adv_net_util.net(adv_net_input)
+                adv_net_prediction_image_input = adv_net_util.net(adv_net_input)
                 adv_net_prediction_generator_input = adv_net_util.net(generator_output, reuse=True)
-                # adv_net_expected_output = tf.placeholder(tf.float32, shape=[2], name='adv_net_expected_output')
                 adv_net_all_var = adv_net_util.get_net_all_variables()
-                adv_net_expected_output_real =  np.array([1.0])
-                # adv_loss = tf.nn.l2_loss(adv_net_prediction - adv_net_expected_output_real) * adv_net_weight
-                # adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                #                        beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
-                # I think the generator loss also changes? It should be optimizing 1-log(D(G(x)) instead of the
-                # t2 loss.
                 generator_all_var = unet_util.get_net_all_variables()
-                # adv_net_expected_output_generator_input = np.array([0.0])
-                # adv_loss_generator_input = tf.nn.l2_loss(adv_net_prediction_generator_input - adv_net_expected_output_generator_input) * adv_net_weight
 
-                adv_diff =  tf.reduce_sum(1 - (adv_net_prediction - adv_net_prediction_generator_input)) * adv_net_weight
+                logits_from_i = adv_net_prediction_image_input
+                logits_from_g = adv_net_prediction_generator_input
+
+                # One represent labeling the image as coming from real image. Zero represent labeling it as generated.
+                adv_loss =  tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_i, tf.ones([batch_size], dtype=tf.int64))) +\
+                            tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.zeros([batch_size], dtype=tf.int64)))
+                generator_loss_through_adv = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.ones([batch_size], dtype=tf.int64)))
+
 
                 # ADV is trying to maximize the probability, so minimize -(p-0)^2
-                adv_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(-adv_diff, var_list=adv_net_all_var)
-                generator_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(generator_loss+adv_diff, var_list=generator_all_var)
-                # generator_train_step_generator_input = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                #                        beta2=0.999).minimize(adv_diff, var_list=generator_all_var)
+                adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
+                generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                                       beta2=0.999).minimize(generator_loss_through_adv, var_list=generator_all_var)
             else:
                 # optimizer setup
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(generator_loss)
-
-            # optimizer setup
-            # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
-            generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                   beta2=0.999).minimize(generator_loss)
+                                       beta2=0.999).minimize(generator_loss_l2)
 
 
             def print_progress(i, feed_dict, adv_feed_dict, last=False):
@@ -116,12 +107,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     'Iteration %d/%d\n' % (i + 1, iterations))
                 if last or (print_iterations and i % print_iterations == 0):
                     stderr.write('Learning rate %f\n' % (learning_rate_decayed.eval()))
-                    # Assume that the feed_dict is for the last content and style.
-                    # stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
-                    # stderr.write('       tv loss: %g\n' % tv_loss.eval(feed_dict=feed_dict))
-                    stderr.write('generator loss: %g\n' % generator_loss.eval(feed_dict=feed_dict))
+                    stderr.write(' generator l2 loss: %g\n' % generator_loss_l2.eval(feed_dict=feed_dict))
                     if use_adversarial_net:
-                        stderr.write(' adv_diff loss: %g\n' % adv_diff.eval(feed_dict=adv_feed_dict))
+                        stderr.write('          adv loss: %g\n' % adv_loss.eval(feed_dict=adv_feed_dict))
+                        stderr.write('generator adv loss: %g\n' % generator_loss_through_adv.eval(feed_dict=adv_feed_dict))
 
 
         # Optimization
@@ -251,35 +240,25 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                             adv_feed_dict[input_hint] = image_hint
                         if generators_turn:
                             # generator_train_step.run(feed_dict=feed_dict)
-                            generator_train_step_generator_input.run(feed_dict=adv_feed_dict)
+                            generator_train_step_through_adv.run(feed_dict=adv_feed_dict)
                         else:
-                            adv_train_step_generator_input.run(feed_dict=adv_feed_dict)
-                        #     ORIGINAL
-                        # adv_feed_dict = {adv_net_input: content_pre_list}
-                        # adv_random_number = random.random()
-                        # if adv_random_number < 0.5:
-                        #     adv_train_step_generator_input.run(feed_dict=feed_dict)
-                        #     generator_train_step_generator_input.run(feed_dict=feed_dict)
-                        # else:
-                        #     adv_train_step.run(feed_dict=adv_feed_dict)
+                            adv_train_step.run(feed_dict=adv_feed_dict)
                     else:
                         adv_feed_dict = None
                         generator_train_step.run(feed_dict=feed_dict)
-                    generator_train_step_generator_input.run(feed_dict=adv_feed_dict)
                     print_progress(i, feed_dict=feed_dict, adv_feed_dict= adv_feed_dict, last=last_step)
                     # TODO:
                     if i%10==0 and use_adversarial_net:
                         with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                            current_general_loss = generator_loss.eval(feed_dict=feed_dict)
-                            loss_record_file.write('%d\t%g\n' % (i, current_general_loss))
+                            current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
+                            loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
                         with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
-                            current_adv_diff = adv_diff.eval(feed_dict=adv_feed_dict)
-                            loss_record_file.write('%d\t%g\t%g\t%s\n' % (
-                            i, current_adv_diff,
-                            current_general_loss, str(generators_turn)))
+                            current_adv_loss = adv_loss.eval(feed_dict=adv_feed_dict)
+                            current_gen_loss_through_adv = generator_loss_through_adv.eval(feed_dict=adv_feed_dict)
+                            loss_record_file.write('%d\t%g\t%g\t%g\t%s\n' % (i, current_generator_l2_loss, current_adv_loss, current_gen_loss_through_adv, str(generators_turn)))
 
                             # Test training GAN differently***
-                            if current_adv_diff <= 1 * batch_size * adv_net_weight:
+                            if current_adv_loss <= 1 * batch_size * adv_net_weight:
                                 generators_turn = False
                             else:
                                 generators_turn = True
@@ -287,10 +266,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                     if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                         saver.save(sess, save_dir + 'model.ckpt', global_step=i)
-                        # Record loss after each checkpoint.
-                        with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                            current_general_loss = generator_loss.eval(feed_dict=feed_dict)
-                            loss_record_file.write('%d\t%g\n' % (i, current_general_loss))
+                        if not use_adversarial_net:
+                            # Record loss after each checkpoint.
+                            with open(save_dir + 'loss.tsv','a') as loss_record_file:
+                                current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
+                                loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
 
 
                         if test_img_dir is not None:
