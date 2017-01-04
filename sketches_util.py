@@ -7,6 +7,7 @@ import random
 
 import cv2
 import numpy as np
+from scipy.stats import threshold
 
 
 def image_to_sketch(img):
@@ -14,6 +15,9 @@ def image_to_sketch(img):
     :param image: An image represented in numpy array with shape (height, width, 3) or (batch, height, width, 3)
     :return: A sketch of the image with shape (height, width) or (batch, height, width)
     """
+
+    SKETCH_LOWEST_BRIGHTNESS = 32
+
 
     if len(img.shape) == 4:
         img_diff_dilation_gray =  np.array([image_to_sketch(img[i,...]) for i in range(img.shape[0])])
@@ -26,7 +30,11 @@ def image_to_sketch(img):
         img_diff_dilation = np.abs(np.subtract(img, img_dilation))
         img_diff_dilation_gray = cv2.cvtColor(img_diff_dilation, cv2.COLOR_RGB2GRAY)
 
-        return img_diff_dilation_gray
+
+
+        img_diff_dilation_gray_thresholded = threshold(img_diff_dilation_gray, SKETCH_LOWEST_BRIGHTNESS)
+
+        return img_diff_dilation_gray_thresholded
     else:
         print('Image has to be either of shape (height, width, num_features) or (batch_size, height, width, num_features)')
         raise AssertionError

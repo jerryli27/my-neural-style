@@ -95,7 +95,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                        beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
                 adv_train_step_i = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
                                        beta2=0.999).minimize(adv_loss_from_i, var_list=adv_net_all_var)
-                adv_train_step_g = tf.train.AdamOptimizer(learning_rate_decayed * 2.0, beta1=0.5,
+                adv_train_step_g = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
                                        beta2=0.999).minimize(adv_loss_from_g, var_list=adv_net_all_var)
                 generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
                                        beta2=0.999).minimize(generator_loss_through_adv, var_list=generator_all_var)

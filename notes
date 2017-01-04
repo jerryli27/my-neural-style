@@ -793,3 +793,9 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     and let go after that. But the network went back to the old messy looking image after I let go. So the network
     actually prefer the messy looking one, which is completely nonsense. It is probably the adv network was too weak
     (as shown in the sanity check...) the generator network always outlearns the adversarial network for some reason.
+
+
+    I think the sketch generation has a 'bug': when it generate the sketch, I forgot to set a threshold. Therefore,
+    most of the area is actually filled with almost invisible but nonzero values. This may provide hints to the cnn.
+    That's why the cnn can learn the shades so successfully... GG. TODO: I need to rerun the tests after changing the
+    sketch util to set a lower threshold for sketches.
