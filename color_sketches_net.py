@@ -19,7 +19,7 @@ from general_util import *
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,# 100000000.0,
+                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,
                        lr_decay_steps=50000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
@@ -276,32 +276,20 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         generator_train_step.run(feed_dict=feed_dict)
                     print_progress(i, feed_dict=feed_dict, adv_feed_dict= adv_feed_dict, last=last_step)
                     # TODO:
-                    if i%10==0 and use_adversarial_net:
+                    if i%100==0:
                         with open(save_dir + 'loss.tsv','a') as loss_record_file:
                             current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
                             loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
-                        with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
-                            current_adv_loss_i = adv_loss_from_i.eval(feed_dict=adv_feed_dict)
-                            current_adv_loss_g = adv_loss_from_g.eval(feed_dict=adv_feed_dict)
-                            current_gen_loss_through_adv = generator_loss_through_adv.eval(feed_dict=adv_feed_dict)
-                            # loss_record_file.write('%d\t%g\t%g\t%g\t%s\n' % (i, current_generator_l2_loss, current_adv_loss, current_gen_loss_through_adv, str(generators_turn)))
-                            loss_record_file.write('%d\t%g\t%g\t%g\t%g\n' % (i, current_generator_l2_loss, current_adv_loss_i, current_adv_loss_g, current_gen_loss_through_adv))
+                        if use_adversarial_net:
+                            with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
+                                current_adv_loss_i = adv_loss_from_i.eval(feed_dict=adv_feed_dict)
+                                current_adv_loss_g = adv_loss_from_g.eval(feed_dict=adv_feed_dict)
+                                current_gen_loss_through_adv = generator_loss_through_adv.eval(feed_dict=adv_feed_dict)
+                                loss_record_file.write('%d\t%g\t%g\t%g\t%g\n' % (i, current_generator_l2_loss, current_adv_loss_i, current_adv_loss_g, current_gen_loss_through_adv))
 
-                            # # Test training GAN differently***
-                            # if current_adv_loss <= 1 * batch_size * adv_net_weight:
-                            #     generators_turn = False
-                            # else:
-                            #     generators_turn = True
-                            #     # END TEST***
 
                     if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                         saver.save(sess, save_dir + 'model.ckpt', global_step=i)
-                        if not use_adversarial_net:
-                            # Record loss after each checkpoint.
-                            with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                                current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
-                                loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
-
 
                         if test_img_dir is not None:
                             test_image = imread(test_img_dir)

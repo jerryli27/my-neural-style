@@ -802,3 +802,13 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
     Doesn't seem to be the case actually. I ran the network using the new sketch generation method and it still looked
     fine (as good/bad as before).
+
+    I'm trying to filter training images where there are too many lines (the sketch that takes more than 20% of the
+    white space is filtered). I might end up with not enough training images...
+
+    I found that the training set had surprisingly few number of images... I'll reupload the training data. I will
+    also definitely download the larger dataset and train on that... I believe the method itself is fine... I hope.
+
+    But why the adversarial network is not working? The only difference I found between my implementation and the one
+    online is that we use different networks and they use a much larger batch size... Also they probably had more
+    training data...

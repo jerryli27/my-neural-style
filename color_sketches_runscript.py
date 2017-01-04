@@ -7,9 +7,9 @@ from general_util import *
 
 learning_rate=0.0002 # 0.001
 iterations=800000# 800000
-batch_size=1 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
+batch_size=8 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 content_weight=5
-checkpoint_iterations=5000
+checkpoint_iterations=1000
 height = 128
 width = 128
 print_iteration = 100

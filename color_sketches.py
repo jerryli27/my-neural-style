@@ -8,26 +8,19 @@ from general_util import *
 
 # default arguments
 CONTENT_WEIGHT = 5e0
-STYLE_WEIGHT = 1e2
 TV_WEIGHT = 2e2
 
-# Higher learning rate than 0.01 may sacrifice the quality of the network.
-LEARNING_RATE = 0.001  # Set according to  https://arxiv.org/abs/1610.07629.
-ITERATIONS = 160000  # 40000 in https://arxiv.org/abs/1610.07629
-BATCH_SIZE = 4  # 16 in https://arxiv.org/abs/1610.07629, but higher value requires more memory.
-VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
-STYLE_WEIGHT_MASKS_FOR_TRAINING = 'style_weight_train_masks.npy'
+LEARNING_RATE = 0.0002 # Set according to dcgan paper
+ITERATIONS = 160000
+BATCH_SIZE = 64
 PRINT_ITERATIONS = 100
-MASK_FOLDER = 'random_masks/'
-SEMANTIC_MASKS_WEIGHT = 1.0
-SEMANTIC_MASKS_NUM_LAYERS = 1
 
 # TODO: fix comments for the color sketches net.
 def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content_folder', dest='content_folder',
-                        help='The path to the content images for training. In the papers they use the Microsoft COCO dataset.',
-                        metavar='CONTENT_FOLDER', default='/home/ubuntu/pixiv/pixiv_training/')
+                        help='The path to the colored pixiv images for training. ',
+                        metavar='CONTENT_FOLDER', default='/home/ubuntu/pixiv/pixiv_training_filtered/')
     parser.add_argument('--output', dest='output',
                         help='Output path.',
                         metavar='OUTPUT', required=True)

@@ -22,7 +22,7 @@ def net(image, mirror_padding=False, reuse=False):
             # Do not normalize the first layer. According to https://arxiv.org/abs/1511.06434.
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
                                        filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
-                                       mirror_padding=mirror_padding, norm='instance_norm' if i != 0 else '', name='conv_down_%d' %i, reuse=reuse)
+                                       mirror_padding=mirror_padding, norm='batch_norm' if i != 0 else '', name='conv_down_%d' %i, reuse=reuse)
             prev_layer = current_layer
             prev_layer_list.append(current_layer)
 

@@ -32,7 +32,7 @@ def conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_padding
 
         return net
 
-def conv_tranpose_layer(net, num_filters, filter_size, strides, mirror_padding = True, one_hot_style_vector = None, name ='', reuse = False):
+def conv_tranpose_layer(net, num_filters, filter_size, strides, mirror_padding = True, one_hot_style_vector = None, norm='instance_norm', name ='', reuse = False):
     with tf.variable_scope('conv_tranpose_layer' + name, reuse=reuse):
         weights_init = conv_init_vars(net, num_filters, filter_size, transpose=True, name=name, reuse = reuse)
 
@@ -48,7 +48,16 @@ def conv_tranpose_layer(net, num_filters, filter_size, strides, mirror_padding =
             net = conv2d_transpose_mirror_padding(net, weights_init, None, tf_shape, filter_size, stride=strides)
         else:
             net = tf.nn.conv2d_transpose(net, weights_init, tf_shape, strides_shape, padding='SAME')
-        net = instance_norm(net, name=name, one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+
+        if norm == 'instance_norm':
+            net = instance_norm(net, name=name, one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        elif norm == 'batch_norm':
+            net = batch_norm(net, name=name, reuse = reuse)
+        elif norm == '' or norm == None:
+            pass
+        else:
+            print('Please specify a valid normalization method: "instance_norm", "batch_norm", or simply leave it blank')
+            raise NotImplementedError
         return tf.nn.elu(net)  # tf.nn.relu(net)
 
 def residual_block(net, filter_size=3, mirror_padding = True, name ='', one_hot_style_vector = None, reuse = False):

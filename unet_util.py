@@ -26,7 +26,7 @@ def net(image, mirror_padding=False, reuse=False):
         for i in range(len(CONV_DOWN_NUM_FILTERS)):
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
                                        filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
-                                       mirror_padding=mirror_padding, name='conv_down_%d' %i, reuse=reuse)
+                                       mirror_padding=mirror_padding, norm='batch_norm', name='conv_down_%d' %i, reuse=reuse)
             prev_layer = current_layer
             prev_layer_list.append(current_layer)
 
@@ -44,12 +44,12 @@ def net(image, mirror_padding=False, reuse=False):
                 concat_layer = tf.concat(3, [prev_layer_list[-i-1], prev_layer])
                 current_layer = conv_tranpose_layer(concat_layer, num_filters=CONV_UP_NUM_FILTERS[i],
                                                     filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
-                                                    mirror_padding=mirror_padding, name='conv_up_%d' %i, reuse=reuse)
+                                                    mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
             else:
                 current_layer = conv_layer(prev_layer, num_filters=CONV_UP_NUM_FILTERS[i],
                                                     filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
-                                                    mirror_padding=mirror_padding, name='conv_up_%d' %i, reuse=reuse)
+                                                    mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
 
 
