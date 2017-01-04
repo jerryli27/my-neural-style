@@ -770,3 +770,26 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     I confirmed that no matter if I use the discriminator or not, it will not color thing correctly. Everything looks
     like old photos. Maybe the adversarial network is not set up correctly? I should take a look at other
     implementations of gan and its relatives.
+
+    I found that I implemented several things wrong in the adv network. First I normalized the first input layer, which
+    according to the dcgan paper will cause oscillation. I also got the loss function wrong. I naively thought that
+    my implementation is equivalent to the more formal cross entropy loss. That doesn't seem to be the case.
+
+    I did not increase the batch size (the paper used a huge batch size) because I want to quickly check if the result
+    is working. I will switch to larger batch size once I know it's working.
+
+    If it is still not working, then it might be the training data. I am downloading more training data from pixiv.
+    I will have around 200g of data to train, which should be more than enough.
+
+    I'll go ahead and post the chinese translation while working on the english one.
+
+
+    Nah it's not working... It is generating wierd colors.Did I get the loss wrong or is this the natural reaction...
+    It doesn't seem natural.
+    After checking the change in loss after each training round, I found that the learning rate was too large. Smaller
+    learning rate or larger batch size will generate more stable result. That's why only training through adv did not
+    generate satisfying-looking images even after 50000 rounds of training. This sanity check was helpful...
+    The following test confirmed my guess. I tried to force the network to learn the l2 loss for the first 10000 round
+    and let go after that. But the network went back to the old messy looking image after I let go. So the network
+    actually prefer the messy looking one, which is completely nonsense. It is probably the adv network was too weak
+    (as shown in the sanity check...) the generator network always outlearns the adversarial network for some reason.

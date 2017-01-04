@@ -5,7 +5,7 @@
 
 from general_util import *
 
-learning_rate=0.0002 # 0.001
+learning_rate=0.0001 # 0.001
 iterations=600000# 800000
 batch_size=16 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 content_weight=5
