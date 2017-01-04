@@ -202,7 +202,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 # Get path to all content images.
                 content_dirs = get_all_image_paths_in_dir(content_folder)
                 # Ignore the ones at the end.
-                if batch_size != 1:
+                if batch_size != 1 and len(content_dirs) % batch_size != 0:
                     content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
 
 

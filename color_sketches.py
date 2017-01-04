@@ -22,7 +22,7 @@ MASK_FOLDER = 'random_masks/'
 SEMANTIC_MASKS_WEIGHT = 1.0
 SEMANTIC_MASKS_NUM_LAYERS = 1
 
-
+# TODO: fix comments for the color sketches net.
 def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content_folder', dest='content_folder',
