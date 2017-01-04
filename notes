@@ -799,3 +799,6 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     most of the area is actually filled with almost invisible but nonzero values. This may provide hints to the cnn.
     That's why the cnn can learn the shades so successfully... GG. TODO: I need to rerun the tests after changing the
     sketch util to set a lower threshold for sketches.
+
+    Doesn't seem to be the case actually. I ran the network using the new sketch generation method and it still looked
+    fine (as good/bad as before).

@@ -5,21 +5,21 @@
 
 from general_util import *
 
-learning_rate=0.0001 # 0.001
-iterations=600000# 800000
-batch_size=16 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
+learning_rate=0.0002 # 0.001
+iterations=800000# 800000
+batch_size=1 # Optimally 16, but it ran out of memory. #TODO: change it to 8.
 content_weight=5
-checkpoint_iterations=1000
+checkpoint_iterations=5000
 height = 128
 width = 128
 print_iteration = 100
 do_restore_and_train = False  # True
 do_restore_and_generate = False
-use_adversarial_net = True
-use_hint = False
+use_adversarial_net = False
+use_hint = True
 
 test_img = '378688_128.jpg'#u'/home/ubuntu/pixiv/pixiv_testing/骨董屋・三千世界の女主人_12746957.jpg' #'source_compressed/chicago.jpg'
-test_img_hint = '12746957_hint.png'
+test_img_hint = '378688_128_hint.png'
 
 do_restore_and_train_string = '--do_restore_and_train' if do_restore_and_train else ''
 do_restore_and_generate_string = '--do_restore_and_generate' if do_restore_and_generate else ''

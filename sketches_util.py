@@ -16,6 +16,9 @@ def image_to_sketch(img):
     :return: A sketch of the image with shape (height, width) or (batch, height, width)
     """
 
+    # We must apply a lower threshold. Otherwise the sketch image will be filled with non-zero values that may provide
+    # hints to the cnn trained. (It is unlikely to occur in human provided sketches that we have many pixels with
+    # brightness lower than 32. )
     SKETCH_LOWEST_BRIGHTNESS = 32
 
 
