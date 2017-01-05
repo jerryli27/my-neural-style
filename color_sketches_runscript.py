@@ -7,11 +7,11 @@ from general_util import *
 
 learning_rate=0.0002 # 0.001
 iterations=800000# 800000
-batch_size=64  # The larger the better.
+batch_size=32  # The larger the better.
 content_weight=5
 checkpoint_iterations=1000
-height = 128
-width = 128
+height = 256
+width = 256
 print_iteration = 100
 do_restore_and_train = False  # True
 do_restore_and_generate = False

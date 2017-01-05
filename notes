@@ -797,7 +797,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
     I think the sketch generation has a 'bug': when it generate the sketch, I forgot to set a threshold. Therefore,
     most of the area is actually filled with almost invisible but nonzero values. This may provide hints to the cnn.
-    That's why the cnn can learn the shades so successfully... GG. TODO: I need to rerun the tests after changing the
+    That's why the cnn can learn the shades so successfully... GG. Plan: I need to rerun the tests after changing the
     sketch util to set a lower threshold for sketches.
 
     Doesn't seem to be the case actually. I ran the network using the new sketch generation method and it still looked
@@ -817,4 +817,18 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 1. Nijigen
     Higher batch size is way more important than I thought... It provided much stabler training process and better
     result simply by raising batch from 1 to 8. The hint didn't work as well as the original author had shown, but it's
-    good enough.
+    better than the previous versions. Given more training time and data, maybe it can get even better.
+
+
+2.  Text dcgan
+    This is the idea I came up with last night. Instead of feeding in images, I can feed in text in certain encoding
+    and see what happens. I may come up with a good enough sentence generator.
+
+3. Random thought
+    I just thought of one thing. Why can't I have a network that take two inputs: the style and the content, and
+    train that on the gram loss? So the structure would be similar to unet, except that the conv will take the style as
+    the input and the content is fed in by concatenating the resized version of that to each deconv layer. (So
+    the structure changed slightly from the unet to take two input images). Maybe that can work... lol.
+    But I'm not so positive. I haven't seen the network work fully as described by the blog yet. The color is just not
+    satisfying. I was hoping that much more training data could save the day (or higher resolution. 128 was just too
+    hard even for a human). We'll see.
