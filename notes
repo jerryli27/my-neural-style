@@ -812,3 +812,9 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     But why the adversarial network is not working? The only difference I found between my implementation and the one
     online is that we use different networks and they use a much larger batch size... Also they probably had more
     training data...
+
+2017/01/03
+1. Nijigen
+    Higher batch size is way more important than I thought... It provided much stabler training process and better
+    result simply by raising batch from 1 to 8. The hint didn't work as well as the original author had shown, but it's
+    good enough.
