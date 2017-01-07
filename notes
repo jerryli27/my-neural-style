@@ -813,11 +813,13 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     online is that we use different networks and they use a much larger batch size... Also they probably had more
     training data...
 
-2017/01/03
+2017/01/05
 1. Nijigen
     Higher batch size is way more important than I thought... It provided much stabler training process and better
     result simply by raising batch from 1 to 8. The hint didn't work as well as the original author had shown, but it's
     better than the previous versions. Given more training time and data, maybe it can get even better.
+
+    The adversarial network was still not performing well... It's training super slowly and it's getting no where..
 
 
 2.  Text dcgan
@@ -832,3 +834,46 @@ Plan: Try generating styles with content image with skip noise 4 without style w
     But I'm not so positive. I haven't seen the network work fully as described by the blog yet. The color is just not
     satisfying. I was hoping that much more training data could save the day (or higher resolution. 128 was just too
     hard even for a human). We'll see.
+
+
+2017/01/06
+1. Nijigen
+    Still downloading the dataset.
+
+2. Text dcgan
+    I found a great explaination for why text dcgan won' work:
+    https://www.reddit.com/r/MachineLearning/comments/40ldq6/generative_adversarial_networks_for_text/
+    I need something continuous. Then I thought of chinese characters.
+
+2017/01/07
+1. Summary
+Try to solve problems not try to use new tech
+
+The problem I am facing now is I can't color the sketches. The colors look like those from the old pictures.
+I used three methods. One is train against l2 loss. The second is train with 5x5 random hints on the color to be used
+against the same loss. The third is train using GAN. The first and second is some what successful but not satisfactory.
+The third is completely shit. The reasons I can think of is as follows
+The first one fails mainly because it is almost impossible to predict what color one used simply based on the sketch.
+The result is therefore reasonable.
+The second one still failed. I thought it was because the images were too small. Even if I gave the hint, it might
+still be too hard. Maybe the way I am giving hint was wrong.  The third possibility was the lack of training data.
+The third one failed I think mainly because of network design. I am not training it correctly. I may want to test if
+the adv network can tell apart anime from real life images. If it can't do that. Well there's something wrong with the
+discriminator. If it can then there is something wrong with how we train.
+So this is my plan.
+Regarding the neural style, I've done most of what the papers have mentioned so far. They looked as expected. I was
+planning to improve applying styles differently on different objects but it seemed hard with feed forward network. I
+need to improve the network design if I want to do that. Also, I should probably try different networks other than VGG.
+This is the most direct way to improve object recognition because vgg is not trained on art works.
+As of the NLP plus GAN, I am still experimenting. The biggest difference Between image and language is that language is
+more discrete due to its abstract nature. I need to think more on how to approach it. Chinese characters are
+interesting, but are they also discrete?
+
+2. Nijigen
+    a. No hint no GAN
+        Waiting for training data
+    b. Hint
+        Waiting for training data
+    c. GAN
+        The Adv network works on discriminating between anime and real life. So it's not the adv network
+        The generator network... I don't know. I need to log the loss.

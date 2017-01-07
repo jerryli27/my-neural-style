@@ -7,16 +7,16 @@ from general_util import *
 
 learning_rate=0.0002 # 0.001
 iterations=800000# 800000
-batch_size=32  # The larger the better.
+batch_size=4  # The larger the better.
 content_weight=5
-checkpoint_iterations=1000
-height = 256
-width = 256
+checkpoint_iterations=500
+height = 512
+width = 512
 print_iteration = 100
 do_restore_and_train = False  # True
 do_restore_and_generate = False
-use_adversarial_net = True
-use_hint = False
+use_adversarial_net = False
+use_hint = True
 
 test_img = '378688_128.jpg'#u'/home/ubuntu/pixiv/pixiv_testing/骨董屋・三千世界の女主人_12746957.jpg' #'source_compressed/chicago.jpg'
 test_img_hint = '378688_128_hint.png'

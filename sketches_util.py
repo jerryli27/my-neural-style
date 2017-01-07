@@ -50,13 +50,17 @@ def generate_hint_from_image(img):
     (batch, height, width, 4) where the last additional dimension stands for a (in rgba).
     """
     _max_num_hint = 20
+    _min_num_hint = 20
     _hint_width = 5
     _hint_height = 5
     if len(img.shape) == 4:
         img_diff_dilation_gray =  np.array([generate_hint_from_image(img[i, ...]) for i in range(img.shape[0])])
         return img_diff_dilation_gray
     elif len(img.shape) == 3:
-        num_hints = random.randint(0, _max_num_hint)
+        if _min_num_hint == _max_num_hint:
+            num_hints = _max_num_hint
+        else:
+            num_hints = random.randint(_min_num_hint, _max_num_hint)
         height, width, rgb = img.shape
         assert rgb==3
 

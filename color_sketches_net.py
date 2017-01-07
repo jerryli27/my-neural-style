@@ -104,8 +104,18 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 with tf.control_dependencies([generator_train_step_through_adv, adv_train_step_i, adv_train_step_g]):
                     adv_generator_both_train = tf.no_op(name='adv_generator_both_train')
 
-                generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                generator_train_step =   tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_l2)
+
+                adv_loss_real_sum = tf.summary.scalar("adv_loss_real", adv_loss_from_i)
+                adv_loss_fake_sum = tf.summary.scalar("adv_loss_fake", adv_loss_from_g)
+
+                g_loss_sum = tf.summary.scalar("g_loss", generator_loss_through_adv)
+                adv_loss_sum = tf.summary.scalar("adv_loss", adv_loss)
+
+
+                g_sum = tf.summary.merge([adv_loss_fake_sum, g_loss_sum])
+                adv_sum = tf.summary.merge([adv_loss_real_sum, adv_loss_sum])
             else:
                 # optimizer setup
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
@@ -192,6 +202,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     yield (iterator, generated_image)
 
             else:
+                # Initialize log writer
+                summary_writer = tf.summary.FileWriter("./logs", sess.graph)
 
                 with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
                     pass  # Clear the loss file before appending to it.
@@ -263,7 +275,21 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         # adv_train_step.run(feed_dict=adv_feed_dict)
 
 
-                        adv_generator_both_train.run(feed_dict=adv_feed_dict)
+                        # Update D network
+                        _, summary_str = sess.run([adv_train_step, adv_sum],
+                                                       feed_dict=adv_feed_dict)
+                        summary_writer.add_summary(summary_str, i)
+
+                        # Update G network
+                        _, summary_str = sess.run([generator_train_step_through_adv, g_sum],
+                                                       feed_dict=adv_feed_dict)
+                        summary_writer.add_summary(summary_str, i)
+
+                        # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
+                        _, summary_str = sess.run([generator_train_step_through_adv, g_sum],
+                                                       feed_dict=adv_feed_dict)
+                        summary_writer.add_summary(summary_str, i)
+
                         # if i < 10000:
                         #     generator_train_step.run(feed_dict=feed_dict)
 
