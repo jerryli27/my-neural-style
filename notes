@@ -945,3 +945,9 @@ interesting, but are they also discrete?
         TODO: This is also worth trying.
 
         The first experiment would be simply use the johnson network but change the last dimension of the input to 6.
+
+        Well the result was: the image looked almost like the style image except with black and white color. You can
+        see a tiny shade of the content image. I didn't think that the network can use the style image directly instead
+        of learning some complicated loss function.. lol that was dumb.
+        I can't feed the style image as an input then... otherwise the network will just use it directly on the output
+        image.

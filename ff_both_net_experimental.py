@@ -141,7 +141,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                 image = johnson_feedforward_net_util.net(input_concatenated, one_hot_style_vector=one_hot_style_vector)
             else:
-                style_images_stacked = tf.pack([tf.squeeze(style_images, axis=0) for _ in range(batch_size)], name='style_images_stacked')
+                style_images_stacked = tf.pack([tf.squeeze(style_images, [0]) for _ in range(batch_size)], name='style_images_stacked')
                 inputs_concatenated_with_style = tf.concat(3, (inputs, style_images_stacked), name='inputs_concatenated_with_style')
                 image = johnson_feedforward_net_util.net(inputs_concatenated_with_style, one_hot_style_vector=one_hot_style_vector)  # Deleting the  / 255.0 because the network normalizes automatically.
         elif use_skip_noise_4:
@@ -346,8 +346,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                         image = johnson_feedforward_net_util.net(input_concatenated, one_hot_style_vector=one_hot_style_vector, reuse=True)
                     else:
-
-                        style_images_stacked = tf.pack([tf.squeeze(style_images, axis=0) for _ in range(batch_size)],
+                        style_images_stacked = tf.pack([tf.squeeze(style_images, [0]) for _ in range(batch_size)],
                                                        name='style_images_stacked')
                         inputs_concatenated_with_style = tf.concat(3, (inputs, style_images_stacked),
                                                                    name='inputs_concatenated_with_style')
@@ -598,7 +597,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[content_img_style_weight_mask_placeholder] = style_weight_mask_for_training[content_img_style_weight_mask_batch_i, :, :, :]
 
                         train_step_for_each_style[style_i].run(feed_dict=feed_dict)
-                        if style_i == len(styles) - 1:
+                        if i % 10 == 0 and style_i == len(styles) - 1:
                             print_progress(i, feed_dict=feed_dict, last=last_step)
                             # Record loss after each training round.
                             with open(save_dir + 'loss.tsv','a') as loss_record_file:

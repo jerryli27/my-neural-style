@@ -26,7 +26,7 @@ def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the colored pixiv images for training. ',
-                        metavar='CONTENT_FOLDER', default='/home/ubuntu/pixiv/pixiv_training_filtered/')
+                        metavar='CONTENT_FOLDER', default='/home/ubuntu/pixiv_full/pixiv/')  # /home/ubuntu/pixiv/pixiv_training_filtered/'
     parser.add_argument('--output', dest='output',
                         help='Output path.',
                         metavar='OUTPUT', required=True)
