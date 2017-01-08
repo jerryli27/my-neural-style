@@ -33,28 +33,11 @@ def imsave(path, img):
 
 def read_and_resize_images(dirs, height, width):
     if isinstance(dirs, list):
-        # image_1 = imread(dirs[0])
-        # # If there is no width and height, we automatically take the first image's width and height and apply to all the
-        # # other ones.
-        # if width is not None:
-        #     if height is not None:
-        #         target_shape = (height, width)
-        #     else:
-        #         target_shape = (int(math.floor(float(image_1.shape[0]) /
-        #                                        image_1.shape[1] * width)), width)
-        # else:
-        #     if height is not None:
-        #         target_shape = (height, int(math.floor(float(image_1.shape[1]) /
-        #                                                image_1.shape[0] * height)))
-        #     else:
-        #         target_shape = (image_1.shape[0], image_1.shape[1])
         if height is not None and width is not None:
             target_shape = (height, width)
         else:
             target_shape = None
         images = [imread(d, shape=target_shape) for d in dirs]
-
-
         return images
     elif isinstance(dirs, str):
         image_1 = imread(dirs)
@@ -180,6 +163,13 @@ def get_np_array_num_elements(arr):
     return reduce(mul, arr.shape, 1)
 
 def np_image_dot_mask(image, mask):
+    """
+    Dot a numpy-represented image with a numpy-represented mask and return the dotted result (image features takes
+    priority over mask features, so the return is image_dot_mask1_rgb, image_dot_mask2_rgb, ...)
+    :param image: Numpy represented image with shape (batch, height, width, num_colors)
+    :param mask:  Numpy represented image with shape (batch, height, width, num_masks)
+    :return: Numpy represented image with shape (batch, height, width, num_colors * num_masks)
+    """
     image_layer_num = image.shape[3]
     mask_layer_num = mask.shape[3]
 

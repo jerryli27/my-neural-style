@@ -1,21 +1,14 @@
 """
-This file will take two images, one...
-"""
-
-"""
-This file uses the texture nets technique to generate an image by combining style of an input and the content of
-another input. The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
+This file will take two images, one style and one content image. It can help visualize how the vgg network layers are
+activated for each one. This is mainly for learning and debugging purposes.
 """
 
 from argparse import ArgumentParser
 
-import numpy as np
 from matplotlib import pyplot as plt
 
 import feature_visualize_util
 from general_util import *
-
-# TODO: Needs reformatting.
 
 # default arguments
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'

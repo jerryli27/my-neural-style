@@ -2,8 +2,10 @@
 This file implements functions to visualize the feature layers
 """
 
+import numpy as np
+import tensorflow as tf
+
 import vgg
-from feedforward_style_net_util import *
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 # STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')

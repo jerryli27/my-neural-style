@@ -1,5 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-TODO: Add description
+This file is for running a neural network (or two if you're using the adversarial net) that can generate colored
+version of sketches given the black-and-white sketch image. Training takes a lot of image/paintings, preferably with
+sharp edges so that the sketch generator can do its job.
 """
 from argparse import ArgumentParser
 
@@ -10,8 +14,10 @@ from general_util import *
 CONTENT_WEIGHT = 5e0
 TV_WEIGHT = 2e2
 
-LEARNING_RATE = 0.0002 # Set according to dcgan paper
-ITERATIONS = 160000
+LEARNING_RATE = 0.0002  # Set according to the dcgan paper but it also works when we're not using adversarial net.
+ITERATIONS = 160000  # Change this according to the dataset used.
+# The larger batch size the more memory required and the slower the training is, but it provides stability. Usually 4
+# or 8 works well for non-adversarial condition.
 BATCH_SIZE = 64
 PRINT_ITERATIONS = 100
 

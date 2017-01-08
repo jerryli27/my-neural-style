@@ -3,20 +3,16 @@ This file uses the texture nets technique to generate an image by combining styl
 another input. The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
 """
 
-import os
-from matplotlib import pyplot as plt
-from matplotlib.widgets import Slider, Button, RadioButtons
 import time
-
-import texture_nets
-import n_style_feedforward_net
-from general_util import *
+from argparse import ArgumentParser
 
 import numpy as np
 import scipy.misc
+from matplotlib import pyplot as plt
+from matplotlib.widgets import Slider
 
-import math
-from argparse import ArgumentParser
+import n_style_feedforward_net
+from general_util import *
 
 # TODO: Needs reformatting.
 

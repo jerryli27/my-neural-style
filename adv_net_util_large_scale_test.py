@@ -200,7 +200,7 @@ CONTENT_WEIGHT = 5e0
 TV_WEIGHT = 2e2
 
 LEARNING_RATE = 0.0002 # Set according to dcgan paper
-ITERATIONS = 160000
+ITERATIONS = 4000
 BATCH_SIZE = 8
 PRINT_ITERATIONS = 100
 
@@ -270,14 +270,15 @@ def build_parser():
 
 
 def main():
+    print('Starting to run a large scale test on the capability of the adversarial network. It will probably take a '
+          'while depending on the input you provided. At the end you should see that the loss for both real and fake '
+          'iamges goes down to near zero (in the recorded adv_loss.tsv). If not, then the test failed.')
+
     parser = build_parser()
     options = parser.parse_args()
 
     if not os.path.exists(options.model_save_dir):
         os.makedirs(options.model_save_dir)  # TODO: add %s content_img_style_weight_mask_string to the model_save_dir
-
-    print(options.checkpoint_output % (0, 'real'))
-    print(options.output % ('fake'))
 
     for iteration, best_real_img, best_fake_img in color_sketches_net(
             height=options.height,

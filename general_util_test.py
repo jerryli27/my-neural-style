@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import shutil
 import tempfile
 import unittest
@@ -20,8 +22,11 @@ class TestDataUtilMethods(unittest.TestCase):
         image_path = dirpath + '/image.jpg'
         f = open(image_path, 'w')
         f.close()
+        image_path2 = dirpath + u'/骨董屋・三千世界の女主人_12746957.png'
+        f = open(image_path2, 'w')
+        f.close()
         actual_answer = get_all_image_paths_in_dir(dirpath + '/')
-        expected_answer = [image_path]
+        expected_answer = [image_path, image_path2.encode('utf8')]
         shutil.rmtree(dirpath)
         self.assertEqual(expected_answer,actual_answer)
 
@@ -108,23 +113,15 @@ class TestDataUtilMethods(unittest.TestCase):
 
         expected_output = np.ones((1,2,3,6))
         expected_output[0,0,0,0] = 0
-        expected_output[0,0,0,1] = 0
+        expected_output[0,0,0,1] = 1
         expected_output[0,0,0,2] = 1
-        expected_output[0,0,0,3] = 2
-        expected_output[0,0,0,4] = 1
+        expected_output[0,0,0,3] = 0
+        expected_output[0,0,0,4] = 2
         expected_output[0,0,0,5] = 2
 
         actual_output = np_image_dot_mask(image, mask)
 
         np.testing.assert_array_equal(actual_output, expected_output)
-
-    def test_dumb(self):
-        content_dirs = get_all_image_paths_in_dir('4_color_masks/')
-
-        content_pre_list = read_and_resize_bw_mask_images(
-                get_batch(content_dirs, 0, 4),
-                256, 256, 1, 4)
-        print content_pre_list
 
     def test_imread_rgba(self):
         height = 256
@@ -150,7 +147,25 @@ class TestDataUtilMethods(unittest.TestCase):
 
         shutil.rmtree(content_folder)
 
+    def test_imread_utf8(self):
+        height = 256
+        width = 256
 
+        content_folder = tempfile.mkdtemp()
+        # DO NOT NOT NOT TEST WITH .jpg... There's a compression process. I debugged on this for half an hour.
+        # Also refrain from using completely random image. There's a normalization or whatever process when I save
+        # the image.
+        image_path = content_folder + (u'/骨董屋・三千世界の女主人_12746957.png')
+        # current_image = np.random.rand(height, width, 3)
+        # current_image = current_image / np.max(current_image) * 255.0
+        current_image = np.ones((height, width, 3)) * 255.0
+        current_image[0,0,0] = 0
+        scipy.misc.imsave(image_path, current_image)
+
+        actual_output = imread(get_all_image_paths_in_dir(content_folder + '/')[0])
+
+        expected_answer = np.round(np.array(current_image))
+        np.testing.assert_almost_equal(expected_answer, actual_output)
 
 if __name__ == '__main__':
     unittest.main()

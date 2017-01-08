@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 This file is the main file for feed forward style synthesis. It combined numerous techniques, including but not limited
 to: texture synthesis, style synthesis, style synthesis with mrf, and fast neural doodles.

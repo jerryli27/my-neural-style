@@ -12,12 +12,20 @@ class TestImageToSketchesUtil(unittest.TestCase):
 
         cv2.waitKey(0)
 
+        actual_output = raw_input('Please enter "y" if you think the result is satisfactory')
+        expected_output = 'y'
+        self.assertEqual(actual_output, expected_output)
+
     def test_generate_hint_from_image(self):
         img = general_util.imread('face_36_566_115.png')
         sketch = generate_hint_from_image(img)
         cv2.imshow('Input', cv2.cvtColor(img, cv2.COLOR_RGB2BGR).astype(np.uint8))
         cv2.imshow('Hint', cv2.cvtColor(sketch.astype(np.uint8), cv2.COLOR_RGBA2BGR))
         cv2.waitKey(0)
+
+        actual_output = raw_input('Please enter "y" if you think the result is satisfactory')
+        expected_output = 'y'
+        self.assertEqual(actual_output, expected_output)
 
 
 if __name__ == '__main__':

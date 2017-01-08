@@ -877,3 +877,44 @@ interesting, but are they also discrete?
     c. GAN
         The Adv network works on discriminating between anime and real life. So it's not the adv network
         The generator network... I don't know. I need to log the loss.
+        I implemented loss logging. The loss seems to be working fine. I think the network did not work due to a lack
+        of training data. The DCGAN paper used 1 million + images for each training task. Mine had 20000... This is a
+        huge difference. I will get the larger set of training data asap and I will not try training it further...
+
+3. Text DCGAN
+    The generator can't produce satisfying kanji. The adversarial net was too good.
+    The problem still exist for kanji. There is definitely more smooth transition than pure english alphabet, but it's
+    still kind of discrete. I see that the generator mastered some of the strikes, but the overall structure of the
+    kanji generated was just bad.
+
+4. Random thoughts
+    I was thinking if I can use the techniques in style generation in nijigen stuff. I know how to mimic the 'style' of
+    any image. What happens if I train a network on anime images and use that instead of vgg? Would the gram loss still
+    work on that network?
+
+2017/01/08
+1. Nijigen
+    Finally finished downloading. Decompressing will take a while...
+2. Text DCGAN,
+    I also realized the problem for kanji. There are too few of them. The DCGAN requires 1 million + examples at least.
+    I realized yesterday that although natural language is inheritly discrete, it can be turned into a continuous
+    problem(otherwise no ml approach would've existed for nlp). The problem is how. If I have a loss function and a
+    generator network, then I don't need the adversarial network (yet). I can google CNN for nlp
+3. Neural style
+    a. Feature size
+        I just found through training the back prop version that the feature is indeed only related to the vgg network.
+        I reached the wrong conclusion previously because I used a style image that was not so obvious. If I choose one
+        correctly, then it is obvious that the feature size has nothing to do with how large things are in the content
+        image.
+        One remedy I can think of is to directly change the conv layers of the vgg network. If I want the features look
+        twice as big, I just need to change the stride from 1 to 2 or from 2 to 4. Generating smaller features would be
+        tricker but still possible. I can provide an image twice as large, run neural style on it, and then reshape it
+        back to the original size.
+        Todo: Let me actually do this. I didn't see people do that yet.
+
+    b. Code refactoring
+        I refactored the code a little and deleted unnecessary files/functions. It looked a little bit cleaner now.
+
+    c. Fast forward both style and content.
+        Hum... I need a lot of style images. Well I have them right? The pixiv dataset.
+        TODO: This is also worth trying but let me first do the feature size.

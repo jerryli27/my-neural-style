@@ -24,7 +24,7 @@ class AdvNetTest(tf.test.TestCase):
             self.assertEqual(2, final_shape[1])
 
             all_var = get_net_all_variables()
-            expected_var_number = 3*7+2
+            expected_var_number = 3*7+2-2  # Minus 2 because the first conv layer is not normalized.
             self.assertEqual(len(all_var), expected_var_number )
 
 if __name__ == '__main__':

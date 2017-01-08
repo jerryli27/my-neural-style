@@ -6,8 +6,8 @@ import tensorflow as tf
 
 import neural_util
 import vgg
-from feedforward_style_net_util import gramian
 from general_util import *
+from neural_util import gramian
 
 def concatenate_mask_layer_tf(mask_layer, original_layer):
     """

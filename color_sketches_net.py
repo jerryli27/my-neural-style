@@ -1,7 +1,6 @@
 """
-This file implements the feed-forward texture networks as described in http://arxiv.org/abs/1603.03417 and
-https://arxiv.org/abs/1603.03417.
-(For more background, see http://arxiv.org/abs/1508.06576)
+This file implements a network that can learn to color sketches.
+I first saw it at http://qiita.com/taizan/items/cf77fd37ec3a0bef5d9d
 """
 
 # import gtk.gdk
@@ -17,6 +16,19 @@ import unet_util
 from general_util import *
 
 
+try:
+    image_summary = tf.image_summary
+    scalar_summary = tf.scalar_summary
+    histogram_summary = tf.histogram_summary
+    merge_summary = tf.merge_summary
+    SummaryWriter = tf.train.SummaryWriter
+except:
+    image_summary = tf.summary.image
+    scalar_summary = tf.summary.scalar
+    histogram_summary = tf.summary.histogram
+    merge_summary = tf.summary.merge
+    SummaryWriter = tf.summary.FileWriter
+
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
                         learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,
@@ -27,6 +39,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
+    TODO: modify the description.
 
     This function yields tuples (iteration, image); `iteration` is None
     if this is the final image (the last iteration).  Other tuples are yielded
@@ -100,22 +113,21 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
                                        beta2=0.999).minimize(generator_loss_through_adv, var_list=generator_all_var)
 
-                # with tf.control_dependencies([generator_train_step_through_adv, adv_train_step]):
                 with tf.control_dependencies([generator_train_step_through_adv, adv_train_step_i, adv_train_step_g]):
                     adv_generator_both_train = tf.no_op(name='adv_generator_both_train')
 
-                generator_train_step =   tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
+                generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_l2)
 
-                adv_loss_real_sum = tf.summary.scalar("adv_loss_real", adv_loss_from_i)
-                adv_loss_fake_sum = tf.summary.scalar("adv_loss_fake", adv_loss_from_g)
+                adv_loss_real_sum = scalar_summary("adv_loss_real", adv_loss_from_i)
+                adv_loss_fake_sum = scalar_summary("adv_loss_fake", adv_loss_from_g)
 
-                g_loss_sum = tf.summary.scalar("g_loss", generator_loss_through_adv)
-                adv_loss_sum = tf.summary.scalar("adv_loss", adv_loss)
+                g_loss_sum = scalar_summary("g_loss", generator_loss_through_adv)
+                adv_loss_sum = scalar_summary("adv_loss", adv_loss)
 
 
-                g_sum = tf.summary.merge([adv_loss_fake_sum, g_loss_sum])
-                adv_sum = tf.summary.merge([adv_loss_real_sum, adv_loss_sum])
+                g_sum = merge_summary([adv_loss_fake_sum, g_loss_sum])
+                adv_sum = merge_summary([adv_loss_real_sum, adv_loss_sum])
             else:
                 # optimizer setup
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
@@ -203,7 +215,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
             else:
                 # Initialize log writer
-                summary_writer = tf.summary.FileWriter("./logs", sess.graph)
+                summary_writer = SummaryWriter("./logs", sess.graph)
 
                 with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
                     pass  # Clear the loss file before appending to it.

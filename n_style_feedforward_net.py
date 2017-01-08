@@ -8,12 +8,16 @@ https://arxiv.org/abs/1603.03417.
 from sys import stderr
 
 import cv2
+import tensorflow as tf
 
 import johnson_feedforward_net_util
 import neural_doodle_util
+import neural_util
 import skip_noise_4_feedforward_net
-from feedforward_style_net_util import *
+import vgg
+from general_util import *
 from mrf_util import mrf_loss
+from neural_util import gramian, total_variation, precompute_image_features
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # According to http://arxiv.org/abs/1603.03417

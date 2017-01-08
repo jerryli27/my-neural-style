@@ -4,7 +4,6 @@ from sys import stderr
 import numpy as np
 import tensorflow as tf
 
-import feedforward_style_net_util
 import neural_doodle_util
 import neural_util
 import vgg
@@ -111,7 +110,7 @@ def stylize(network, initial, content, styles, shape, iterations,
                     if new_gram:
                         gram = neural_util.gram_stacks(features, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
-                        gram = feedforward_style_net_util.gramian(features)
+                        gram = neural_util.gramian(features)
                         # _, height, width, number = map(lambda i: i.value, features.get_shape())
                         # size = height * width * number
                         # features = tf.reshape(features, (-1, number))
@@ -175,7 +174,7 @@ def stylize(network, initial, content, styles, shape, iterations,
                         if new_gram:
                             gram = neural_util.gram_stacks(layer, shift_size=new_gram_shift_size, stride=new_gram_stride)
                         else:
-                            gram = feedforward_style_net_util.gramian(layer)
+                            gram = neural_util.gramian(layer)
                         # _, height, width, number = map(lambda i: i.value, layer.get_shape())
                         # size = height * width * number
                         # feats = tf.reshape(layer, (-1, number))

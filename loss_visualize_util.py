@@ -2,8 +2,10 @@
 This file implements functions to visualize some potential loss functions.
 """
 
+import numpy as np
+import tensorflow as tf
+
 import vgg
-from feedforward_style_net_util import *
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
 # STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
@@ -62,25 +64,4 @@ def np_gramian(layer):
         single_layer = layer[i,:,:,:]
         feats = np.reshape(single_layer, (-1, number))
         grams.append(np.matmul(np.transpose(feats), feats) / size)
-    return np.array(grams)
-
-# Calculate the per pixel loss for a single feature.
-def gramian_loss_per_pix(layer, feature_x, feature_y):
-    # Takes (batches, height, width, channels) and computes gramians of dimension (batches, channels, channels)
-    # activations_shape = activations.get_shape().as_list()
-    # """
-    # Instead of iterating over #channels width by height matrices and computing similarity, we vectorize and compute
-    # the entire gramian in a single matrix multiplication.
-    # """
-    batch, height, width, number = layer.shape
-    size = height * width * number
-    grams = []
-    for i in range(batch):
-        single_layer = layer[i,:,:,:]
-        feats = np.reshape(single_layer, (-1, number))
-        feats_gram = []
-        for j in range(number):
-            feats_gram.append(np.matmul(np.transpose(feats[:,j]), feats[:,j])  / size)
-        # grams.append(np.matmul(np.transpose(feats), feats))
-        grams.append(np.array(feats_gram))
     return np.array(grams)

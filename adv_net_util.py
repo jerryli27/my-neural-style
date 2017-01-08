@@ -12,8 +12,7 @@ CONV_DOWN_STRIDES=[2, 1, 2, 1, 2, 1, 2]
 
 
 # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly by 4.
-def net(image, mirror_padding=False, reuse=False):
-    # TODO: check if we need mirror padding
+def net(image, reuse=False):
     prev_layer = image
     prev_layer_list = [image]
 
@@ -22,21 +21,14 @@ def net(image, mirror_padding=False, reuse=False):
             # Do not normalize the first layer. According to https://arxiv.org/abs/1511.06434.
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
                                        filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
-                                       mirror_padding=mirror_padding, norm='batch_norm' if i != 0 else '', name='conv_down_%d' %i, reuse=reuse)
+                                       mirror_padding=False, norm='batch_norm' if i != 0 else '', name='conv_down_%d' %i, reuse=reuse)
             prev_layer = current_layer
             prev_layer_list.append(current_layer)
 
 
+        # The output is the unnormalized probability for each class (we have two here). the loss should be
+        # sparse_softmax_cross_entropy_with_logits.
         final = fully_connected(prev_layer, 2, name='fc', reuse=reuse)
-
-
-        # TODO: here's one layer I added versus the original version described. As of my understanding, the output
-        # is an indicator vector indicating whether it is original or fake. So I changed the output dimension from 2
-        # to 1 and added a sigmoid function. But according to https://arxiv.org/abs/1511.06434, the loss should be
-        # sparse_softmax_cross_entropy_with_logits so we don't need sigmoid. I didn't understand this part fully.
-        # fc = fully_connected(prev_layer, 1, name='fc',
-        #                      reuse=reuse)
-        # final = tf.nn.sigmoid(fc)
     return final
 
 

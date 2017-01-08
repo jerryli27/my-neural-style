@@ -166,6 +166,7 @@ def patch_matching_experiment(generated_layer_patches, style_layer_patches, patc
     return ret, nns
 
 
+#TODO: nn is not differentiable...
 def mrf_loss_experiment(style_layer, generated_layer, patch_size=3, name='mrf_loss'):
     generated_layer_patches = create_local_patches(generated_layer, patch_size)
     style_layer_patches = create_local_patches(style_layer, patch_size)
@@ -248,5 +249,3 @@ def nearest_neighbor_indices_loss(nn):
 
 
     return total_variation
-
-#TODO: nn is not differentiable...

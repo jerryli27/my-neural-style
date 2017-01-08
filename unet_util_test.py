@@ -17,11 +17,6 @@ class UnetTest(tf.test.TestCase):
             image_shape = input_layer.get_shape().as_list()
             final_shape = unet_output.get_shape().as_list()
 
-            #
-            # if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
-            #     print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
-            #     raise AssertionError
-
             self.assertAllEqual(image_shape, final_shape)
 
             sess.run(tf.initialize_all_variables())
@@ -30,7 +25,7 @@ class UnetTest(tf.test.TestCase):
 
             feed_dict = {input_layer:feed_input}
             actual_output = unet_output.eval(feed_dict)
-            print(actual_output)
+            self.assertTrue(actual_output is not None, 'The unet failed to produce an output.')
 
 
 if __name__ == '__main__':
