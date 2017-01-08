@@ -910,11 +910,34 @@ interesting, but are they also discrete?
         twice as big, I just need to change the stride from 1 to 2 or from 2 to 4. Generating smaller features would be
         tricker but still possible. I can provide an image twice as large, run neural style on it, and then reshape it
         back to the original size.
-        Todo: Let me actually do this. I didn't see people do that yet.
+        Plan: Let me actually do this. I didn't see people do that yet.
+
+        I tried several experiments. Simply doubling the stride size in either conv or max pool layers did not work.
+        I then tried to resize the filter so that they become twice as large. That worked to some extent but the image
+        produced was blurry. Wait of course it is blurry. The network is not trained on doubling the size of the
+        filters at all!
+
+        Imagining the activation of one to two layers would make sense. If you try to make the activations be the same
+        after you enlarge the image to twice as large, then it is clear that you should also make the weight matrix
+        twice the size and keep the max pool the same. If you change the max pool, then you change the relationship
+        between pixels and the masks trained is no longer valid.  Multiplying the ksize and stride of the max pool
+        layer is more like making the shape of the features smaller. The result is usually not so satisfactory because
+        the features should be already pretty small.
+
+        Anyway it is not so satisfactory yet. The best I can do is to produce a blurry distored version of the enlarged
+        style.
+
+        I tried varying the style image size again, and again apart from sharper looking image, the size of the
+        features did not change with regard to the style image size. This result is the same as I've tried before.
+
+        Anyway, this is good for now.
+
+
 
     b. Code refactoring
         I refactored the code a little and deleted unnecessary files/functions. It looked a little bit cleaner now.
 
     c. Fast forward both style and content.
         Hum... I need a lot of style images. Well I have them right? The pixiv dataset.
-        TODO: This is also worth trying but let me first do the feature size.
+        TODO: This is also worth trying.
+

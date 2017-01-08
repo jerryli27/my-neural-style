@@ -15,7 +15,7 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu3_1', 'relu4_1') # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
+STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1') # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
 STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
@@ -27,7 +27,7 @@ def stylize(network, initial, content, styles, shape, iterations,
             output_semantic_mask = None, style_semantic_masks = None, semantic_masks_weight = 1.0,
             print_iterations=None, checkpoint_iterations=None, new_gram = False, new_gram_shift_size = 4,
             new_gram_stride = 1, semantic_masks_num_layers=4,
-            content_img_style_weight_mask = None):
+            content_img_style_weight_mask = None, feature_size = 1):
     """
     Stylize images.
 
@@ -37,6 +37,7 @@ def stylize(network, initial, content, styles, shape, iterations,
 
     :rtype: iterator[tuple[int|None,image]]
     """
+    # Note: the "feature size' option is not so well developed yet. It is hard to enlarge the features.
     global STYLE_LAYERS
     if content is not None:
         STYLE_LAYERS = STYLE_LAYERS_WITH_CONTENT
@@ -55,6 +56,10 @@ def stylize(network, initial, content, styles, shape, iterations,
         if content_img_style_weight_mask.dtype!=np.float32:
             print('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
             raise AssertionError
+    assert isinstance(feature_size, int) and feature_size >= 1
+    # This is for preventing the usage of experimental feature "feature_size". It is not doing what I want.
+    assert feature_size == 1
+
 
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
     # 3 corresponds to rgb.
@@ -70,8 +75,7 @@ def stylize(network, initial, content, styles, shape, iterations,
 
         # compute content features in feedforward mode
         content_image = tf.placeholder('float', shape=shape, name='content_image')
-        net = vgg.pre_read_net(vgg_data, content_image)
-        # net, mean_pixel = vgg.net(network, content_image)
+        net = vgg.pre_read_net(vgg_data, content_image, stride_multiplier=feature_size)
         content_features[CONTENT_LAYER] = net[CONTENT_LAYER]
         net_layer_sizes = vgg.get_net_layer_sizes(net)
 
@@ -92,8 +96,7 @@ def stylize(network, initial, content, styles, shape, iterations,
         for i in range(len(styles)):
             style_images.append(tf.placeholder('float', shape=style_shapes[i], name='style_image_%d' % i))
             print(style_shapes[i])
-            net = vgg.pre_read_net(vgg_data, style_images[-1])
-            # net, _ = vgg.net(network, style_images[-1])
+            net = vgg.pre_read_net(vgg_data, style_images[-1], stride_multiplier=feature_size)
             style_pres.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
             for layer in STYLE_LAYERS:
                 features = net[layer]
@@ -132,7 +135,7 @@ def stylize(network, initial, content, styles, shape, iterations,
             initial = np.array([vgg.preprocess(initial, mean_pixel)])
             initial = initial.astype('float32')
         image = tf.Variable(initial)
-        net, _ = vgg.net(network, image)
+        net, _ = vgg.net(network, image, stride_multiplier=feature_size)
 
         # content loss
         _, height, width, number = map(lambda i: i.value, content_features[CONTENT_LAYER].get_shape())
