@@ -930,7 +930,10 @@ interesting, but are they also discrete?
         I tried varying the style image size again, and again apart from sharper looking image, the size of the
         features did not change with regard to the style image size. This result is the same as I've tried before.
 
-        Anyway, this is good for now.
+        Anyway, this is good for now. The main reason of failure I suspect is that resizing the filters is not good
+        enough for interpreting the styles accurately. The distortion was too large and the style no longer looks like
+        the original one. I know how to make the features look smaller though: just run it on larger content image and
+        resize the result afterwards. :)
 
 
 
@@ -941,3 +944,4 @@ interesting, but are they also discrete?
         Hum... I need a lot of style images. Well I have them right? The pixiv dataset.
         TODO: This is also worth trying.
 
+        The first experiment would be simply use the johnson network but change the last dimension of the input to 6.

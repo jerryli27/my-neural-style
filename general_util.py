@@ -88,10 +88,17 @@ def read_and_resize_bw_mask_images(dirs, height, width, batch_size, semantic_mas
 def get_all_image_paths_in_dir(dir):
     assert(dir.endswith('/'))
     content_dirs = []
-    for file_name in os.listdir(dir):
-        base, ext = os.path.splitext(file_name)
-        if ext == '.jpg' or ext == '.png':
-            content_dirs.append(dir + file_name)
+    # for file_name in os.listdir(dir):
+    #     base, ext = os.path.splitext(file_name)
+    #     if ext == '.jpg' or ext == '.png':
+    #         content_dirs.append(dir + file_name)
+    for path, subdirs, files in os.walk(dir):
+        for name in files:
+            full_file_path = os.path.join(path, name)
+            base, ext = os.path.splitext(full_file_path)
+            if ext == '.jpg' or ext == '.png':
+                content_dirs.append(full_file_path)
+
     if (len(content_dirs) == 0):
         print('There is no image in directory %s' % dir)
         raise AssertionError

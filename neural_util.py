@@ -1,5 +1,6 @@
 from operator import mul
 
+import numpy as np
 import tensorflow as tf
 
 import vgg

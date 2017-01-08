@@ -22,7 +22,9 @@ class TestDataUtilMethods(unittest.TestCase):
         image_path = dirpath + '/image.jpg'
         f = open(image_path, 'w')
         f.close()
-        image_path2 = dirpath + u'/骨董屋・三千世界の女主人_12746957.png'
+        subfolder = '/subfolder'
+        os.makedirs(dirpath + subfolder)
+        image_path2 = dirpath + subfolder + u'/骨董屋・三千世界の女主人_12746957.png'
         f = open(image_path2, 'w')
         f.close()
         actual_answer = get_all_image_paths_in_dir(dirpath + '/')
