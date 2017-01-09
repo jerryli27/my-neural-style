@@ -32,7 +32,7 @@ except:
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
                         learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,
-                       lr_decay_steps=50000,
+                       lr_decay_steps=20000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                         do_restore_and_train=False, content_folder=None,
@@ -133,6 +133,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_l2)
+                g_loss_sum = scalar_summary("g_loss", generator_loss_l2)
 
 
             def print_progress(i, feed_dict, adv_feed_dict, last=False):
@@ -307,12 +308,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                     else:
                         adv_feed_dict = None
-
-                        # TEST printing before training
                         print_progress(i, feed_dict=feed_dict, adv_feed_dict=adv_feed_dict, last=last_step)
 
-                        generator_train_step.run(feed_dict=feed_dict)
-                    print_progress(i, feed_dict=feed_dict, adv_feed_dict= adv_feed_dict, last=last_step)
+                        _, summary_str = sess.run([generator_train_step, g_loss_sum], feed_dict=feed_dict)
+                        summary_writer.add_summary(summary_str,i)
+
                     # TODO:
                     if i%100==0:
                         with open(save_dir + 'loss.tsv','a') as loss_record_file:

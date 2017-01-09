@@ -951,3 +951,21 @@ interesting, but are they also discrete?
         of learning some complicated loss function.. lol that was dumb.
         I can't feed the style image as an input then... otherwise the network will just use it directly on the output
         image.
+
+2017/01/08
+1. Nijigen
+    Training using the new dataset. The new dataset was smaller than I thought. It is 10x larger than the previous one,
+    but still did not reach 1 million. The size was 100 thousand.
+
+2. Text DCGAN,
+    After changing the generator to a more complicated structure and training for the whole night, it was clear that
+    the generator did not to a good job. The best it could do was to produce the word "the" and "one" from time to time.
+    I therefore decided to change the task to generating english-looking words.
+
+3. Neural style
+    Still thinking
+
+Plan:
+    Run text dcgan for word generation
+    Run color_sketches_runscript with hint
+    resume color_sketches_resume_runscript to see if the network can learn anything without hint

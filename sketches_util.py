@@ -49,10 +49,13 @@ def generate_hint_from_image(img):
     :return: A hint of the color usage of the original image image with shape (height, width, 4) or
     (batch, height, width, 4) where the last additional dimension stands for a (in rgba).
     """
-    _max_num_hint = 20
-    _min_num_hint = 20
-    _hint_width = 5
-    _hint_height = 5
+    _max_num_hint = 15
+    _min_num_hint = 5
+    _hint_max_width = 15
+    _hint_min_width = 5
+    _hint_max_area = 100
+    _hint_min_area = 25
+
     if len(img.shape) == 4:
         img_diff_dilation_gray =  np.array([generate_hint_from_image(img[i, ...]) for i in range(img.shape[0])])
         return img_diff_dilation_gray
@@ -61,6 +64,8 @@ def generate_hint_from_image(img):
             num_hints = _max_num_hint
         else:
             num_hints = random.randint(_min_num_hint, _max_num_hint)
+
+
         height, width, rgb = img.shape
         assert rgb==3
 
@@ -69,10 +74,14 @@ def generate_hint_from_image(img):
 
         # Select random sites to give hints about the color used at that point.
         for hint_i in range(num_hints):
+            curr_hint_width = random.randint(_hint_min_width, _hint_max_width)
+            curr_hint_area = random.randint(_hint_min_area, _hint_max_area)
+            curr_hint_height = int(curr_hint_area / curr_hint_width)
+
             rand_x = random.randint(0,width-1)
             rand_y = random.randint(0,height-1)
-            ret[max(0, rand_y - _hint_height / 2):min(height, rand_y + _hint_height),max(0, rand_x - _hint_width / 2):min(width, rand_x + _hint_width),0:3] = img[max(0, rand_y - _hint_height / 2):min(height, rand_y + _hint_height),max(0, rand_x - _hint_width / 2):min(width, rand_x + _hint_width),:]
-            ret[max(0, rand_y - _hint_height / 2):min(height, rand_y + _hint_height),max(0, rand_x - _hint_width / 2):min(width, rand_x + _hint_width),3] = np.ones((min(height, rand_y + _hint_height) - max(0, rand_y - _hint_height / 2),min(width, rand_x + _hint_width) - max(0, rand_x - _hint_width / 2))) * 255.0
+            ret[max(0, rand_y - curr_hint_height / 2):min(height, rand_y + curr_hint_height),max(0, rand_x - curr_hint_width / 2):min(width, rand_x + curr_hint_width),0:3] = img[max(0, rand_y - curr_hint_height / 2):min(height, rand_y + curr_hint_height),max(0, rand_x - curr_hint_width / 2):min(width, rand_x + curr_hint_width),:]
+            ret[max(0, rand_y - curr_hint_height / 2):min(height, rand_y + curr_hint_height),max(0, rand_x - curr_hint_width / 2):min(width, rand_x + curr_hint_width),3] = np.ones((min(height, rand_y + curr_hint_height) - max(0, rand_y - curr_hint_height / 2),min(width, rand_x + curr_hint_width) - max(0, rand_x - curr_hint_width / 2))) * 255.0
         return ret
 
     else:
