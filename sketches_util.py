@@ -43,14 +43,13 @@ def image_to_sketch(img):
         raise AssertionError
 
 
-def generate_hint_from_image(img):
+def generate_hint_from_image(img, max_num_hint = 15, min_num_hint = 5):
     """
     :param image: An image represented in numpy array with shape (height, width, 3) or (batch, height, width, 3)
     :return: A hint of the color usage of the original image image with shape (height, width, 4) or
     (batch, height, width, 4) where the last additional dimension stands for a (in rgba).
     """
-    _max_num_hint = 15
-    _min_num_hint = 5
+    assert max_num_hint >= min_num_hint
     _hint_max_width = 15
     _hint_min_width = 5
     _hint_max_area = 100
@@ -60,10 +59,10 @@ def generate_hint_from_image(img):
         img_diff_dilation_gray =  np.array([generate_hint_from_image(img[i, ...]) for i in range(img.shape[0])])
         return img_diff_dilation_gray
     elif len(img.shape) == 3:
-        if _min_num_hint == _max_num_hint:
-            num_hints = _max_num_hint
+        if min_num_hint == max_num_hint:
+            num_hints = max_num_hint
         else:
-            num_hints = random.randint(_min_num_hint, _max_num_hint)
+            num_hints = random.randint(min_num_hint, max_num_hint)
 
 
         height, width, rgb = img.shape

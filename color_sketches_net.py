@@ -35,7 +35,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        lr_decay_steps=20000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
-                        do_restore_and_train=False, content_folder=None,
+                        do_restore_and_train=False, restore_from_noadv_to_adv = True,content_folder=None,
                         from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
@@ -152,8 +152,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
         # It used to track and record only the best one with lowest loss. This is no longer necessary and I think
         # just recording the one generated at each round will make it easier to debug.
         best_image = None
-
-        saver = tf.train.Saver()
+        if restore_from_noadv_to_adv and use_adversarial_net:
+            saver = tf.train.Saver(generator_all_var + [learning_rate_decayed])
+        else:
+            saver = tf.train.Saver()
         with tf.Session() as sess:
             if do_restore_and_generate:
                 assert batch_size == 1
@@ -233,6 +235,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     else:
                         stderr("No checkpoint found. Exiting program")
                         return
+                    if restore_from_noadv_to_adv and use_adversarial_net:
+                        sess.run(tf.initialize_variables(adv_net_all_var))
+                        # Now change the saver back to normal
+                        saver = tf.train.Saver()
                 else:
                     sess.run(tf.initialize_all_variables())
 
@@ -340,7 +346,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       1,
                                                                       content_weight, tv_weight,
                                                                       learning_rate,
-                                                                      use_adversarial_net=use_adversarial_net,
+                                                                      use_adversarial_net=False,  # use_adversarial_net=use_adversarial_net,
                                                                       use_hint=use_hint,
                                                                       save_dir=save_dir,
                                                                       do_restore_and_generate=True,

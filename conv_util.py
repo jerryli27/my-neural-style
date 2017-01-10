@@ -110,8 +110,9 @@ def conv_init_vars(net, out_channels, filter_size, transpose=False, name ='', re
             weights_shape = [filter_size, filter_size, in_channels, out_channels]
         else:
             weights_shape = [filter_size, filter_size, out_channels, in_channels]
-        weights_initializer = tf.truncated_normal(weights_shape, stddev=WEIGHTS_INIT_STDEV, seed=1)
-        weights_init = tf.get_variable('weights_init', dtype=tf.float32, initializer=weights_initializer)
+        weights_initializer = tf.truncated_normal_initializer(stddev=WEIGHTS_INIT_STDEV)
+
+        weights_init = tf.get_variable('weights_init', shape=weights_shape, dtype=tf.float32, initializer=weights_initializer)
         return weights_init
 
 def fully_connected(net, out_channels, activation_fn = None, name ='', reuse = False):
@@ -123,8 +124,8 @@ def fully_connected(net, out_channels, activation_fn = None, name ='', reuse = F
 
         weights_shape = [rows*cols*in_channels, out_channels]
         weights_init_stdv = math.sqrt(1.0/(rows*cols*in_channels))
-        weights_initializer = tf.truncated_normal(weights_shape, stddev=weights_init_stdv, seed=1)
-        weights_init = tf.get_variable('weights_init', dtype=tf.float32, initializer=weights_initializer)
+        weights_initializer = tf.truncated_normal_initializer(stddev=weights_init_stdv)
+        weights_init = tf.get_variable('weights_init', shape=weights_shape, dtype=tf.float32, initializer=weights_initializer)
 
         bias_shape = [out_channels]
         bias_init = tf.get_variable('bias_init', shape=bias_shape, dtype=tf.float32, initializer=tf.constant_initializer())

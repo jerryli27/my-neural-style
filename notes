@@ -971,3 +971,9 @@ Plan:
     Run text dcgan for word generation
     Run color_sketches_runscript with hint
     resume color_sketches_resume_runscript to see if the network can learn anything without hint
+
+2017/01/09
+1. Nijigen
+    After training for around 50000 rounds, the result was still not satisfactory. The coloring just isn't right, even
+    with the hint. When using 256x256, the hint can be generalized to a larger area successfully but that property
+    disappeared when I try to generate image of larger size using the network trained on 256x256...
