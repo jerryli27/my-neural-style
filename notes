@@ -942,7 +942,7 @@ interesting, but are they also discrete?
 
     c. Fast forward both style and content.
         Hum... I need a lot of style images. Well I have them right? The pixiv dataset.
-        TODO: This is also worth trying.
+        Plan: This is also worth trying.
 
         The first experiment would be simply use the johnson network but change the last dimension of the input to 6.
 
@@ -963,6 +963,8 @@ interesting, but are they also discrete?
     I therefore decided to change the task to generating english-looking words.
 
     still failed,,,
+    I realized that there are still definitely no more than 1 million english words in the training set. Probably on
+    the level of 10 thousands, which is not enough. I'm planning to work on something else for now.
 
 3. Neural style
     Still thinking
@@ -977,3 +979,12 @@ Plan:
     After training for around 50000 rounds, the result was still not satisfactory. The coloring just isn't right, even
     with the hint. When using 256x256, the hint can be generalized to a larger area successfully but that property
     disappeared when I try to generate image of larger size using the network trained on 256x256...
+
+    I Also tried to retrain a network that has been trained previously without adversarial network with adv=True. The
+    result was not satisfying. The adversarial losses for both adversarial network and the genrator was decreasing
+    slowly but the l2 loss became larger. I don't know if training the adv network along side the l2 loss would help or
+    not. I don't think so personally... But I'll give it a try.
+
+2. Neural style
+    Planning to separate the nijigen stuff out from the neural style. The neural style project's reimplementation part
+    is almost done. I just need more refactoring and that's it. So spend the time refactoring code.

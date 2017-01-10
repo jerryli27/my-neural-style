@@ -35,7 +35,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        lr_decay_steps=20000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
-                        do_restore_and_train=False, restore_from_noadv_to_adv = True,content_folder=None,
+                        do_restore_and_train=False, restore_from_noadv_to_adv = False,content_folder=None,
                         from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
@@ -112,28 +112,29 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                        beta2=0.999).minimize(adv_loss_from_g, var_list=adv_net_all_var)
                 generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
                                        beta2=0.999).minimize(generator_loss_through_adv, var_list=generator_all_var)
-
-                with tf.control_dependencies([generator_train_step_through_adv, adv_train_step_i, adv_train_step_g]):
-                    adv_generator_both_train = tf.no_op(name='adv_generator_both_train')
-
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_l2)
+
+                with tf.control_dependencies([generator_train_step_through_adv, generator_train_step]):
+                    generator_both_train = tf.no_op(name='generator_both_train')
+
 
                 adv_loss_real_sum = scalar_summary("adv_loss_real", adv_loss_from_i)
                 adv_loss_fake_sum = scalar_summary("adv_loss_fake", adv_loss_from_g)
 
-                g_loss_sum = scalar_summary("g_loss", generator_loss_through_adv)
+                generator_loss_through_adv_sum = scalar_summary("g_loss_through_adv", generator_loss_through_adv)
                 adv_loss_sum = scalar_summary("adv_loss", adv_loss)
+                generator_loss_l2_sum = scalar_summary("g_l2_loss", generator_loss_l2)
 
 
-                g_sum = merge_summary([adv_loss_fake_sum, g_loss_sum])
-                adv_sum = merge_summary([adv_loss_real_sum, adv_loss_sum])
+                g_sum = merge_summary([generator_loss_through_adv_sum, generator_loss_l2_sum])
+                adv_sum = merge_summary([adv_loss_fake_sum, adv_loss_real_sum, adv_loss_sum])
             else:
                 # optimizer setup
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_l2)
-                g_loss_sum = scalar_summary("g_loss", generator_loss_l2)
+                g_loss_sum = scalar_summary("g_l2_loss", generator_loss_l2)
 
 
             def print_progress(i, feed_dict, adv_feed_dict, last=False):
@@ -236,7 +237,16 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         stderr("No checkpoint found. Exiting program")
                         return
                     if restore_from_noadv_to_adv and use_adversarial_net:
-                        sess.run(tf.initialize_variables(adv_net_all_var))
+                        # Simply running this doesn;t seem to work.
+                        # sess.run(tf.initialize_variables(adv_net_all_var))
+
+                        # Get all variables except the generator net and the learning rate
+                        if '0.12.0' in tf.__version__:
+                            all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+                        else:
+                            all_vars = tf.get_collection(tf.GraphKeys.VARIABLES)
+                        var_not_saved = [item for item in all_vars if item not in (generator_all_var + [learning_rate_decayed])]
+                        sess.run(tf.initialize_variables(var_not_saved))
                         # Now change the saver back to normal
                         saver = tf.train.Saver()
                 else:
@@ -300,17 +310,18 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         summary_writer.add_summary(summary_str, i)
 
                         # Update G network
-                        _, summary_str = sess.run([generator_train_step_through_adv, g_sum],
+                        # TODO: Try to update the generator network with loss both from adversarial net and from l2.
+                        _, summary_str = sess.run([generator_both_train, g_sum],
                                                        feed_dict=adv_feed_dict)
                         summary_writer.add_summary(summary_str, i)
 
-                        # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                        _, summary_str = sess.run([generator_train_step_through_adv, g_sum],
-                                                       feed_dict=adv_feed_dict)
-                        summary_writer.add_summary(summary_str, i)
+                        # # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
+                        # _, summary_str = sess.run([generator_train_step_through_adv, g_sum],
+                        #                                feed_dict=adv_feed_dict)
+                        # summary_writer.add_summary(summary_str, i)
 
-                        # if i < 10000:
-                        #     generator_train_step.run(feed_dict=feed_dict)
+                        summary_str, = sess.run([g_loss_sum], feed_dict=feed_dict)
+                        summary_writer.add_summary(summary_str,i)
 
                     else:
                         adv_feed_dict = None
@@ -319,21 +330,25 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         _, summary_str = sess.run([generator_train_step, g_loss_sum], feed_dict=feed_dict)
                         summary_writer.add_summary(summary_str,i)
 
-                    # TODO:
-                    if i%100==0:
-                        with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                            current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
-                            loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
-                        if use_adversarial_net:
-                            with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
-                                current_adv_loss_i = adv_loss_from_i.eval(feed_dict=adv_feed_dict)
-                                current_adv_loss_g = adv_loss_from_g.eval(feed_dict=adv_feed_dict)
-                                current_gen_loss_through_adv = generator_loss_through_adv.eval(feed_dict=adv_feed_dict)
-                                loss_record_file.write('%d\t%g\t%g\t%g\t%g\n' % (i, current_generator_l2_loss, current_adv_loss_i, current_adv_loss_g, current_gen_loss_through_adv))
+                    # TEST printing after training
+                    print_progress(i, feed_dict=feed_dict, adv_feed_dict=adv_feed_dict, last=last_step)
+
+                    # # TODO:
+                    # if i%100==0:
+                    #     with open(save_dir + 'loss.tsv','a') as loss_record_file:
+                    #         current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
+                    #         loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
+                    #     if use_adversarial_net:
+                    #         with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
+                    #             current_adv_loss_i = adv_loss_from_i.eval(feed_dict=adv_feed_dict)
+                    #             current_adv_loss_g = adv_loss_from_g.eval(feed_dict=adv_feed_dict)
+                    #             current_gen_loss_through_adv = generator_loss_through_adv.eval(feed_dict=adv_feed_dict)
+                    #             loss_record_file.write('%d\t%g\t%g\t%g\t%g\n' % (i, current_generator_l2_loss, current_adv_loss_i, current_adv_loss_g, current_gen_loss_through_adv))
 
 
                     if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                         saver.save(sess, save_dir + 'model.ckpt', global_step=i)
+                        print('Checkpoint saved.')
 
                         if test_img_dir is not None:
                             test_image = imread(test_img_dir)
