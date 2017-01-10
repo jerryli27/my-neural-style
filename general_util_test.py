@@ -169,5 +169,11 @@ class TestDataUtilMethods(unittest.TestCase):
         expected_answer = np.round(np.array(current_image))
         np.testing.assert_almost_equal(expected_answer, actual_output)
 
+    def test_get_file_name(self):
+        image_path = (u'home/ubuntu/骨董屋・三千世界の女主人_12746957.png')
+        actual_output = get_file_name(image_path)
+        expected_output = u'骨董屋・三千世界の女主人_12746957'
+        self.assertEqual(actual_output,expected_output)
+
 if __name__ == '__main__':
     unittest.main()

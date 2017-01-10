@@ -1,6 +1,7 @@
 import math
 import os
 from operator import mul
+from os.path import basename
 
 import numpy as np
 import scipy.misc
@@ -204,3 +205,5 @@ def resize_image_like_layers(image, shape):
     resized_image = np.transpose(np.array(resized_image), (0,2,3,1))
     return resized_image
 
+def get_file_name(file_path):
+    return basename(file_path).split('.')[0]

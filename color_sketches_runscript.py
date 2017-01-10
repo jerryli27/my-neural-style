@@ -5,9 +5,9 @@
 
 from general_util import *
 
-learning_rate=0.001 # 0.001
+learning_rate=0.0005 # 0.001
 iterations=800000# 800000
-batch_size=4  # The larger the better.
+batch_size=8  # The larger the better.
 content_weight=5
 checkpoint_iterations=1000
 height = 256
