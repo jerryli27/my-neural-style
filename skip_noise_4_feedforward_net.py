@@ -4,7 +4,8 @@
 
 import tensorflow as tf
 
-from neural_util import conv2d_mirror_padding, conv2d_transpose_mirror_padding
+from conv_util import conv2d_mirror_padding, conv2d_transpose_mirror_padding
+from neural_util import conv2d_transpose_mirror_padding
 
 WEIGHTS_INIT_STDEV = .1
 nums_3x3down = [4, 4, 4, 4,4]

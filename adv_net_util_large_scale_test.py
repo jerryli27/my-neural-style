@@ -139,12 +139,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     current_lr = learning_rate_decayed.eval()
                     sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
 
-                current_content_dirs = get_batch(real_dirs, i * batch_size, batch_size)
+                current_content_dirs = get_batch_paths(real_dirs, i * batch_size, batch_size)
                 content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
                                                                 input_shape[2])
 
 
-                current_fake_dirs = get_batch(fake_dirs, i * batch_size, batch_size)
+                current_fake_dirs = get_batch_paths(fake_dirs, i * batch_size, batch_size)
                 fake_pre_list = read_and_resize_batch_images(current_fake_dirs, input_shape[1],
                                                                 input_shape[2])
 

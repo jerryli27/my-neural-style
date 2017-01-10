@@ -6,9 +6,10 @@ import scipy.ndimage
 import tensorflow as tf
 
 
-# The stride multiplier feature is an attempt to make the style/texture features look larger.  It is not stable yet so
-# please keep it at 1.
+
 def net(data_path, input_image, stride_multiplier = 1):
+    # The stride multiplier feature is an attempt to make the style/texture features look larger. It is not fully
+    # developed yet so please keep it at 1.
     layers = (
         'conv1_1', 'relu1_1', 'conv1_2', 'relu1_2', 'pool1',
 
@@ -97,6 +98,8 @@ def pre_read_net(data, input_image, stride_multiplier = 1):
 
 
 def _conv_layer(input, weights, bias, stride_multiplier = 1):
+    # The stride multiplier feature is an attempt to make the style/texture features look larger. It is not fully
+    # developed yet so please keep it at 1.
     if stride_multiplier == 1:
         conv = tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1, 1, 1),
                 padding='SAME')
@@ -117,6 +120,8 @@ def _conv_layer(input, weights, bias, stride_multiplier = 1):
 
 
 def _pool_layer(input, stride_multiplier = 1):
+    # The stride multiplier feature is an attempt to make the style/texture features look larger. It is not fully
+    # developed yet so please keep it at 1.
     # Multiply the ksize and strides by the stride multiplier will have an effect similar to making the features look
     # a little bit smaller.
     # return tf.nn.max_pool(input, ksize=(1, 2 * stride_multiplier, 2 * stride_multiplier, 1), strides=(1, 2 * stride_multiplier, 2 * stride_multiplier, 1),

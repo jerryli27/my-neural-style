@@ -988,3 +988,12 @@ Plan:
 2. Neural style
     Planning to separate the nijigen stuff out from the neural style. The neural style project's reimplementation part
     is almost done. I just need more refactoring and that's it. So spend the time refactoring code.
+
+    Refactor status:
+        general_util: Done
+        neural_doodle_util:
+        neural_util: Done except for adding some unit tests.
+        vgg: No need for refactoring because it's mostly other's code.
+        mrf_util:
+
+        stylize:

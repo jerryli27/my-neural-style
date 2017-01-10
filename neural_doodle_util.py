@@ -4,7 +4,7 @@
 
 import tensorflow as tf
 
-import neural_util
+import experimental_util
 import vgg
 from general_util import *
 from neural_util import gramian
@@ -84,7 +84,7 @@ def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride 
         mask = tf.expand_dims(mask, dim=3)
         layer_dotted_with_mask = vgg_layer_dot_mask(mask, layer)
         if new_gram:
-            layer_dotted_with_mask_gram = neural_util.gram_stacks(layer_dotted_with_mask, shift_size, stride)
+            layer_dotted_with_mask_gram = experimental_util.gram_stacks(layer_dotted_with_mask, shift_size, stride)
         else:
             layer_dotted_with_mask_gram = gramian(layer_dotted_with_mask)
         # Normalization is very importantant here. Because otherwise there is no way to compare two gram matrices

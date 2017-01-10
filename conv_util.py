@@ -6,8 +6,6 @@ import math
 
 import tensorflow as tf
 
-from neural_util import conv2d_mirror_padding, conv2d_transpose_mirror_padding
-
 WEIGHTS_INIT_STDEV = .1
 def conv_layer(net, num_filters, filter_size, strides, relu=True, mirror_padding = True, one_hot_style_vector = None, norm='instance_norm', name ='', reuse = False):
     with tf.variable_scope('conv_layer' + name, reuse=reuse):
@@ -136,3 +134,43 @@ def fully_connected(net, out_channels, activation_fn = None, name ='', reuse = F
         if activation_fn is not None:
             fc1 = activation_fn(fc1)
         return fc1
+
+
+def conv2d_mirror_padding(input_layer, w, b, kernel_size, stride=1):
+    """
+
+    :param input_layer: Input tensor.
+    :param w: Weight. Either tensorflow constant or variable.
+    :param b: Bias. Either tensorflow constant or variable.
+    :param stride: Stride of the conv.
+    :return: the 2d convolution tensor with mirror padding.
+    """
+    # N_out = N_in / stride + 2N_pad - N_kernel_size + 1. We have N_out and N_in fixed (treat as 0) and solve for N_pad.
+    n_pad = (kernel_size - 1) / 2
+    padding = [[0, 0], [n_pad, n_pad], [n_pad, n_pad], [0, 0]]
+    mirror_padded_input_layer = tf.pad(input_layer, padding, "REFLECT", name='mirror_padding')
+    conv_output = tf.nn.conv2d(mirror_padded_input_layer, w, strides=[1, stride, stride, 1], padding='VALID')
+    if b is not None:
+        return tf.nn.bias_add(conv_output, b)
+    else:
+        return conv_output
+
+
+def conv2d_transpose_mirror_padding(input_layer, w, b, output_shape, kernel_size, stride=1):
+    """
+    TODO: For some reason transpose mirror padding is causing some error in the optimization step
+    :param input_layer: Input tensor.
+    :param w: Weight. Either tensorflow constant or variable.
+    :param b: Bias. Either tensorflow constant or variable.
+    :param stride: Stride of the conv.
+    :return: the 2d convolution tensor with mirror padding.
+    """
+    # N_out = N_in / stride + 2N_pad - N_kernel_size + 1. We have N_out and N_in fixed (treat as 0) and solve for N_pad.
+    n_pad = (kernel_size - 1) / 2
+    padding = [[0, 0], [n_pad, n_pad], [n_pad, n_pad], [0, 0]]
+    mirror_padded_input_layer = tf.pad(input_layer, padding, "REFLECT", name='mirror_padding')
+    conv_output = tf.nn.conv2d_transpose(mirror_padded_input_layer, w, output_shape, strides=[1, stride, stride, 1], padding='VALID')
+    if b is not None:
+        return tf.nn.bias_add(conv_output, b)
+    else:
+        return conv_output

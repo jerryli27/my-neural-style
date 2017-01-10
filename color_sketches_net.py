@@ -35,7 +35,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        lr_decay_steps=20000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
-                        do_restore_and_train=False, restore_from_noadv_to_adv = False,content_folder=None,
+                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
                         from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
@@ -270,7 +270,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         current_lr = learning_rate_decayed.eval()
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
 
-                    current_content_dirs = get_batch(content_dirs, i * batch_size, batch_size)
+                    current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
                     content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
                                                                     input_shape[2])
 
@@ -319,9 +319,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         # _, summary_str = sess.run([generator_train_step_through_adv, g_sum],
                         #                                feed_dict=adv_feed_dict)
                         # summary_writer.add_summary(summary_str, i)
-
-                        summary_str, = sess.run([g_loss_sum], feed_dict=feed_dict)
-                        summary_writer.add_summary(summary_str,i)
 
                     else:
                         adv_feed_dict = None

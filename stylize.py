@@ -4,6 +4,7 @@ from sys import stderr
 import numpy as np
 import tensorflow as tf
 
+import experimental_util
 import neural_doodle_util
 import neural_util
 import vgg
@@ -111,7 +112,7 @@ def stylize(network, initial, content, styles, shape, iterations,
                     # ***** TEST GRAM*****
                     # TODO: Testing new loss function.
                     if new_gram:
-                        gram = neural_util.gram_stacks(features, shift_size=new_gram_shift_size, stride=new_gram_stride)
+                        gram = experimental_util.gram_stacks(features, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
                         gram = neural_util.gramian(features)
                         # _, height, width, number = map(lambda i: i.value, features.get_shape())
@@ -175,7 +176,7 @@ def stylize(network, initial, content, styles, shape, iterations,
                         gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer], new_gram=new_gram, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
                         if new_gram:
-                            gram = neural_util.gram_stacks(layer, shift_size=new_gram_shift_size, stride=new_gram_stride)
+                            gram = experimental_util.gram_stacks(layer, shift_size=new_gram_shift_size, stride=new_gram_stride)
                         else:
                             gram = neural_util.gramian(layer)
                         # _, height, width, number = map(lambda i: i.value, layer.get_shape())

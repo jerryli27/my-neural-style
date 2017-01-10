@@ -138,7 +138,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             if content_img_style_weight_mask is not None:
                 raise NotImplementedError
                 content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
-                input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                input_concatenated = neural_util.concat_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                 image = johnson_feedforward_net_util.net(input_concatenated, one_hot_style_vector=one_hot_style_vector)
             else:
                 style_images_stacked = tf.pack([tf.squeeze(style_images, [0]) for _ in range(batch_size)], name='style_images_stacked')
@@ -153,7 +153,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
             if content_img_style_weight_mask is not None:
                 content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
-                input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                input_concatenated = neural_util.concat_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                 image, skip_noise_list = skip_noise_4_feedforward_net.net(input_concatenated)
             else:
                 image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs)
@@ -343,7 +343,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     if content_img_style_weight_mask is not None:
                         content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
-                        input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                        input_concatenated = neural_util.concat_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                         image = johnson_feedforward_net_util.net(input_concatenated, one_hot_style_vector=one_hot_style_vector, reuse=True)
                     else:
                         style_images_stacked = tf.pack([tf.squeeze(style_images, [0]) for _ in range(batch_size)],
@@ -358,7 +358,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     if content_img_style_weight_mask is not None:
                         content_img_style_weight_mask_placeholder = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 1], name='content_img_style_weight_mask')
-                        input_concatenated = neural_util.add_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
+                        input_concatenated = neural_util.concat_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                         image, skip_noise_list = skip_noise_4_feedforward_net.net(input_concatenated, reuse=True)
                     else:
                         image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs, reuse=True)
@@ -505,14 +505,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     if not style_only:
                         # Load content images
-                        current_content_dirs = get_batch(content_dirs, i * batch_size, batch_size)
+                        current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
                         content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
                                                                         input_shape[2])
 
                     # Load mask images
                     if use_semantic_masks:
-                        current_mask_dirs = get_batch(mask_dirs, i * batch_size * semantic_masks_num_layers,
-                                                      batch_size * semantic_masks_num_layers)
+                        current_mask_dirs = get_batch_paths(mask_dirs, i * batch_size * semantic_masks_num_layers,
+                                                            batch_size * semantic_masks_num_layers)
                         # DEBUG
                         for semantic_masks_i in range(semantic_masks_num_layers):
                             expected_end_str=  '%d.png' %semantic_masks_i
@@ -527,7 +527,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                                        input_shape[2], batch_size,
                                                                        semantic_masks_num_layers)
 
-                    current_style_dirs = get_batch(style_dirs, i * 1, 1)
+                    current_style_dirs = get_batch_paths(style_dirs, i * 1, 1)
                     style_pre_list = read_and_resize_batch_images(current_style_dirs, input_shape[1],
                                                                     input_shape[2])
 
