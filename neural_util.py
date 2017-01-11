@@ -181,9 +181,10 @@ def precompute_image_features(img, layers, shape, vgg_data, mean_pixel, use_mrf,
     """
     features_dict = {}
     g = tf.Graph()
-    # If using gpu, uncomment the following line.
-    # with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
-    with g.as_default(), tf.Session():
+    # Choose to use cpu here because we only need to compute this once and using cpu would provide us more memory
+    # than the gpu and therefore allow us to process larger style images using the extra memory. This will not have
+    # an effect on the training speed later since the gram matrix size is not related to the size of the image.
+    with g.as_default(), g.device('/cpu:0'), tf.Session():
         image = tf.placeholder('float', shape=shape)
         net = vgg.pre_read_net(vgg_data, image)
         style_pre = np.array([vgg.preprocess(img, mean_pixel)])

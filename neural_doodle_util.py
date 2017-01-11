@@ -3,37 +3,33 @@
 # essentially "draw" according to the mask layers provided.
 
 import tensorflow as tf
+from typing import Tuple, Dict
 
 import experimental_util
 import vgg
 from general_util import *
 from neural_util import gramian
 
+
 def concatenate_mask_layer_tf(mask_layer, original_layer):
+    # type: (Union[np.ndarray,tf.Tensor], Union[np.ndarray,tf.Tensor]) -> tf.Tensor
     """
 
-    :param mask_layer: One layer of mask
-    :param original_layer: The original layer before concatenating the mask layer to it.
-    :return: A layer with the mask layer concatenated to the end.
+    :param mask_layer: mask with shape (num_batch, height, width, num_masks)
+    :param original_layer: The vgg feature layer with shape (num_batch, height, width, num_features)
+    :return: The two layers concatenated in their last dimension.
     """
     return tf.concat(3, [mask_layer, original_layer])
 
-def concatenate_mask_layer_np(mask_layer, original_layer):
-    """
-
-    :param mask_layer: One layer of mask
-    :param original_layer: The original layer before concatenating the mask layer to it.
-    :return: A layer with the mask layer concatenated to the end.
-    """
-    return np.concatenate((mask_layer, original_layer), axis=3)
-
-def concatenate_mask(mask, original, layers):
-    ret = {}
-    for layer in layers:
-        ret[layer] = concatenate_mask_layer_tf(mask[layer], original[layer])
-    return ret
-
 def vgg_layer_dot_mask(masks, vgg_layer):
+    # type: (Union[np.ndarray,tf.Tensor], Union[np.ndarray,tf.Tensor]) -> tf.Tensor
+    """
+
+    :param masks:  mask with shape (num_batch, height, width, num_masks)
+    :param vgg_layer: The vgg feature layer with shape (num_batch, height, width, num_features)
+    :return: The two layers dotted for each mask and each feature. The returned tensor will have shape
+    (num_batch, height, width, num_features * num_masks)
+    """
     masks_dim_expanded = tf.expand_dims(masks, 4)
     vgg_layer_dim_expanded = tf.expand_dims(vgg_layer, 3)
     dot = tf.mul(masks_dim_expanded, vgg_layer_dim_expanded)
@@ -43,6 +39,14 @@ def vgg_layer_dot_mask(masks, vgg_layer):
     return dot
 
 def masks_average_pool(masks):
+    # type: (tf.Tensor) -> Dict[str,tf.Tensor]
+    """
+    This  function computes the average pool of a given mask to simulate the process of an image being passed through
+    the vgg network and the boarders in the image become blurry after convolution layers and pooling layers. (It
+    make less sense to apply a perfectly sharp mask to a blurry image.)
+    :param masks: The mask to compute average pool over.
+    :return: A dictionary with key = layer name and value = the average pooled masked at that layer.
+    """
     layers = (
         'conv1_1', 'relu1_1', 'conv1_2', 'relu1_2', 'pool1',
 
@@ -74,7 +78,17 @@ def masks_average_pool(masks):
 
 
 def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride = None):
-    """TODO"""
+    # type: (Union[np.ndarray,tf.Tensor], tf.Tensor, bool, int, int) -> tf.Tensor
+    """
+    It computes the gramian of the given layer with given masks. Each mask will have its independent gramian for that
+    layer.
+    :param layer: The vgg feature layer with shape (num_batch, height, width, num_features)
+    :param masks: mask with shape (num_batch, height, width, num_masks)
+    :param new_gram: Whether we use the experimental gramian. Should be set to False unless experimenting.
+    :param shift_size: Parameter for the experimental gramian.
+    :param stride: Parameter for the experimental gramian.
+    :return: a tensor with dimension gramians of dimension (num_masks, num_batch, num_features, num_features)
+    """
     assert new_gram is False or shift_size is not None
     mask_list = tf.unpack(masks, axis=3) # A list of masks with dimension (1,height, width)
 
@@ -111,50 +125,52 @@ def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride 
 
 
 def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram = False, shift_size = None, stride = None, average_pool = False):
-    # Variables to be returned.
+    # type: (List[np.ndarray], List[np.ndarray], List[Dict[str,np.ndarray]], int, int, int, int, List[str], Dict[str,Union[List[int],Tuple[int]]], float, Dict[str,np.ndarray], Union[List[float],Tuple[float]], bool, bool, bool, Union[int,None], Union[int,None], bool) -> Tuple[Dict[str,np.ndarray],List[Dict[str,np.ndarray]],tf.Tensor,List[tf.Tensor]]
+    """
+    This is a wrapper for computing the features for the style image as well as constructing the placeholders for
+    the semantic masks.
+    TODO: This might be too complicated for a single function...
+    """
     output_semantic_mask_features = {}
 
-    content_semantic_mask = tf.placeholder(tf.float32, [batch_size, height, width,
+    output_semantic_mask_placeholder = tf.placeholder(tf.float32, [batch_size, height, width,
                                                         semantic_masks_num_layers],
-                                           name='content_semantic_mask')
+                                           name='output_semantic_mask_placeholder')
     if mask_resize_as_feature:
-        # TODO: According to http://dmitryulyanov.github.io/feed-forward-neural-doodle/,
-        # resizing might not be sufficient. "Use 3x3 mean filter for mask when the data goes through
-        # convolutions and average pooling along with pooling layers."
-        # But this is just a minor improvement that should not affect the final result too much.
-        # prev_layer = None
         if average_pool:
-            output_semantic_masks_for_each_layer = masks_average_pool(content_semantic_mask)
+            # According to http://dmitryulyanov.github.io/feed-forward-neural-doodle/,
+            # resizing might not be sufficient. "Use 3x3 mean filter for mask when the data goes through
+            # convolutions and average pooling along with pooling layers."
+            output_semantic_masks_for_each_layer = masks_average_pool(output_semantic_mask_placeholder)
         for layer in style_layer_names:
             if average_pool:
                 output_semantic_mask_feature = output_semantic_masks_for_each_layer[layer]
             else:
-                output_semantic_mask_feature = tf.image.resize_images(content_semantic_mask, (
+                output_semantic_mask_feature = tf.image.resize_images(output_semantic_mask_placeholder, (
                     net_layer_sizes[layer][1], net_layer_sizes[layer][2]))
 
             output_semantic_mask_shape = map(lambda i: i.value, output_semantic_mask_feature.get_shape())
             if (net_layer_sizes[layer][1] != output_semantic_mask_shape[1]) or (
                 net_layer_sizes[layer][1] != output_semantic_mask_shape[1]):
-                print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
-                      % (layer, str(net_layer_sizes[layer]), str(output_semantic_mask_shape)))
-                raise AssertionError
+                raise AssertionError("Semantic masks shape not equal. Net layer %s size is: %s, "
+                                     "semantic mask size is: %s" % (layer, str(net_layer_sizes[layer]),
+                                                                    str(output_semantic_mask_shape)))
 
             # Must be normalized (/ 255), otherwise the style loss just gets out of control.
             output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
-            # prev_layer = layer
     else:
-        content_semantic_mask_pre = vgg.preprocess(content_semantic_mask, mean_pixel)
+        content_semantic_mask_pre = vgg.preprocess(output_semantic_mask_placeholder, mean_pixel)
         semantic_mask_net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask_pre)
         for layer in style_layer_names:
             output_semantic_mask_feature = semantic_mask_net[layer] * semantic_masks_weight
             output_semantic_mask_features[layer] = output_semantic_mask_feature
 
     style_semantic_masks_pres = []
-    style_semantic_masks_images = []
+    style_semantic_masks_placeholders = []
     style_semantic_masks_for_each_layer = []
     for i in range(len(styles)):
-        current_style_shape = styles[i].shape # Shape has format : height width rgb
-        style_semantic_masks_images.append(
+        current_style_shape = styles[i].shape  # Shape has format : height width rgb
+        style_semantic_masks_placeholders.append(
             tf.placeholder('float',
                            shape=(1, current_style_shape[0], current_style_shape[1], semantic_masks_num_layers),
                            name='style_mask_%d' % i))
@@ -165,38 +181,18 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
             semantic_mask_net, _ = vgg.pre_read_net(vgg_data, style_semantic_masks_pres[-1])
         else:
             style_semantic_masks_for_each_layer.append(
-                masks_average_pool(style_semantic_masks_images[-1]))
+                masks_average_pool(style_semantic_masks_placeholders[-1]))
 
         for layer in style_layer_names:
             if mask_resize_as_feature:
-                # Must be normalized (/ 255), otherwise the style loss just gets out of control.
-                # features = tf.image.resize_images(style_semantic_masks_images[-1],
-                #                                   (net_layer_sizes[layer][1], net_layer_sizes[layer][2])) / 255.0
-                features = style_semantic_masks_for_each_layer[-1][layer] / 255.0
-
-                # TODO: fix this. The shapes of content masks and style masks are different.
-                # features_shape = map(lambda i: i.value, features.get_shape())
-                # if (net_layer_sizes[layer][1] != features_shape[1]) or (net_layer_sizes[layer][1] != features_shape[1]):
-                #     print("Semantic masks shape not equal. Net layer %s size is: %s, semantic mask size is: %s"
-                #           % (layer, str(net_layer_sizes[layer]), str(features_shape)))
-                #     raise AssertionError
-
+                features = tf.div(style_semantic_masks_for_each_layer[-1][layer], 255.0)
             else:
                 features = semantic_mask_net[layer]
-            features = features * semantic_masks_weight
+            features = tf.mul(features, semantic_masks_weight)
             if use_mrf:
-                style_features[i][layer] = \
-                    concatenate_mask_layer_tf(features, style_features[i][layer])
+                style_features[i][layer] = concatenate_mask_layer_tf(features, style_features[i][layer])
             else:
-                # TODO :testing new gram with masks.
-                style_feature_size = map(lambda i: i.value, style_features[i][layer].get_shape())
                 gram = gramian_with_mask(style_features[i][layer], features, new_gram=new_gram, shift_size=shift_size, stride=stride)
-                #
-                # features = neural_doodle_util.vgg_layer_dot_mask(features, style_features[i][layer])
-                # # TODO: testing gram stacks
-                # gram = gramian(features)
-                # # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                # # gram = neural_util.gram_stacks(features)
                 style_features[i][layer] = gram
 
-    return output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images
+    return output_semantic_mask_features, style_features, output_semantic_mask_placeholder, style_semantic_masks_placeholders

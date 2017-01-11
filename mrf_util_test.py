@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 
 from mrf_util import *
 
@@ -106,8 +105,7 @@ class MrfUtilTest(tf.test.TestCase):
                                          [[4, 4, 5, 5, 7, 7, 8, 8], [5, 5, 6, 6, 8, 8, 9, 9]]],
                                         [[[4, 4, 5, 5, 7, 7, 8, 8], [5, 5, 6, 6, 8, 8, 9, 9]],
                                          [[5, 5, 6, 6, 8, 8, 9, 9], [5, 5, 6, 6, 8, 8, 9, 9]]]])
-            expected_output = expected_output / np.expand_dims(np.linalg.norm(expected_output, axis=(3)),
-                                                               axis=3)
+            expected_output = expected_output / np.expand_dims(np.linalg.norm(expected_output, axis=(3)), axis=3)
             np.testing.assert_array_almost_equal(actual_output.eval(feeddict), expected_output)
 
     def test_mrf_loss_sanity_check(self):
@@ -130,8 +128,8 @@ class MrfUtilTest(tf.test.TestCase):
             # The first batch is a perfect match
             # The second batch has loss: 2^2  * 4 + 1^2  * 4+ 3^2* 4
             expected_output = (2.0 ** 2 * 4 + 1.0 ** 2 * 4 + 3.0 ** 2 * 4) / (
-            height * width * feature) / patch_size ** 2
-            np.testing.assert_array_almost_equal(actual_output.eval(feeddict), expected_output)
+                height * width * feature) / patch_size ** 2
+            self.assertAlmostEqual(actual_output.eval(feeddict), expected_output)
 
 
 if __name__ == '__main__':

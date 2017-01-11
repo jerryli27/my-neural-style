@@ -1,4 +1,15 @@
-# The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
+"""
+This file contains one function that implemented the papers:
+"A Neural Algorithm of Artistic Style" (https://arxiv.org/abs/1508.06576),
+"Combining Markov Random Fields and Convolutional Neural Networks for Image Synthesis" (arxiv.org/abs/1601.04589),
+"Instance Normalization - The Missing Ingredient for Fast Stylization" (https://arxiv.org/abs/1607.08022),
+"Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks" (https://arxiv.org/abs/1603.01768).
+
+In addition, it contains one more functionality to control the degree of stylization of the content image by using a
+weighted mask for the content image ("content_img_style_weight_mask" in the code)
+The code skeleton was borrowed from https://github.com/anishathalye/neural-style.
+"""
+
 from sys import stderr
 
 import numpy as np
@@ -17,7 +28,7 @@ except NameError:
 
 CONTENT_LAYER = 'relu4_2'
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1') # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
-STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
+STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')
 #STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 

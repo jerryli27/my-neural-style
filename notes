@@ -991,9 +991,16 @@ Plan:
 
     Refactor status:
         general_util: Done
-        neural_doodle_util:
+        neural_doodle_util: Done except for adding some unit tests. Also the last function is too large.
         neural_util: Done except for adding some unit tests.
         vgg: No need for refactoring because it's mostly other's code.
-        mrf_util:
+        mrf_util: Done.
 
         stylize:
+        neural_style:
+
+        skip_noise_4_feedforward_net:
+        johnson_feedforward_net_util:
+        n_style_feedforward_net:
+        faster_neural_style:
+        real_time_neural_style:

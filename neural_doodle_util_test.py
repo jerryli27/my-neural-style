@@ -1,12 +1,7 @@
 from neural_doodle_util import *
 
 
-class SquareTest(tf.test.TestCase):
-    def testSquare(self):
-        with self.test_session():
-            x = tf.square([2, 3])
-            self.assertAllEqual(x.eval(), [4, 9])
-
+class NeuralDoodleUtilTest(tf.test.TestCase):
     def test_gramian_with_mask(self):
         with self.test_session():
             batch_size = 1
