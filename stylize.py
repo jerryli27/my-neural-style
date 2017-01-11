@@ -27,9 +27,8 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1') # ('relu1_1', 'relu2_1')  #  ('relu3_1', 'relu4_1')
+STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')  # This is used for texture generation (without content)
 STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1')
-#STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 
@@ -49,7 +48,6 @@ def stylize(network, initial, content, styles, shape, iterations,
 
     :rtype: iterator[tuple[int|None,image]]
     """
-    # Note: the "feature size' option is not so well developed yet. It is hard to enlarge the features.
     global STYLE_LAYERS
     if content is not None:
         STYLE_LAYERS = STYLE_LAYERS_WITH_CONTENT
@@ -61,31 +59,30 @@ def stylize(network, initial, content, styles, shape, iterations,
         assert style_semantic_masks is not None
     if content_img_style_weight_mask is not None:
         if shape[1] != content_img_style_weight_mask.shape[1] or shape[2] != content_img_style_weight_mask.shape[2]:
-            print("The shape of style_weight_mask is incorrect. It must have the same height and width as the "
-                  "output image. The output image has shape: %s and the style weight mask has shape: %s"
-                  % (str(shape), str(content_img_style_weight_mask.shape)))
-            raise AssertionError
+            raise AssertionError("The shape of style_weight_mask is incorrect. It must have the same height and width "
+                                 "as the output image. The output image has shape: %s and the style weight mask has "
+                                 "shape: %s" % (str(shape), str(content_img_style_weight_mask.shape)))
         if content_img_style_weight_mask.dtype!=np.float32:
-            print('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
-            raise AssertionError
+            raise AssertionError('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
     assert isinstance(feature_size, int) and feature_size >= 1
-    # This is for preventing the usage of experimental feature "feature_size". It is not doing what I want.
+
+    # Note: the "feature size' option is not so well developed yet. I tried to use it to enlarge the features.
+    # The following is for preventing the usage of experimental feature "feature_size". It is not doing what I want.
     assert feature_size == 1
 
-
-    # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
+    # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width, 3).
     # 3 corresponds to rgb.
     style_shapes = [(1,) + style.shape for style in styles]
     content_features = {}
     style_features = [{} for _ in styles]
     output_semantic_mask_features = {}
 
-    # make stylized image using backpropogation
+    # Make stylized image using back-propogation.
     with tf.Graph().as_default():
 
         vgg_data, mean_pixel = vgg.read_net(network)
 
-        # compute content features in feedforward mode
+        # Compute content features in feed-forward mode
         content_image = tf.placeholder('float', shape=shape, name='content_image')
         net = vgg.pre_read_net(vgg_data, content_image, stride_multiplier=feature_size)
         content_features[CONTENT_LAYER] = net[CONTENT_LAYER]
@@ -94,16 +91,11 @@ def stylize(network, initial, content, styles, shape, iterations,
         if content is not None:
             content_pre = np.array([vgg.preprocess(content, mean_pixel)])
 
-
-
-        # compute style features in feedforward mode
+        # Compute style features in feed-forward mode.
         style_images = []
         style_pres = []
         if content_img_style_weight_mask is not None:
-            # *** TESTING
-            # Compute style weight masks for each feature layer in vgg.
             style_weight_mask_layer_dict = neural_doodle_util.masks_average_pool(content_img_style_weight_mask)
-            # *** END TESTING
 
         for i in range(len(styles)):
             style_images.append(tf.placeholder('float', shape=style_shapes[i], name='style_image_%d' % i))
@@ -112,36 +104,20 @@ def stylize(network, initial, content, styles, shape, iterations,
             style_pres.append(np.array([vgg.preprocess(styles[i], mean_pixel)]))
             for layer in STYLE_LAYERS:
                 features = net[layer]
-                # # *** TESTING
-                # # apply_style_weight_mask_to_feature_layer. But we don't need to do this to style image.
-                # features = neural_doodle_util.vgg_layer_dot_mask(style_weight_mask_layer_dict[layer], features)
-                # # *** END TESTING
                 if use_mrf or use_semantic_masks:
                     style_features[i][layer] = features  # Compute gram later if use semantic masks
                 else:
-
-                    # ***** TEST GRAM*****
-                    # TODO: Testing new loss function.
                     if new_gram:
                         gram = experimental_util.gram_stacks(features, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
                         gram = neural_util.gramian(features)
-                        # _, height, width, number = map(lambda i: i.value, features.get_shape())
-                        # size = height * width * number
-                        # features = tf.reshape(features, (-1, number))
-                        # gram = tf.matmul(tf.transpose(features), features) / size
                     style_features[i][layer] = gram
-                    # ***** END TEST GRAM*****
         if use_semantic_masks:
             output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
                 style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
                 STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram=new_gram, shift_size=new_gram_shift_size, stride=new_gram_stride, average_pool=False) # TODO: average pool is not working so well in practice??
 
         if initial is None:
-            # if content is None:
-            #     noise = np.random.normal(size=shape, scale=0.1)
-            # else:
-            #     noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
             initial = tf.random_normal(shape) * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, mean_pixel)])
@@ -161,15 +137,10 @@ def stylize(network, initial, content, styles, shape, iterations,
             style_losses = []
             for style_layer in STYLE_LAYERS:
                 layer = net[style_layer]
-
-
-                # *** TESTING
                 if content_img_style_weight_mask is not None:
                     # Apply_style_weight_mask_to_feature_layer, then normalize with average of that style weight mask.
                     layer = neural_doodle_util.vgg_layer_dot_mask(style_weight_mask_layer_dict[style_layer], layer) \
                             / (tf.reduce_mean(style_weight_mask_layer_dict[style_layer]) + 0.000001)
-                # *** END TESTING
-
 
                 if use_mrf:
                     if use_semantic_masks:
@@ -178,11 +149,6 @@ def stylize(network, initial, content, styles, shape, iterations,
                         # layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer], layer)
                     style_losses.append(mrf_loss(style_features[i][style_layer], layer, name = '%d%s' % (i, style_layer)))
                 else:
-
-
-                    # ***** TEST GRAM*****
-                    # TODO: Testing new loss function.
-
                     if use_semantic_masks:
                         gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer], new_gram=new_gram, shift_size=new_gram_shift_size, stride=new_gram_stride)
                     else:
@@ -190,36 +156,30 @@ def stylize(network, initial, content, styles, shape, iterations,
                             gram = experimental_util.gram_stacks(layer, shift_size=new_gram_shift_size, stride=new_gram_stride)
                         else:
                             gram = neural_util.gramian(layer)
-                        # _, height, width, number = map(lambda i: i.value, layer.get_shape())
-                        # size = height * width * number
-                        # feats = tf.reshape(layer, (-1, number))
-                        # gram = tf.matmul(tf.transpose(feats), feats) / size
-
                     style_gram = style_features[i][style_layer]
 
-                    # ***** END TEST GRAM*****
                     if new_gram:
                         style_gram_size = neural_util.get_tensor_num_elements(style_gram) / (new_gram_shift_size ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
                     else:
                         style_gram_size = neural_util.get_tensor_num_elements(style_gram)
-                    style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two
-                    # style_losses.append(tf.nn.l2_loss(gram - style_gram))
+                    style_losses.append(tf.nn.l2_loss(gram - style_gram) / style_gram_size) # TODO: Check normalization constants. the style loss is way too big compared to the other two.
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
         # total variation denoising
-        tv_y_size = _tensor_size(image[:,1:,:,:])
-        tv_x_size = _tensor_size(image[:,:,1:,:])
-        tv_loss = tv_weight * 2 * (
-                (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
-                    tv_y_size) +
-                (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
-                    tv_x_size))
+        tv_loss = tf.mul(neural_util.total_variation(image), tv_weight)
+
+        # tv_y_size = _tensor_size(image[:,1:,:,:])
+        # tv_x_size = _tensor_size(image[:,:,1:,:])
+        # tv_loss = tv_weight * 2 * (
+        #         (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
+        #             tv_y_size) +
+        #         (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
+        #             tv_x_size))
+
         # overall loss
-        # TODO: don't forget to change it back.
         if content is None: # If we are doing style/texture regeration only.
             loss = style_loss + tv_loss
         else:
             loss = content_loss + style_loss + tv_loss
-
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
@@ -236,14 +196,16 @@ def stylize(network, initial, content, styles, shape, iterations,
         # optimization
         best_loss = float('inf')
         best = None
-        with tf.Session() as sess:
+
+        # TODO: TESTING
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             feed_dict = {}
             if content is not None:
                 feed_dict[content_image] = content_pre
             for i in range(len(styles)):
                 feed_dict[style_images[i]] = style_pres[i]
             if use_semantic_masks:
-
                 feed_dict[content_semantic_mask] = output_semantic_mask
                 for styles_iter in range(len(styles)):
                     feed_dict[style_semantic_masks_images[styles_iter]] = style_semantic_masks[styles_iter]

@@ -134,7 +134,7 @@ def gramian(layer):
 
 
 def total_variation(image_batch):
-    # type: (tf.Tensor) -> tf.Tensor
+    # type: (Union[tf.Tensor,tf.Variable]) -> tf.Tensor
     """
     :param image_batch: A 4D tensor of shape (batch_size, height, width, num_features)
     :return: The variation of the input represented as a scalar tensor.
@@ -160,7 +160,7 @@ def total_variation(image_batch):
     # Why there's a 2 here? I added it according to https://github.com/antlerros/tensorflow-fast-neuralstyle and
     # https://github.com/anishathalye/neural-style
     total_var = 2 * (tf.nn.l2_loss(horizontal_diff) / num_pixels_in_horizontal_diff + tf.nn.l2_loss(
-        vertical_diff) / num_pixels_in_vertical_diff) / batch_size
+        vertical_diff) / num_pixels_in_vertical_diff)
 
     return total_var
 

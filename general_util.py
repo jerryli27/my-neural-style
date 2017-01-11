@@ -4,8 +4,9 @@ contains tensorflow or neural network.
 """
 import math
 import os
+import urllib
 from operator import mul
-from os.path import basename
+from os.path import basename, dirname
 
 import numpy as np
 import scipy.misc
@@ -241,3 +242,27 @@ def get_file_name(file_path):
     :return: file name.
     """
     return basename(file_path).split('.')[0]
+
+def download_if_not_exist(fileurl, file_save_path, helpmsg=''):
+    # type: (str, str, str) -> bool
+    """
+
+    :param fileurl: The url to the file to be downloaded.
+    :param file_save_path: Where the downloaded fill will be saved.
+    :param helpmsg: Brief description of the file. It is used for displaying debugging information.
+    :return: Whether the file download process has succeeded.
+    """
+    if not os.path.isfile(file_save_path):
+        print('%s file does not exist. Attempting to download.' % helpmsg)
+        try:
+            file_save_dir = dirname(file_save_path)
+            if not os.path.exists(file_save_dir):
+                os.makedirs(file_save_dir)
+            urllib.urlretrieve(fileurl, file_save_path)
+            if not os.path.isfile(file_save_path):
+                raise AssertionError
+            print('Download finished!')
+            return True
+        except:
+            print('Download failed.')
+            return False

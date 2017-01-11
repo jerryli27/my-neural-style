@@ -14,6 +14,8 @@ SEMANTIC_MASKS_NUM_LAYERS = 4
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
+PRINT_ITERATIONS = 100
+CHECKPOINT_ITERATIONS = 100
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 
@@ -105,10 +107,10 @@ def build_parser():
             metavar='INITIAL')
     parser.add_argument('--print-iterations', type=int,
             dest='print_iterations', help='statistics printing frequency',
-            metavar='PRINT_ITERATIONS')
+            metavar='PRINT_ITERATIONS', default=PRINT_ITERATIONS)
     parser.add_argument('--checkpoint-iterations', type=int,
             dest='checkpoint_iterations', help='checkpoint frequency',
-            metavar='CHECKPOINT_ITERATIONS')
+            metavar='CHECKPOINT_ITERATIONS', default=CHECKPOINT_ITERATIONS)
     return parser
 
 
@@ -119,30 +121,13 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    # content_image = imread(options.content)
-    # style_images = [imread(style) for style in options.styles]
-    #
-    # width = options.width
-    # if width is not None:
-    #     new_shape = (int(math.floor(float(content_image.shape[0]) /
-    #             content_image.shape[1] * width)), width)
-    #     content_image = scipy.misc.imresize(content_image, new_shape)
-
     content_image = None
     if options.content != '':
         print('reading content image %s' %options.content)
         content_image =read_and_resize_images(options.content, options.height, options.width)
-    # style_images = read_and_resize_images(options.styles, options.height, options.width)
-    style_images = read_and_resize_images(options.styles, None, None) # We don't need to resize style images... Testing...
+    style_images = read_and_resize_images(options.styles, None, None) # We don't need to resize style images.
 
     target_shape = (1, options.height, options.width, 3)
-    # Again.. probably no need to resize style images... unless we're doing mrf loss?? Dunno.
-    # for i in range(len(style_images)):
-    #     style_scale = STYLE_SCALE
-    #     if options.style_scales is not None:
-    #         style_scale = options.style_scales[i]
-    #     style_images[i] = scipy.misc.imresize(style_images[i], style_scale *
-    #             target_shape[1] / style_images[i].shape[1])
 
     style_blend_weights = options.style_blend_weights
     if style_blend_weights is None:
@@ -184,22 +169,6 @@ def main():
     style_semantic_masks = None
     if options.use_semantic_masks:
         assert (len(options.style_semantic_masks) == len(options.styles))
-        # output_semantic_mask = imread(options.output_semantic_mask)
-        # width = options.width
-        # if width is not None:
-        #     new_shape = (int(math.floor(float(output_semantic_mask.shape[0]) /
-        #                                 output_semantic_mask.shape[1] * width)), width)
-        #     output_semantic_mask = scipy.misc.imresize(output_semantic_mask, new_shape)
-        # style_semantic_masks = [imread(style) for style in options.style_semantic_masks]
-        # for i in range(len(style_semantic_masks)):
-        #     style_scale = STYLE_SCALE
-        #     if options.style_scales is not None:
-        #         style_scale = options.style_scales[i]
-        #     style_semantic_masks[i] = scipy.misc.imresize(style_semantic_masks[i], style_scale *
-        #             target_shape[1] / style_semantic_masks[i].shape[1])
-        # output_semantic_mask = read_and_resize_images(options.output_semantic_mask, options.height, options.width)
-        # style_semantic_masks = read_and_resize_images(options.style_semantic_masks, options.height, options.width)
-
         output_semantic_mask_paths = get_all_image_paths_in_dir(options.output_semantic_mask)
         output_semantic_mask = read_and_resize_bw_mask_images(output_semantic_mask_paths, options.height, options.width, 1,
                                                               options.semantic_masks_num_layers)
@@ -218,6 +187,13 @@ def main():
     if options.checkpoint_output and "%s" not in options.checkpoint_output:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
+
+    checkpoint_dir = os.path.dirname(options.checkpoint_output)
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    output_dir = os.path.dirname(options.output)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     for iteration, image in stylize(
         network=options.network,
