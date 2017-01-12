@@ -997,7 +997,7 @@ Plan:
         mrf_util: Done.
 
         stylize: Done
-        stylize_examples: write more large-scale tests for stylize that can also serve as examples.
+        stylize_examples: Done writing large-scale tests for stylize that can also serve as examples.
         neural_style:
 
         skip_noise_4_feedforward_net:
@@ -1008,3 +1008,6 @@ Plan:
 
     There's another thing that I noticed. The texture seems to also change with respect to the size of the style image.
     TODO: I will investigate throughly.
+
+2017/01/10
+    worked on refactoring.

@@ -198,11 +198,6 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
                         else:
                             gram = neural_util.gramian(layer)
                     style_gram = style_features[i][style_layer]
-
-                    # if new_gram:
-                    #     style_gram_size = neural_util.get_tensor_num_elements(style_gram) / (new_gram_shift_size ** 2) # 2 is the shift size, 3 squared is the number of gram matrices we have.
-                    # else:
-                    #     style_gram_size = neural_util.get_tensor_num_elements(style_gram)
                     if new_gram:
                         style_gram_size = get_np_array_num_elements(style_gram) / (
                         new_gram_shift_size ** 2)  # 2 is the shift size, 3 squared is the number of gram matrices we have.
@@ -238,8 +233,6 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
         feed_dict = {}
         if content is not None:
             feed_dict[content_image] = content_pre
-        # for i in range(len(styles)):
-        #     feed_dict[style_images[i]] = style_pres[i]
         if use_semantic_masks:
             feed_dict[content_semantic_mask] = output_semantic_mask
             for styles_iter in range(len(styles)):
@@ -248,10 +241,10 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
         for i in range(iterations):
             last_step = (i == iterations - 1)
             print_progress(i, feed_dict, last=last_step)
-            _, this_loss = sess.run([train_step, loss], feed_dict=feed_dict)
+            train_step.run(feed_dict=feed_dict)
 
             if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
-                # this_loss = loss.eval(feed_dict=feed_dict)
+                this_loss = loss.eval(feed_dict=feed_dict)
                 if this_loss < best_loss:
                     best_loss = this_loss
                     best = image.eval()

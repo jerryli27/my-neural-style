@@ -20,8 +20,6 @@ if __name__=='__main__':
                           'stylize_examples/5-content.jpg', 'Content image for mrf loss with semantic masks')
 
 
-    'https://raw.githubusercontent.com/alexjc/neural-doodle/master/samples/Freddie.jpg'
-
 
     # The first example: Generate an image styled with Van Gogh's Starry Sky and with content as 1-content.jpg
     content = 'stylize_examples/1-content.jpg'
@@ -71,13 +69,14 @@ if __name__=='__main__':
 
     # The fourth example: use mrf loss instead of gramian loss. Note that the image can't be too large or it will run
     # out of memory.
+    # TODO: still need testing. Style weight 5 looked too much like style image...
     content = 'stylize_examples/4-content.jpg'
     styles = ['stylize_examples/4-style.jpg']
     learning_rate = 10.0
     iterations = 1000
     width = 512
     height = 384
-    style_weight = 5
+    style_weight = 2.0
 
     checkpoint_output_str = 'stylize_examples/output_checkpoint/4_iter_%s.jpg'
     output_str = 'stylize_examples/output/4_result.jpg'
@@ -87,13 +86,14 @@ if __name__=='__main__':
               %(content, ' '.join(styles), learning_rate, iterations, checkpoint_output_str, output_str, width, height, style_weight))
 
     # The fifth example: use mrf loss with semantic masks.
+    # TODO: still need testing. style weight 10 end up looking too much like the original content image.
     content = 'stylize_examples/5-content.jpg'
     styles = ['stylize_examples/5-style.jpg']
-    learning_rate = 10.0
+    learning_rate = 100.0
     iterations = 1000
     width = 512
     height = 512
-    style_weight = 5
+    style_weight = 10.0
     output_semantic_mask = 'stylize_examples/semantic_masks/Freddie_sem_masks/'
     style_semantic_masks = ['stylize_examples/semantic_masks/Mia_sem_masks/']
     semantic_masks_num_layers = 10
@@ -102,7 +102,7 @@ if __name__=='__main__':
     output_str = 'stylize_examples/output/5_result.jpg'
 
     os.system('python neural_style.py --content=%s --styles %s --learning-rate=%f '
-              '--iterations=%d --checkpoint-output=%s --output=%s --width=%d --height=%d --style-weight=%f --use_mrf --output_semantic_mask=%s --style_semantic_masks %s --semantic_masks_num_layers=%d'
+              '--iterations=%d --checkpoint-output=%s --output=%s --width=%d --height=%d --style-weight=%f --use_mrf --use_semantic_masks --output_semantic_mask=%s --style_semantic_masks %s --semantic_masks_num_layers=%d'
               %(content, ' '.join(styles), learning_rate, iterations, checkpoint_output_str, output_str, width, height, style_weight, output_semantic_mask, ' '.join(style_semantic_masks),semantic_masks_num_layers))
 
     # The sixth example: use the 'content_img_style_weight_mask" to control the degree of stylization for each pixel.
