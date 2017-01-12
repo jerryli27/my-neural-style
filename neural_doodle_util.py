@@ -11,15 +11,30 @@ from general_util import *
 from neural_util import gramian
 
 
-def concatenate_mask_layer_tf(mask_layer, original_layer):
+def concatenate_mask_layer_tf(mask_layer, vgg_feature_layer):
     # type: (Union[np.ndarray,tf.Tensor], Union[np.ndarray,tf.Tensor]) -> tf.Tensor
     """
 
     :param mask_layer: mask with shape (num_batch, height, width, num_masks)
-    :param original_layer: The vgg feature layer with shape (num_batch, height, width, num_features)
+    :param vgg_feature_layer: The vgg feature layer with shape (num_batch, height, width, num_features)
     :return: The two layers concatenated in their last dimension.
     """
-    return tf.concat(3, [mask_layer, original_layer])
+    # TODO: test rescaling the mask layer to the same distribution as the vgg feature layer.
+
+    vgg_feature_layer_mean, vgg_feature_layer_variance = tf.nn.moments(vgg_feature_layer, [0, 1, 2, 3])
+    # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+    vgg_feature_layer_variance = tf.abs(vgg_feature_layer_variance)
+    variance_epsilon = 0.001
+
+    mask_layer_mean, mask_layer_variance = tf.nn.moments(mask_layer, [0, 1, 2, 3])
+    # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+    mask_layer_variance = tf.abs(mask_layer_variance)
+    variance_epsilon = 0.001
+
+    mask_layer_rescaled = (mask_layer - mask_layer_mean) / tf.sqrt(mask_layer_variance) * tf.sqrt(vgg_feature_layer_variance) + vgg_feature_layer_mean
+
+    # return tf.concat(3, [mask_layer, vgg_feature_layer])
+    return tf.concat(3, [mask_layer_rescaled, vgg_feature_layer])
 
 def vgg_layer_dot_mask(masks, vgg_layer):
     # type: (Union[np.ndarray,tf.Tensor], Union[np.ndarray,tf.Tensor]) -> tf.Tensor
