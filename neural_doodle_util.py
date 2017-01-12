@@ -129,6 +129,14 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
     """
     This is a wrapper for computing the features for the style image as well as constructing the placeholders for
     the semantic masks.
+    :param mask_resize_as_feature: If true, resize the mask and use the resized mask as additional feature besides the
+    vgg network layers. If false, pass the masks (must have exactly 3 masks) into the vgg network and use the outputted
+    layers as additional features. The merits of setting this to True is: it supports using more than 3 masks; it's
+    meaning is more understandable than passing a mask through an image recognition network. The merits of setting it
+    to False is: The mean/std for each layer would be the same as any other vgg layers, so it would be better for mrf
+    loss (otherwise, if we use resize it would be treating the masks with different level of importance when doing nn
+    matching since each vgg layer has different magnetudes but the mask layers all have the same magnetude across all
+    layers.)
     TODO: This might be too complicated for a single function...
     """
     output_semantic_mask_features = {}
@@ -159,6 +167,10 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
             # Must be normalized (/ 255), otherwise the style loss just gets out of control.
             output_semantic_mask_features[layer] = output_semantic_mask_feature * semantic_masks_weight / 255.0
     else:
+        if semantic_masks_num_layers != 3:
+            raise AssertionError('The semantic_masks_num_layers must be 3 (RGB) if mask_resize_as_feature is turned '
+                                 'off. Otherwise it is not possible to treat it as an image and pass it through the '
+                                 'vgg network.')
         content_semantic_mask_pre = vgg.preprocess(output_semantic_mask_placeholder, mean_pixel)
         semantic_mask_net, _ = vgg.pre_read_net(vgg_data, content_semantic_mask_pre)
         for layer in style_layer_names:
@@ -190,7 +202,7 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
                 features = semantic_mask_net[layer]
             features = tf.mul(features, semantic_masks_weight)
             if use_mrf:
-                style_features[i][layer] = concatenate_mask_layer_tf(features, style_features[i][layer])
+                style_features[i][layer] = concatenate_mask_layer_tf(features, style_features[i][layer]) # TODO: maybe I should change the magnetude of the mask layers as i'm concatenating it with the vgg feature layers so that they're on the same magnitude.
             else:
                 gram = gramian_with_mask(style_features[i][layer], features, new_gram=new_gram, shift_size=shift_size, stride=stride)
                 style_features[i][layer] = gram

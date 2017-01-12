@@ -127,7 +127,7 @@ def main():
         content_image =read_and_resize_images(options.content, options.height, options.width)
     style_images = read_and_resize_images(options.styles, None, None) # We don't need to resize style images.
 
-    target_shape = (1, options.height, options.width, 3)
+    target_shape = (1, int(options.height), int(options.width), 3)
 
     style_blend_weights = options.style_blend_weights
     if style_blend_weights is None:
@@ -195,37 +195,27 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    for iteration, image in stylize(
-        network=options.network,
-        initial=initial,
-        content=content_image,
-        styles=style_images,
-        shape=target_shape,
-        iterations=options.iterations,
-        content_weight=options.content_weight,
-        style_weight=options.style_weight,
-        style_blend_weights=style_blend_weights,
-        tv_weight=options.tv_weight,
-        learning_rate=options.learning_rate,
-        use_mrf=options.use_mrf,
-        use_semantic_masks = options.use_semantic_masks,
-        output_semantic_mask = output_semantic_mask,
-        style_semantic_masks= style_semantic_masks,
-        semantic_masks_weight= options.semantic_masks_weight,
-        print_iterations=options.print_iterations,
-        checkpoint_iterations=options.checkpoint_iterations,
-        new_gram=options.new_gram,
-        new_gram_shift_size=options.new_gram_shift_size,
-        new_gram_stride=options.new_gram_stride,
-        semantic_masks_num_layers=options.semantic_masks_num_layers,
-        content_img_style_weight_mask = content_img_style_weight_mask
-    ):
+    for iteration, image in stylize(network=options.network, content=content_image, styles=style_images,
+                                    shape=target_shape, iterations=options.iterations,
+                                    content_weight=options.content_weight, style_weight=options.style_weight,
+                                    tv_weight=options.tv_weight, style_blend_weights=style_blend_weights,
+                                    learning_rate=options.learning_rate, initial=initial, use_mrf=options.use_mrf,
+                                    use_semantic_masks=options.use_semantic_masks,
+                                    output_semantic_mask=output_semantic_mask,
+                                    style_semantic_masks=style_semantic_masks,
+                                    semantic_masks_weight=options.semantic_masks_weight,
+                                    print_iterations=options.print_iterations,
+                                    checkpoint_iterations=options.checkpoint_iterations, new_gram=options.new_gram,
+                                    new_gram_shift_size=options.new_gram_shift_size,
+                                    new_gram_stride=options.new_gram_stride,
+                                    semantic_masks_num_layers=options.semantic_masks_num_layers,
+                                    content_img_style_weight_mask=content_img_style_weight_mask):
         output_file = None
         if iteration is not None:
             if options.checkpoint_output:
                 output_file = options.checkpoint_output % iteration
         else:
-            output_file = options.output
+            output_file = str(options.output)
         if output_file:
             imsave(output_file, image)
 
