@@ -19,31 +19,32 @@ def concatenate_mask_layer_tf(mask_layer, vgg_feature_layer):
     :param vgg_feature_layer: The vgg feature layer with shape (num_batch, height, width, num_features)
     :return: The two layers concatenated in their last dimension.
     """
-    # TODO: test rescaling the mask layer to the same distribution as the vgg feature layer.
-    if not isinstance(vgg_feature_layer, tf.Tensor):
-        vgg_feature_layer_variance = np.var(vgg_feature_layer, dtype=np.float64)
-        vgg_feature_layer_mean = np.mean(vgg_feature_layer, dtype=np.float32)
-    else:
-        vgg_feature_layer_mean, vgg_feature_layer_variance = tf.nn.moments(vgg_feature_layer, [0, 1, 2, 3])
-        # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
-        vgg_feature_layer_variance = tf.abs(vgg_feature_layer_variance)
-
-    if not isinstance(mask_layer, tf.Tensor):
-        mask_layer_variance = np.var(mask_layer, dtype=np.float32)
-        mask_layer_mean = np.mean(mask_layer, dtype=np.float32)
-
-    else:
-        mask_layer_mean, mask_layer_variance = tf.nn.moments(mask_layer, [0, 1, 2, 3])
-        # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
-        mask_layer_variance = tf.abs(mask_layer_variance)
-
-
-    variance_epsilon = tf.constant(0.00001, dtype=tf.float32)
-
-    mask_layer_rescaled = (mask_layer - mask_layer_mean) / tf.sqrt(mask_layer_variance + variance_epsilon) * tf.sqrt(vgg_feature_layer_variance + variance_epsilon) + vgg_feature_layer_mean
-
-    # return tf.concat(3, [mask_layer, vgg_feature_layer])
-    return tf.concat(3, [mask_layer_rescaled, vgg_feature_layer])
+    # # TODO: test rescaling the mask layer to the same distribution as the vgg feature layer.
+    # if not isinstance(vgg_feature_layer, tf.Tensor):
+    #     vgg_feature_layer_variance = np.var(vgg_feature_layer, dtype=np.float64)
+    #     vgg_feature_layer_mean = np.mean(vgg_feature_layer, dtype=np.float32)
+    # else:
+    #     vgg_feature_layer_mean, vgg_feature_layer_variance = tf.nn.moments(vgg_feature_layer, [0, 1, 2, 3])
+    #     # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+    #     vgg_feature_layer_variance = tf.abs(vgg_feature_layer_variance)
+    #
+    # if not isinstance(mask_layer, tf.Tensor):
+    #     mask_layer_variance = np.var(mask_layer, dtype=np.float32)
+    #     mask_layer_mean = np.mean(mask_layer, dtype=np.float32)
+    #
+    # else:
+    #     mask_layer_mean, mask_layer_variance = tf.nn.moments(mask_layer, [0, 1, 2, 3])
+    #     # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
+    #     mask_layer_variance = tf.abs(mask_layer_variance)
+    #
+    #
+    # variance_epsilon = tf.constant(0.00001, dtype=tf.float32)
+    #
+    # mask_layer_rescaled = (mask_layer - mask_layer_mean) / tf.sqrt(mask_layer_variance + variance_epsilon) * tf.sqrt(vgg_feature_layer_variance + variance_epsilon) + vgg_feature_layer_mean
+    #
+    # return tf.concat(3, [mask_layer_rescaled, vgg_feature_layer])
+    #
+    return tf.concat(3, [mask_layer, vgg_feature_layer])
 
 def vgg_layer_dot_mask(masks, vgg_layer):
     # type: (Union[np.ndarray,tf.Tensor], Union[np.ndarray,tf.Tensor]) -> tf.Tensor
