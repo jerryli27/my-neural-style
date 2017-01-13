@@ -7,6 +7,7 @@ import random
 
 import cv2
 import numpy as np
+from PIL import Image, ImageStat
 from scipy.stats import threshold
 
 
@@ -87,3 +88,27 @@ def generate_hint_from_image(img, max_num_hint = 15, min_num_hint = 5):
         print('Image has to be either of shape (height, width, num_features) or (batch_size, height, width, num_features)')
         raise AssertionError
 
+def detect_bw(file, thumb_size=40, MSE_cutoff=22, adjust_color_bias=True):
+    # Mainly copied from
+    # http://stackoverflow.com/questions/14041562/python-pil-detect-if-an-image-is-completely-black-or-white
+    pil_img = Image.open(file)
+    bands = pil_img.getbands()
+    if bands == ('R', 'G', 'B') or bands == ('R', 'G', 'B', 'A'):
+        thumb = pil_img.resize((thumb_size, thumb_size))
+        SSE, bias = 0, [0, 0, 0]
+        if adjust_color_bias:
+            bias = ImageStat.Stat(thumb).mean[:3]
+            bias = [b - sum(bias) / 3 for b in bias]
+        for pixel in thumb.getdata():
+            mu = sum(pixel) / 3
+            SSE += sum((pixel[i] - mu - bias[i]) * (pixel[i] - mu - bias[i]) for i in [0, 1, 2])
+        MSE = float(SSE) / (thumb_size * thumb_size)
+        if MSE <= MSE_cutoff:
+            print "grayscale\t",
+        else:
+            print "Color\t\t\t",
+        print "( MSE=", MSE, ")"
+    elif len(bands) == 1:
+        print "Black and white", bands
+    else:
+        print "Don't know...", bands

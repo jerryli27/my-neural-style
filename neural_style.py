@@ -179,7 +179,7 @@ def main():
                                                            options.semantic_masks_num_layers))
 
     content_img_style_weight_mask = None
-    if options.content_img_style_weight_mask:
+    if options.content_img_style_weight_mask and  options.content_img_style_weight_mask!='':
         content_img_style_weight_mask = (read_and_resize_bw_mask_images([options.content_img_style_weight_mask], options.height, options.width, 1, 1))
 
 
