@@ -10,13 +10,13 @@ iterations=800000# 800000
 batch_size=8  # The larger the better.
 content_weight=5
 checkpoint_iterations=1000
-height = 256
-width = 256
+height = 512
+width = 512
 print_iteration = 100
 do_restore_and_train = False  # True
 do_restore_and_generate = False
 use_adversarial_net = False
-use_hint = True
+use_hint = False
 
 test_img = '378688_256.jpg'#u'/home/ubuntu/pixiv/pixiv_testing/骨董屋・三千世界の女主人_12746957.jpg' #'source_compressed/chicago.jpg'
 test_img_hint = '378688_256_hint.png'

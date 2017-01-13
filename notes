@@ -991,14 +991,14 @@ Plan:
 
     Refactor status:
         general_util: Done
-        neural_doodle_util: Done except for adding some unit tests. Also the last function is too large.
+        neural_doodle_util: Done except for adding some unit tests.
         neural_util: Done except for adding some unit tests.
         vgg: No need for refactoring because it's mostly other's code.
         mrf_util: Done.
 
         stylize: Done
         stylize_examples: Done writing large-scale tests for stylize that can also serve as examples.
-        neural_style:
+        neural_style: Done
 
         skip_noise_4_feedforward_net:
         johnson_feedforward_net_util:
@@ -1009,5 +1009,22 @@ Plan:
     There's another thing that I noticed. The texture seems to also change with respect to the size of the style image.
     TODO: I will investigate throughly.
 
-2017/01/10
+2017/01/12
     worked on refactoring.
+
+2017/01/13
+    1. Nijigen
+        Added function to get rid of black and white images from the training dataset. Now I'll try to retrain the whole
+        thing on 512x512 resolution with batch size 8. It will take a while...
+        I also got the "pixivutil2". If I found that it was the problem of not enough data, I will use that to download
+        more data.
+
+
+        Regarding the original author's suggestion to first train for several epochs without adversarial network then
+        add the adversarial network and set the loss to around 1/10~1/20 of the l2 loss, I'll give that a try. The
+        wierd thing is, previously I had adversarial part's loss be around 1/100000 of the l2 loss and it still was
+        having reasonable changes to the model. I don't know what will happen if I time that change by 10000...
+    2. Neural style
+        The refactoring on back propagation part was almost done. I still have one stylize example to do but that was
+        it. Next step is to refactor the feed forward part... But I want to put off that for a while. I haven't worked
+        on something challenging for a while... Refactoring was more like a break.

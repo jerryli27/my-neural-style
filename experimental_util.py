@@ -200,3 +200,31 @@ def nearest_neighbor_indices_loss(nn):
 
 
     return total_variation
+
+
+def avg_initialization_with_masks():
+    # This was put in neural_style.py. But it turned out that I can't really draw nice things with only style loss
+    # using mrf loss and supply a bunch of masks.
+    # style_semantic_mask_paths = get_all_image_paths_in_dir(options.style_semantic_masks[0])
+    # style_semantic_masks_tmp = read_and_resize_bw_mask_images(style_semantic_mask_paths,
+    #                                                           style_images[0].shape[0],
+    #                                                           style_images[0].shape[1], 1,
+    #                                                           options.semantic_masks_num_layers)
+    # style_semantic_masks_tmp = (style_semantic_masks_tmp != 0).astype(np.float32)  # Turn all non-zeros to 1.
+    # dotted = np_image_dot_mask(np.array([style_images[0]]), style_semantic_masks_tmp)
+    #
+    # sum_for_each_mask_rgb = np.repeat(np.sum(style_semantic_masks_tmp, axis=(1, 2)), 3, axis=1)
+    # sum_for_each_dotted_rgb = np.sum(dotted, axis=(1, 2)) / sum_for_each_mask_rgb
+    # # Now we know what the average color of each mask is, apply that color to the masks of the content image.
+    #
+    # output_semantic_mask_paths = get_all_image_paths_in_dir(options.output_semantic_mask)
+    # output_semantic_mask = read_and_resize_bw_mask_images(output_semantic_mask_paths, options.height,
+    #                                                       options.width, 1,
+    #                                                       options.semantic_masks_num_layers)
+    # output_semantic_mask = (output_semantic_mask != 0).astype(np.float32)  # Turn all non-zeros to 1.
+    #
+    # averaged_masks = np.multiply(sum_for_each_dotted_rgb, np.repeat(output_semantic_mask, 3, axis=3))
+    # averaged_masks = np.reshape(averaged_masks, (
+    #     averaged_masks.shape[1], averaged_masks.shape[2], averaged_masks.shape[3] / 3, 3))
+    # initial = np.max(averaged_masks, axis=2)
+    pass

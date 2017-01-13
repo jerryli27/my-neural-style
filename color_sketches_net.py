@@ -31,7 +31,7 @@ except:
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 1.0,
+                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 20000.0,
                        lr_decay_steps=20000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
@@ -98,11 +98,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 logits_from_g = adv_net_prediction_generator_input
 
                 # One represent labeling the image as coming from real image. Zero represent labeling it as generated.
-                adv_loss_from_i = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_i, tf.ones([batch_size], dtype=tf.int64)))
-                adv_loss_from_g = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.zeros([batch_size], dtype=tf.int64)))
+                adv_loss_from_i = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_i, tf.ones([batch_size], dtype=tf.int64))) * adv_net_weight
+                adv_loss_from_g = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.zeros([batch_size], dtype=tf.int64))) * adv_net_weight
 
                 adv_loss =  adv_loss_from_i + adv_loss_from_g
-                generator_loss_through_adv = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.ones([batch_size], dtype=tf.int64)))
+                generator_loss_through_adv = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.ones([batch_size], dtype=tf.int64))) * adv_net_weight
                 # Beta1 = 0.5 according to dcgan paper
                 adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
                                        beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
