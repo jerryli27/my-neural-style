@@ -88,7 +88,7 @@ if __name__=='__main__':
     # TODO: still need testing. style weight 10 end up looking too much like the original content image.
     content = 'stylize_examples/5-content.jpg'
     styles = ['stylize_examples/5-style.jpg']
-    learning_rate = 100.0
+    learning_rate = 10.0
     iterations = 1000
     width = 512
     height = 512
@@ -96,13 +96,14 @@ if __name__=='__main__':
     output_semantic_mask = 'stylize_examples/semantic_masks/Freddie_sem_masks/'
     style_semantic_masks = ['stylize_examples/semantic_masks/Mia_sem_masks/']
     semantic_masks_num_layers = 10
+    semantic_masks_weight = 10.0
 
     checkpoint_output_str = 'stylize_examples/output_checkpoint/5_iter_%s.jpg'
     output_str = 'stylize_examples/output/5_result.jpg'
 
     os.system('python neural_style.py --content=%s --styles %s --learning-rate=%f '
-              '--iterations=%d --checkpoint-output=%s --output=%s --width=%d --height=%d --style-weight=%f --use_mrf --use_semantic_masks --output_semantic_mask=%s --style_semantic_masks %s --semantic_masks_num_layers=%d'
-              %(content, ' '.join(styles), learning_rate, iterations, checkpoint_output_str, output_str, width, height, style_weight, output_semantic_mask, ' '.join(style_semantic_masks),semantic_masks_num_layers))
+              '--iterations=%d --checkpoint-output=%s --output=%s --width=%d --height=%d --style-weight=%f --use_mrf --use_semantic_masks --output_semantic_mask=%s --style_semantic_masks %s --semantic_masks_num_layers=%d --semantic_masks_weight=%f'
+              %(content, ' '.join(styles), learning_rate, iterations, checkpoint_output_str, output_str, width, height, style_weight, output_semantic_mask, ' '.join(style_semantic_masks), semantic_masks_num_layers, semantic_masks_weight))
 
     # # The sixth example: use the 'content_img_style_weight_mask" to control the degree of stylization for each pixel.
     #

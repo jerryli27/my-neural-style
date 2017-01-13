@@ -3,12 +3,16 @@
 This file provides functions for turning any image into a 'sketch'.
 """
 
+import os
 import random
+import shutil
 
 import cv2
 import numpy as np
 from PIL import Image, ImageStat
 from scipy.stats import threshold
+
+from general_util import get_all_image_paths_in_dir
 
 
 def image_to_sketch(img):
@@ -88,7 +92,14 @@ def generate_hint_from_image(img, max_num_hint = 15, min_num_hint = 5):
         print('Image has to be either of shape (height, width, num_features) or (batch_size, height, width, num_features)')
         raise AssertionError
 
+
+IMG_TYPE_GRAYSCALE = 1
+IMG_TYPE_COLOR = 2
+IMG_TYPE_BW = 3
+IMG_TYPE_UK = 4
+
 def detect_bw(file, thumb_size=40, MSE_cutoff=22, adjust_color_bias=True):
+    # type: (str, int, int, bool) -> int
     # Mainly copied from
     # http://stackoverflow.com/questions/14041562/python-pil-detect-if-an-image-is-completely-black-or-white
     pil_img = Image.open(file)
@@ -104,11 +115,25 @@ def detect_bw(file, thumb_size=40, MSE_cutoff=22, adjust_color_bias=True):
             SSE += sum((pixel[i] - mu - bias[i]) * (pixel[i] - mu - bias[i]) for i in [0, 1, 2])
         MSE = float(SSE) / (thumb_size * thumb_size)
         if MSE <= MSE_cutoff:
-            print "grayscale\t",
+            # print "grayscale\t",
+            return IMG_TYPE_GRAYSCALE
         else:
-            print "Color\t\t\t",
-        print "( MSE=", MSE, ")"
+            return IMG_TYPE_COLOR
+            # print "Color\t\t\t",
+        # print "( MSE=", MSE, ")"
     elif len(bands) == 1:
-        print "Black and white", bands
+        # print "Black and white", bands
+        return IMG_TYPE_BW
     else:
-        print "Don't know...", bands
+        # print "Don't know...", bands
+        return IMG_TYPE_UK
+
+
+def training_data_rename_bw(data_folder):
+    all_img_paths = get_all_image_paths_in_dir(data_folder)
+    for i, img_path in enumerate(all_img_paths):
+        if not detect_bw(img_path) == IMG_TYPE_COLOR:
+            shutil.copy(img_path, img_path + '.bak')
+            os.remove(img_path)
+        if i % 100 == 0:
+            print("%.3f%% done." % (100.0 * float(i) / len((all_img_paths))))
