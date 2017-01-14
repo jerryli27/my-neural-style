@@ -1,7 +1,20 @@
 """
-This file implements the feed-forward texture networks as described in http://arxiv.org/abs/1603.03417 and
-https://arxiv.org/abs/1603.03417.
-(For more background, see http://arxiv.org/abs/1508.06576)
+This file implements the feed-forward texture networks as described in the following papers
+
+Related papers (and one blog):
+"Perceptual losses for real-time style transfer and super-resolution" (https://arxiv.org/abs/1603.08155)
+"A Learned Representation For Artistic Style" (https://arxiv.org/abs/1610.07629)
+"Exploring the Neural Algorithm of Artistic Style" (https://arxiv.org/abs/1602.07188)
+"Feed-forward neural doodle" blog (http://dmitryulyanov.github.io/feed-forward-neural-doodle/)
+"Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks" (https://arxiv.org/abs/1603.01768)
+"Texture Networks - Feed-forward Synthesis of Textures and Stylized Images" (https://arxiv.org/abs/1603.03417)
+
+
+-- Back propagation neural style papers:
+"A Neural Algorithm of Artistic Style" (https://arxiv.org/abs/1508.06576),
+"Combining Markov Random Fields and Convolutional Neural Networks for Image Synthesis" (arxiv.org/abs/1601.04589),
+"Instance Normalization - The Missing Ingredient for Fast Stylization" (https://arxiv.org/abs/1607.08022),
+"Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks" (https://arxiv.org/abs/1603.01768).
 """
 
 # import gtk.gdk
@@ -19,28 +32,23 @@ from general_util import *
 from mrf_util import mrf_loss
 from neural_util import gramian, total_variation, precompute_image_features
 
-CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper.
+CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper https://arxiv.org/abs/1603.03417.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # According to http://arxiv.org/abs/1603.03417
-# STYLE_LAYERS = (
+# Another option for style layers :
+#  STYLE_LAYERS = (
 #     'relu1_2', 'relu2_2', 'relu3_2', 'relu4_2')  # Set according to https://github.com/DmitryUlyanov/texture_nets
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
-NUM_NOISE_LAYERS = 0  # This is for adding noise to the input to the generator network. Maybe I should delete this.
 
-
-# TODO: change rtype
-def style_synthesis_net(path_to_network, height, width, styles, iterations, batch_size,
-                        content_weight, style_weight, style_blend_weights, tv_weight,
-                        learning_rate, lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7,
-                        style_only=False,
-                        multiple_styles_train_scale_offset_only=False, use_mrf=False,
-                        use_johnson=False, use_skip_noise_4 = False, print_iterations=None,
-                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
-                        do_restore_and_train=False, content_folder=None,
+def style_synthesis_net(path_to_network, height, width, styles, iterations, batch_size, content_weight=5.0,
+                        style_weight=100.0, tv_weight=100.0, style_blend_weights=None, learning_rate=0.001,
+                        lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7, style_only=False,
+                        multiple_styles_train_scale_offset_only=False, use_mrf=False, use_johnson=False,
+                        use_skip_noise_4=False, print_iterations=None, checkpoint_iterations=None, save_dir="model/",
+                        do_restore_and_generate=False, do_restore_and_train=False, content_folder=None,
                         use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
                         style_semantic_masks=None, semantic_masks_weight=1.0, semantic_masks_num_layers=1,
-                        from_screenshot=False, from_webcam=False, test_img_dir=None, ablation_layer=None,
-                        content_img_style_weight_mask=None, style_weight_mask_for_training = None,
-                        one_hot_vector_for_restore_and_generate = None):
+                        from_screenshot=False, from_webcam=False, test_img_dir=None, content_img_style_weight_mask=None,
+                        style_weight_mask_for_training=None, one_hot_vector_for_restore_and_generate=None):
     """
     Stylize images.
 
@@ -115,8 +123,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         if use_johnson:
             if use_semantic_masks:
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
-                # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS])
-                # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers * NUM_NOISE_LAYERS])
             else:
                 # Else, the input is the content images.
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
@@ -125,11 +131,10 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 input_concatenated = neural_util.concat_content_img_style_weight_mask_to_input(inputs, content_img_style_weight_mask_placeholder)
                 image = johnson_feedforward_net_util.net(input_concatenated, one_hot_style_vector=one_hot_style_vector)
             else:
-                image = johnson_feedforward_net_util.net(inputs, one_hot_style_vector=one_hot_style_vector)  # Deleting the  / 255.0 because the network normalizes automatically.
+                image = johnson_feedforward_net_util.net(inputs, one_hot_style_vector=one_hot_style_vector)
         elif use_skip_noise_4:
             if use_semantic_masks:
-                # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
-                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS])
+                inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
             else:
                 inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
             if content_img_style_weight_mask is not None:
@@ -311,12 +316,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     if use_semantic_masks:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
                                                                    semantic_masks_num_layers])
-                        #
-                        # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
-                        #                                            semantic_masks_num_layers + NUM_NOISE_LAYERS])
-
-                        # inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2],
-                        #                                            semantic_masks_num_layers * NUM_NOISE_LAYERS])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
 
@@ -328,7 +327,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         image = johnson_feedforward_net_util.net(inputs, one_hot_style_vector=one_hot_style_vector, reuse=True)
                 elif use_skip_noise_4:
                     if use_semantic_masks:
-                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers + NUM_NOISE_LAYERS * semantic_masks_num_layers + NUM_NOISE_LAYERS])
+                        inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], semantic_masks_num_layers])
                     else:
                         inputs = tf.placeholder(tf.float32, shape=[batch_size, input_shape[1], input_shape[2], 3])
                     if content_img_style_weight_mask is not None:
@@ -396,10 +395,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     if use_johnson:
                         if use_semantic_masks:
                             feed_dict[inputs] = mask_pre_list
-                            # feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)), mask_pre_list), axis=3)
-                            # feed_dict[inputs] = np_image_dot_mask(mask_pre_list, np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
-
-
                         elif style_only:
                             feed_dict[inputs] = np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
                         else:
@@ -508,11 +503,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         if use_johnson:
                             if use_semantic_masks:
                                 feed_dict[inputs] = mask_pre_list
-                                # feed_dict[inputs] = np.concatenate((np.random.uniform(size=(input_shape[0], input_shape[1],
-                                #                                                    input_shape[2], NUM_NOISE_LAYERS)),
-                                #                                     mask_pre_list), axis=3)
-                                # feed_dict[inputs] = np_image_dot_mask(mask_pre_list,np.random.uniform(size=(input_shape[0], input_shape[1], input_shape[2], NUM_NOISE_LAYERS)))
-
                                 feed_dict[content_semantic_mask] = mask_pre_list
                                 for styles_iter in range(len(styles)):
                                     feed_dict[style_semantic_masks_images[styles_iter]] = np.expand_dims(
@@ -583,12 +573,12 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                     for generate_style_i in range(len(styles)):
                                         current_one_hot_vector_for_restore_and_generate=np.array([[1.0 if generate_style_i == style_j else 0.0 for style_j in range(len(styles))]])
                                         # The for loop will run once and terminate. Can't use return and yield in the same function so this is a hacky way to do it.
-                                        for _, generated_image in style_synthesis_net(path_to_network, test_image_shape[0],
+                                        for _, generated_image in style_synthesis_net(path_to_network,
+                                                                                      test_image_shape[0],
                                                                                       test_image_shape[1], styles,
-                                                                                      iterations,
-                                                                                      1,
-                                                                                      content_weight, style_weight,
-                                                                                      style_blend_weights, tv_weight,
+                                                                                      iterations, 1, content_weight,
+                                                                                      style_weight, tv_weight,
+                                                                                      style_blend_weights,
                                                                                       learning_rate,
                                                                                       style_only=style_only,
                                                                                       multiple_styles_train_scale_offset_only=multiple_styles_train_scale_offset_only,
@@ -598,16 +588,15 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                                                       save_dir=save_dir,
                                                                                       do_restore_and_generate=True,
                                                                                       do_restore_and_train=False,
-                                                                                      from_screenshot=False,
-                                                                                      from_webcam=False,
                                                                                       use_semantic_masks=use_semantic_masks,
                                                                                       mask_folder=mask_folder,
                                                                                       mask_resize_as_feature=mask_resize_as_feature,
                                                                                       style_semantic_masks=style_semantic_masks,
                                                                                       semantic_masks_weight=semantic_masks_weight,
                                                                                       semantic_masks_num_layers=semantic_masks_num_layers,
+                                                                                      from_screenshot=False,
+                                                                                      from_webcam=False,
                                                                                       test_img_dir=test_img_dir,
-                                                                                      ablation_layer=ablation_layer,
                                                                                       content_img_style_weight_mask=content_img_style_weight_mask,
                                                                                       one_hot_vector_for_restore_and_generate=current_one_hot_vector_for_restore_and_generate):
                                             pass

@@ -6,7 +6,6 @@ another input. The code skeleton mainly comes from https://github.com/anishathal
 import time
 from argparse import ArgumentParser
 
-import numpy as np
 import scipy.misc
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
@@ -143,30 +142,25 @@ def main():
     for slider in sliders:
         slider.on_changed(update)
 
-    for iteration, image in n_style_feedforward_net.style_synthesis_net(
-            path_to_network=options.network,
-            height=options.height,
-            width=options.width,
-            styles=style_images,
-            iterations=None,
-            batch_size=options.batch_size,
-            content_weight=options.content_weight,
-            style_weight=options.style_weight,
-            style_blend_weights=style_blend_weights,
-            tv_weight=options.tv_weight,
-            learning_rate=1,  # Dummy learning rate.
-            style_only=options.texture_synthesis_only,
-            use_mrf=options.use_mrf,
-            use_johnson=options.use_johnson,
-            print_iterations=None,
-            checkpoint_iterations=None,
-            save_dir=options.model_save_dir,
-            do_restore_and_generate=True,
-            from_screenshot = options.from_screenshot,
-            from_webcam = options.from_webcam,
-            ablation_layer=options.ablation_layer,
-            test_img_dir=options.test_img
-        ):
+    for iteration, image in n_style_feedforward_net.style_synthesis_net(path_to_network=options.network,
+                                                                        height=options.height, width=options.width,
+                                                                        styles=style_images, iterations=None,
+                                                                        batch_size=options.batch_size,
+                                                                        content_weight=options.content_weight,
+                                                                        style_weight=options.style_weight,
+                                                                        tv_weight=options.tv_weight,
+                                                                        style_blend_weights=style_blend_weights,
+                                                                        learning_rate=1,
+                                                                        style_only=options.texture_synthesis_only,
+                                                                        use_mrf=options.use_mrf,
+                                                                        use_johnson=options.use_johnson,
+                                                                        print_iterations=None,
+                                                                        checkpoint_iterations=None,
+                                                                        save_dir=options.model_save_dir,
+                                                                        do_restore_and_generate=True,
+                                                                        from_screenshot=options.from_screenshot,
+                                                                        from_webcam=options.from_webcam,
+                                                                        test_img_dir=options.test_img):
         # We must do this clip step before we display the image. Otherwise the color will be off.
         image = np.clip(image, 0, 255).astype(np.uint8)
         if tstart is None:

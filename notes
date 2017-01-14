@@ -1000,9 +1000,10 @@ Plan:
         stylize_examples: Done writing large-scale tests for stylize that can also serve as examples.
         neural_style: Done
 
-        skip_noise_4_feedforward_net:
-        johnson_feedforward_net_util:
-        n_style_feedforward_net:
+        conv_util: Done. Maybe add more test cases... Too lazy.
+        skip_noise_4_feedforward_net: Done, don't forget to delete commented out part after testing.
+        johnson_feedforward_net_util: Done
+        n_style_feedforward_net: ... It's a mess.
         faster_neural_style:
         real_time_neural_style:
 
@@ -1028,3 +1029,22 @@ Plan:
         The refactoring on back propagation part was almost done. I still have one stylize example to do but that was
         it. Next step is to refactor the feed forward part... But I want to put off that for a while. I haven't worked
         on something challenging for a while... Refactoring was more like a break.
+
+2017/01/14
+    1. Nijigen
+        More data, more data... Hope pixiv doesn't block amazon's ip forever...
+    2. Neural style
+        More refactoring...
+        Don't forget to investigate pattern size.
+
+
+    3. CNN relation extraction
+        Well I found several tensorflow repos but I forgot to bring data to try it out...
+        My project is a little different though. I lack training data. I have to use active learning to gather more.
+        The most naive way for active learning is after training for a while, put all possible combinations of
+        pairs of phrases into the classifier, select the most uncertain one and ask about that. A little less naive
+        way is to sample say 1000 pairs randomly and do the same thing. That will speed things up a little.
+        Another thing I probably don't have to deal with is that the key phrases I have not may not be accurate (it is
+        certainly not complete) and I may have to create a vector for the phrase by adding up the vectors for each
+        word, but I don't know if that would make learning harder -- balanced tree is quite different from the word
+        "balanced" and "tree" trained on other corpora.

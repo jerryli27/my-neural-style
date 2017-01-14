@@ -93,11 +93,11 @@ if __name__=='__main__':
     width = 512
     height = 512
     content_weight = 10.0
-    style_weight = 150.0
+    style_weight = 30.0
     output_semantic_mask = 'stylize_examples/semantic_masks/Freddie_sem_masks/'
     style_semantic_masks = ['stylize_examples/semantic_masks/Mia_sem_masks/']
     semantic_masks_num_layers = 10
-    semantic_masks_weight = 50.0
+    semantic_masks_weight = 3000.0
 
     checkpoint_output_str = 'stylize_examples/output_checkpoint/5_iter_%s.jpg'
     output_str = 'stylize_examples/output/5_result.jpg'
