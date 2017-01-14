@@ -31,7 +31,7 @@ except:
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 20000.0,
+                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 10000000.0,
                        lr_decay_steps=20000,
                         min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
                         checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
@@ -83,7 +83,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
 
-            generator_loss_l2 = tf.nn.l2_loss(generator_output - expected_output)
+            generator_loss_l2 = tf.nn.l2_loss(generator_output - expected_output) / batch_size
             # tv_loss = tv_weight * total_variation(image)
 
             if use_adversarial_net:

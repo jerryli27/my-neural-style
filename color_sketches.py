@@ -94,6 +94,12 @@ def build_parser():
                              'The overall setting and structure must be the same.',
                         action='store_true')
     parser.set_defaults(do_restore_and_train=False)
+    parser.add_argument('--restore_from_noadv_to_adv', dest='restore_from_noadv_to_adv',
+                        help='If set, it tries to load a checkpoint as if it does not have adversarial network trained. '
+                             'It then train the adversarial part from scratch along with other previously trained '
+                             'variables.',
+                        action='store_true')
+    parser.set_defaults(restore_from_noadv_to_adv=False)
     return parser
 
 
@@ -116,6 +122,7 @@ def main():
             save_dir=options.model_save_dir,
             do_restore_and_generate=options.do_restore_and_generate,
             do_restore_and_train=options.do_restore_and_train,
+            restore_from_noadv_to_adv=options.restore_from_noadv_to_adv,
             content_folder=options.content_folder,
             test_img_dir=options.test_img,
             test_img_hint=options.test_img_hint

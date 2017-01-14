@@ -32,6 +32,21 @@ from general_util import *
 from mrf_util import mrf_loss
 from neural_util import gramian, total_variation, precompute_image_features
 
+
+# For compatibility among tensorflow versions.
+try:
+    image_summary = tf.image_summary
+    scalar_summary = tf.scalar_summary
+    histogram_summary = tf.histogram_summary
+    merge_summary = tf.merge_summary
+    SummaryWriter = tf.train.SummaryWriter
+except:
+    image_summary = tf.summary.image
+    scalar_summary = tf.summary.scalar
+    histogram_summary = tf.summary.histogram
+    merge_summary = tf.summary.merge
+    SummaryWriter = tf.summary.FileWriter
+
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper https://arxiv.org/abs/1603.03417.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # According to http://arxiv.org/abs/1603.03417
 # Another option for style layers :
@@ -44,58 +59,122 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7, style_only=False,
                         multiple_styles_train_scale_offset_only=False, use_mrf=False, use_johnson=False,
                         use_skip_noise_4=False, print_iterations=None, checkpoint_iterations=None, save_dir="model/",
-                        do_restore_and_generate=False, do_restore_and_train=False, content_folder=None,
-                        use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
+                        content_folder=None, use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
                         style_semantic_masks=None, semantic_masks_weight=1.0, semantic_masks_num_layers=1,
-                        from_screenshot=False, from_webcam=False, test_img_dir=None, content_img_style_weight_mask=None,
-                        style_weight_mask_for_training=None, one_hot_vector_for_restore_and_generate=None):
+                        do_restore_and_train=False, do_restore_and_generate=False, from_screenshot=False,
+                        from_webcam=False, test_img_dir=None, one_hot_vector_for_restore_and_generate=None,
+                        content_img_style_weight_mask=None, style_weight_mask_for_training=None):
     """
     Stylize images.
 
     This function yields tuples (iteration, image); `iteration` is None
     if this is the final image (the last iteration).  Other tuples are yielded
     every `checkpoint_iterations` iterations.
+    :param path_to_network: Path to pretrained vgg19 network. It can be downloaded at
+    http://www.vlfeat.org/matconvnet/models/imagenet-vgg-verydeep-19.mat
+    :param height: Height of both the content images and the output.
+    :param width:  Width of both the content images and the output.
+    :param styles: A list of style images as numpy arrays.
+    :param iterations: The number of iterations to run.
+    :param batch_size: as name suggests.
+    :param content_weight: The weight for content loss. The larger the weight, the more the output will look like
+    the content image.
+    :param style_weight: The weight for style loss. The larger the weight, the more the output will have a style that
+    looks like the style images.
+    :param tv_weight: The weight for total-variation loss. The larger the weight, the smoother the output will be.
+    :param style_blend_weights: If inputting multiple style images, this controls the balance between their styles.
+    If left as None, it will treat all style images as equal.
+    :param learning_rate: As name suggests. Default works. Higher learning rate may result in unstable result.
+    :param lr_decay_steps: learning rate decays by lr_decay_rate after lr_decay steps.
+    Default per https://arxiv.org/abs/1603.03417. I didn't find it so useful though because if I try to set the lr to
+    be too high, training fails no matter how I lower the learning rate later on.
+    :param min_lr: The minimum learning rate. The learning rate will not be decrease beyong this point.
+    :param lr_decay_rate: The learning rate is decreased by a factor every this number of batches.
+    :param style_only: If true, it will be trained to generate only style/texture without content images.
+    :param multiple_styles_train_scale_offset_only: If true, the network will be training only on the scale and shift
+    variables (of the instance norms) for any style images other than the first one.
+    :param use_mrf: Whether we use markov-random-field loss instead of gramian loss. mrf_util.py contains more info.
+    This is still in experimental stage!!! I'm not sure feed forward network can learn mrf which is fundamentally
+    a nearest neighbor method.
+    :param use_johnson: If true, it will use the johnson feed forward network as the generator.
+    :param use_skip_noise_4: If true, it will use the skip_noise_4 feed forward network as the generator.
+    :param print_iterations: Print loss information every n iterations.
+    :param checkpoint_iterations: Save a checkpoint as well as the best image so far every n iterations.
+    :param save_dir: The folder to save the checkpoints.
+    :param content_folder: The folder from where it collect content images for training if needed. A good choice would
+    be the Microsoft COCO dataset.
+    :param use_semantic_masks: Whether we use semantic masks as additional semantic information. Please check the paper
+    "Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks" as well as the blog for the fast forward
+    version of it for more information.
+    :param mask_folder: The folder containing training images for masks.
+    :param mask_resize_as_feature: If true, resize the mask and use the resized mask as additional feature besides the
+    vgg network layers. If false, pass the masks (must have exactly 3 masks) into the vgg network and use the outputted
+    layers as additional features.
+    :param style_semantic_masks: A list of semantic masks you would like to apply to each style image. The mask should
+    have shape (batch_size, height, width, semantic_masks_num_layers)
+    :param semantic_masks_weight: How heavily you'd like to weight the semantic masks as compared to other sources of
+    semantic information obtained through passing the image through vgg network. Default is 1.0.
+    :param semantic_masks_num_layers: The number of semantic masks each image have.
+    :param do_restore_and_train: If true, the model would load a previously saved checkpoint in the "save_dir" and
+    continue training from there.
+    :param do_restore_and_generate: If true, it will not train the model, but instead read from a previously saved
+    checkpoint in the "save_dir" and generate a new image using some extra parameters provided below.
+    :param from_screenshot: If true, the content image would be taken from the screenshot of the current screen.
+    :param from_webcam: If true, the content image would be the image taken from the webcam.
+    :param test_img_dir: If neither "from_screenshot" nor "from_webcam" is true, or if use_semantic_masks is true, then
+    the content image (or the semantic masks) would come from this variable.
+    :param one_hot_vector_for_restore_and_generate: If the model is trained using multiple styles, then this variable
+    is provided to specify which style (or a mixure of styles) to use when do_restore_and_generate is true.
+    :param content_img_style_weight_mask: This is EXPERIMENTAL! see stylize for more documentation.
+    :param style_weight_mask_for_training: This is EXPERIMENTAL! This is the np array containing random masks to be
+    used for training.
+    :return:iterator[tuple[int|None,List[image]]]
 
-    :param: lr_decay_steps: learning rate decays by lr_decay_rate after lr_decay steps.
-    Default per https://arxiv.org/abs/1603.03417
-    :param: min_lr: The minimum learning rate. Default per https://arxiv.org/abs/1603.03417
-    :param: lr_decay_rate: learning rate decays by lr_decay_rate after lr_decay steps.
-    Default per https://arxiv.org/abs/1603.03417
-    :param: use_semantic_masks: If it is true, the input to the generator network will be the semantic masks instead
-    of the content image. The content image will serve as ground truth for loss (I haven't decided whether to use content
-    or style loss).
-    :rtype: iterator[tuple[int|None,image]]
     """
+    # TODO: delete use_mrf if it is guaranteed not to work using feed forward mode.
 
     # Before training, make sure everything is set correctly.
     global STYLE_LAYERS
-    if not use_johnson and not use_skip_noise_4:
-        print("Please select one generator network, either johnson or skip_noise_4.")
-        raise AssertionError
+    if (not use_johnson and not use_skip_noise_4) or (use_skip_noise_4 and use_johnson):
+        raise AssertionError("Please select one generator network, either johnson or skip_noise_4.")
 
     if use_mrf:
-        STYLE_LAYERS = STYLE_LAYERS_MRF  # Easiest way to be compatible with no-mrf versions.
+        STYLE_LAYERS = STYLE_LAYERS_MRF  # MRF loss consumes much more memory compared to gramian loss.
     if use_semantic_masks:
         assert mask_folder is not None
-    assert not (use_skip_noise_4 and use_johnson)
+        print("use_semantic_masks is True. Automatically turning into style only mode. I don't know how to make "
+              "semantic masks work with content image in the feed forward mode yet.")
+
+
+    if len(styles) < 1:
+        raise AssertionError('You must feed in at least one style image.')
 
     if content_img_style_weight_mask is not None:
         if do_restore_and_train or not do_restore_and_generate:
             assert style_weight_mask_for_training is not None
         if do_restore_and_generate and (height != content_img_style_weight_mask.shape[1] or width != content_img_style_weight_mask.shape[2]):
-            print("The shape of style_weight_mask is incorrect. It must have the same height and width as the "
-                  "output image. The output image has shape: %s and the style weight mask has shape: %s"
-                  % (str((height, width)), str(content_img_style_weight_mask.shape)))
-            raise AssertionError
+            raise AssertionError("The shape of style_weight_mask is incorrect. It must have the same height and width "
+                                 "as the output image. The output image has shape: %s and the style weight mask has "
+                                 "shape: %s" % (str((height, width)), str(content_img_style_weight_mask.shape)))
         if content_img_style_weight_mask.dtype!=np.float32:
-            print('The dtype of style_weight_mask must be float32. it is now %s' % str(content_img_style_weight_mask.dtype))
-            raise AssertionError
+            raise AssertionError('The dtype of style_weight_mask must be float32. it is now %s'
+                                 % str(content_img_style_weight_mask.dtype))
+
+        print('content_img_style_weight_mask is not None. Note that this is only an experimental feature that is very '
+              'likely not working. Proceed with caution!!!')
 
     input_shape = (1, height, width, 3)
-    print('The input shape is: %s' % (str(input_shape)))
-    # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width , 3).
+    print('The input shape of the content image is: %s' % (str(input_shape)))
+    # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width, 3).
     # 3 corresponds to rgb.
-    style_shapes = [(1,) + style.shape for style in styles] #  TODO: Maybe I should delete this. For now I assume that this size is the same as the input_shape.
+    style_shapes = [(1,) + style.shape for style in styles]
+
+    if use_mrf:
+        for style_shape in style_shapes:
+            if style_shape != input_shape:
+                raise AssertionError("In order to use mrf loss, the content and style images must have the same "
+                                     "shapes.")
+
 
     content_features = {}
     style_features = [{} for _ in styles]
@@ -109,16 +188,14 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         # # Compute style features in feedforward mode.
         for i in range(len(styles)):
             style_features[i] = precompute_image_features(styles[i], STYLE_LAYERS, style_shapes[i], vgg_data, mean_pixel, use_mrf, use_semantic_masks)
-        print('Finished loading VGG and passing content and style image to it.')
+        print('Finished passing style images to VGG for precomputing features.')
 
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
-        if len(styles) < 1:
-            print('You must feed in at least one style image.')
-            raise AssertionError
-        elif len(styles) == 1:
+        if len(styles) == 1:
             one_hot_style_vector = None
         else:
+            print("Detected multiple style image inputs. Entering multi-style mode.")
             one_hot_style_vector = tf.placeholder(tf.float32, [1, len(styles)], name='input_style_placeholder')
         if use_johnson:
             if use_semantic_masks:
@@ -144,20 +221,21 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             else:
                 image, skip_noise_list = skip_noise_4_feedforward_net.net(inputs)
         else:
-            raise AssertionError
+            raise AssertionError("You were supposed to select either johnson or skip_noise_4 generator network.")
         # To my understanding, preprocessing the images generated can make sure that their gram matrices will look
         # similar to the preprocessed content/style images. The image generated is in the normal rgb, not the
         # preprocessed/shifted version. Same reason applies to the other generator network below.
         image = vgg.preprocess(image, mean_pixel)
 
-        # Feed the generated images, content images, and style images to vgg network and get each layers' activations.
+        # Feed the generated images, content images, and style images to vgg network and get the vgg features for each
+        # layer to compute loss.
         net = vgg.pre_read_net(vgg_data, image)
         net_layer_sizes = vgg.get_net_layer_sizes(net)
         if not do_restore_and_generate:
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
-            # compute content features in feedforward mode
+            # compute content features in feed-forward mode.
             content_images = tf.placeholder(tf.float32, [batch_size, input_shape[1], input_shape[2], 3],
                                             name='content_images_placeholder')
             content_pre = vgg.preprocess(content_images, mean_pixel)
@@ -169,26 +247,28 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
 
             # content loss
-            _, height, width, number = map(lambda i: i.value, content_features[CONTENT_LAYER].get_shape())
-            content_features_size = batch_size * height * width * number
+            content_features_size = neural_util.get_tensor_num_elements(content_features[CONTENT_LAYER])
             content_loss = content_weight * (2 * tf.nn.l2_loss(
-                net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) /
-                                             content_features_size)
+                net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) / content_features_size)
+
+            content_loss_summary = scalar_summary("content_loss_summary", content_loss)
 
             if content_img_style_weight_mask is not None:
                 # *** TESTING
-                # Compute style weight masks for each feature layer in vgg.
+                # Compute average pooled style weight masks for each feature layer in vgg.
                 style_weight_mask_layer_dict = neural_doodle_util.masks_average_pool(content_img_style_weight_mask_placeholder)
                 # *** END TESTING
 
             # style loss
             style_loss_for_each_style = []
+            style_loss_summary_for_each_style = []
             for i in range(len(styles)):
                 style_losses_for_each_style_layer = []
                 for style_layer in STYLE_LAYERS:
                     layer = net[style_layer]
                     if content_img_style_weight_mask is not None:
-                        # Apply_style_weight_mask_to_feature_layer, then normalize with average of that style weight mask.
+                        # Apply style_weight_mask to each feature layer, then normalize with average of that style
+                        # weight mask.
                         layer = neural_doodle_util.vgg_layer_dot_mask(style_weight_mask_layer_dict[style_layer], layer) \
                                 / (tf.reduce_mean(style_weight_mask_layer_dict[style_layer]) + 0.000001)
                     if use_mrf:
@@ -204,16 +284,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     else:
                         if use_semantic_masks:
                             gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer])
-
-                            # layer = neural_doodle_util.vgg_layer_dot_mask(output_semantic_mask_features[style_layer],
-                            #                                               layer)
-                            # gram = gramian(layer)
                         else:
-                            # Use gramian loss.
-                            # TODO: testing gram stacks
                             gram = gramian(layer)
-                            # If we want to use gram stacks instead of simple gram, uncomment the line below.
-                            # gram = neural_util.gram_stacks(layer)
                         style_gram = style_features[i][style_layer]
                         if use_semantic_masks:
                             # Dividing by semantic_masks_num_layers because the masks should have one 1 in each pixel
@@ -223,17 +295,16 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             style_gram_num_elements = get_np_array_num_elements(style_gram)
                         style_losses_for_each_style_layer.append(
                             2 * tf.nn.l2_loss(gram - style_gram) / style_gram_num_elements)
-
-                style_loss_for_each_style.append(
-                    style_weight * style_blend_weights[i] * reduce(tf.add,
-                                                                   style_losses_for_each_style_layer) / batch_size)
+                current_style_loss =  style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer) / batch_size
+                style_loss_for_each_style.append(current_style_loss)
+                style_loss_summary_for_each_style.append(scalar_summary("style_loss_%d_summary" % i, style_loss_for_each_style))
             # According to https://arxiv.org/abs/1610.07629 when "zero-padding is replaced with mirror-padding,
             # and transposed convolutions (also sometimes called deconvolutions) are replaced with nearest-neighbor
             # upsampling followed by a convolution.", tv is no longer needed.
             # But in other papers I've seen tv-loss still applicable, like in https://arxiv.org/abs/1603.08155.
             # TODO: side task: find out the difference between having tv loss and not.
-            # tv_loss = 0
             tv_loss = tv_weight * total_variation(image)
+            tv_loss_summary = scalar_summary('tv_loss_summary', tv_loss)
 
             # overall loss
             if style_only or use_semantic_masks:
@@ -244,20 +315,24 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
             overall_loss = 0
             for loss_for_each_style in losses_for_each_style:
                 overall_loss += loss_for_each_style
+                # TODO: There might be a bug here because it is not possible to feed multiple styles all at the same
+                # time, so the overall loss would be impossible to calculate and the current result is wrong.
             # optimizer setup
             # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
-            # TODO:  side task: tell which one is better, training all variables or training only scale and offset.
             if multiple_styles_train_scale_offset_only:
+                # If the variable above is set to be True, then training is only done on the scale and offset of the
+                # instance normalizations in the generator network. It will in theory increase the speed of training
+                # but at the price of sacrificing the quality of the output (from what I've seen the quality is better
+                # when it trains on all variable instead of just scale and offset).
                 if use_johnson:
                     scale_offset_var = johnson_feedforward_net_util.get_johnson_scale_offset_var()
                 elif use_skip_noise_4:
-                    raise NotImplementedError
+                    raise NotImplementedError("Did not implement multiple style training on skip_noise_4 yet.")
                 else:
-                    raise AssertionError
+                    raise AssertionError("You were supposed to select either johnson or skip_noise_4 generator network.")
                 train_step_for_each_style = [
                     tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                           beta2=0.999).minimize(loss,
-                                                                 var_list=scale_offset_var)
+                                           beta2=0.999).minimize(loss, var_list=scale_offset_var)
                     if i != 0 else
                     tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                            beta2=0.999).minimize(loss)
@@ -275,7 +350,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                     'Iteration %d/%d\n' % (i + 1, iterations))
                 if last or (print_iterations and i % print_iterations == 0):
                     stderr.write('Learning rate %f\n' % (learning_rate_decayed.eval()))
-                    # Assume that the feed_dict is for the last content and style.
+                    # Assume that the feed_dict is for the last content and style image.
                     if not (style_only or use_semantic_masks):
                         stderr.write('  content loss: %g\n' % content_loss.eval(feed_dict=feed_dict))
                     stderr.write('    style loss: %g\n' % style_loss_for_each_style[-1].eval(feed_dict=feed_dict))
@@ -285,8 +360,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         # Optimization
         # It used to track and record only the best one with lowest loss. This is no longer necessary and I think
         # just recording the one generated at each round will make it easier to debug.
-        best_loss_for_each_style = [float('inf') for style_i in range(len(styles))]
-        best_for_each_style = [None for style_i in range(len(styles))]
+        output_for_each_style = [None for style_i in range(len(styles))]
 
         saver = tf.train.Saver()
         with tf.Session() as sess:
@@ -343,7 +417,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                 while from_screenshot or from_webcam or (iterator == 0):
                     if from_screenshot:
-                        pass
+                        raise ImportError("I commented out this part because I forgot how to install/import gtk.gdk")
                         # w = gtk.gdk.get_default_root_window()
                         # sz = w.get_size()
                         # print "The size of the window is %d x %d" % sz
@@ -355,17 +429,16 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         ret, frame = cap.read()
                         content_image = scipy.misc.imresize(frame, (input_shape[1], input_shape[2]))
                     elif use_semantic_masks:
-                        # Dummy content image
+                        # Dummy content image.
                         content_image = np.zeros((batch_size, input_shape[1], input_shape[2], 3))
                     else:
                         content_image = imread(test_img_dir, (input_shape[1], input_shape[2]))
 
                     content_pre = np.array([vgg.preprocess(content_image, mean_pixel)])
-                    # Now generate an image using the style_blend_weights given.
                     feed_dict = {}
 
                     if use_semantic_masks:
-                        # read semantic masks
+                        # Read semantic masks.
                         mask_dirs = get_all_image_paths_in_dir(test_img_dir)
 
                         if not len(mask_dirs) >= (batch_size * semantic_masks_num_layers):
@@ -419,17 +492,18 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         feed_dict[content_img_style_weight_mask_placeholder] = content_img_style_weight_mask
                     generated_image = image.eval(feed_dict=feed_dict)
                     iterator += 1
-                    # Can't return because we are in a generator.
-                    # yield (iterator, vgg.unprocess(
-                    #     scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])), mean_pixel))
-                    # No need to unprocess it because we've preprocessed the generated image in the network. That means
-                    # the generated image is before preprocessing.
+                    # Can't return because we are in a generator in python 2.7. So do a one-time yield instead.
+                    # No need to unprocess the generated image because we've preprocessed the generated image before
+                    # feeding it to the network.
                     yield (iterator, scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])))
 
             else:
-                # Clear the loss file.
-                with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
-                    pass
+                # Initialize log writer
+                log_path = save_dir + "logs"
+                if not os.path.exists(log_path):
+                    os.makedirs(log_path)
+                summary_writer = SummaryWriter(log_path, sess.graph)
+
                 # Do Training.
                 iter_start = 0
                 if do_restore_and_train:
@@ -550,14 +624,20 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             content_img_style_weight_mask_batch_i = get_batch_indices(style_weight_mask_for_training_shape[0], i * batch_size, batch_size)
                             feed_dict[content_img_style_weight_mask_placeholder] = style_weight_mask_for_training[content_img_style_weight_mask_batch_i, :, :, :]
 
-                        train_step_for_each_style[style_i].run(feed_dict=feed_dict)
+                        # TODO: testing logging loss summaries.
+                        _, content_loss_summary_str, style_loss_summary_str, tv_loss_summary_str = sess.run([train_step_for_each_style[style_i], content_loss_summary, style_loss_summary_for_each_style[style_i], tv_loss_summary], feed_dict=feed_dict)
+
+                        summary_writer.add_summary(content_loss_summary_str, i)
+                        summary_writer.add_summary(style_loss_summary_str, i)
+                        summary_writer.add_summary(tv_loss_summary_str, i)
+
+                        # train_step_for_each_style[style_i].run(feed_dict=feed_dict)
+
                         if style_i == len(styles) - 1:
                             print_progress(i, feed_dict=feed_dict, last=last_step)
-                            # Record loss after each training round.
-                            with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                                loss_record_file.write('%d\t%g\n' % (i, overall_loss.eval(feed_dict=feed_dict)))
 
                         if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
+                            # Do checkpoint only when it reached the last style image.
                             if style_i == len(styles) - 1:
                                 saver.save(sess, save_dir + 'model.ckpt', global_step=i)
 
@@ -572,7 +652,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                                     for generate_style_i in range(len(styles)):
                                         current_one_hot_vector_for_restore_and_generate=np.array([[1.0 if generate_style_i == style_j else 0.0 for style_j in range(len(styles))]])
-                                        # The for loop will run once and terminate. Can't use return and yield in the same function so this is a hacky way to do it.
+                                        # The checkpoint is done through reading the checkpoint that was just saved and
+                                        # use that to generate the checkpoint image.
+
+                                        # The for loop will run once and terminate. Can't use return and yield in the
+                                        # same function in python 2 so this is a hacky way to do it.
                                         for _, generated_image in style_synthesis_net(path_to_network,
                                                                                       test_image_shape[0],
                                                                                       test_image_shape[1], styles,
@@ -586,26 +670,26 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                                                       use_johnson=use_johnson,
                                                                                       use_skip_noise_4=use_skip_noise_4,
                                                                                       save_dir=save_dir,
-                                                                                      do_restore_and_generate=True,
-                                                                                      do_restore_and_train=False,
                                                                                       use_semantic_masks=use_semantic_masks,
                                                                                       mask_folder=mask_folder,
                                                                                       mask_resize_as_feature=mask_resize_as_feature,
                                                                                       style_semantic_masks=style_semantic_masks,
                                                                                       semantic_masks_weight=semantic_masks_weight,
                                                                                       semantic_masks_num_layers=semantic_masks_num_layers,
+                                                                                      do_restore_and_train=False,
+                                                                                      do_restore_and_generate=True,
                                                                                       from_screenshot=False,
                                                                                       from_webcam=False,
                                                                                       test_img_dir=test_img_dir,
-                                                                                      content_img_style_weight_mask=content_img_style_weight_mask,
-                                                                                      one_hot_vector_for_restore_and_generate=current_one_hot_vector_for_restore_and_generate):
+                                                                                      one_hot_vector_for_restore_and_generate=current_one_hot_vector_for_restore_and_generate,
+                                                                                      content_img_style_weight_mask=content_img_style_weight_mask):
                                             pass
 
-                                        best_for_each_style[generate_style_i] = generated_image
+                                        output_for_each_style[generate_style_i] = generated_image
 
                                 # Because we now have batch, choose the first one in the batch as our sample image.
                                 yield (
                                     (None if last_step else i),
                                     [None if test_img_dir is None else
-                                     best_for_each_style[style_j] for style_j in range(len(styles))]
+                                     output_for_each_style[style_j] for style_j in range(len(styles))]
                                 )

@@ -1003,7 +1003,7 @@ Plan:
         conv_util: Done. Maybe add more test cases... Too lazy.
         skip_noise_4_feedforward_net: Done, don't forget to delete commented out part after testing.
         johnson_feedforward_net_util: Done
-        n_style_feedforward_net: ... It's a mess.
+        n_style_feedforward_net: Done, but it's still a mess.
         faster_neural_style:
         real_time_neural_style:
 
@@ -1020,7 +1020,6 @@ Plan:
         I also got the "pixivutil2". If I found that it was the problem of not enough data, I will use that to download
         more data.
 
-
         Regarding the original author's suggestion to first train for several epochs without adversarial network then
         add the adversarial network and set the loss to around 1/10~1/20 of the l2 loss, I'll give that a try. The
         wierd thing is, previously I had adversarial part's loss be around 1/100000 of the l2 loss and it still was
@@ -1032,11 +1031,13 @@ Plan:
 
 2017/01/14
     1. Nijigen
-        More data, more data... Hope pixiv doesn't block amazon's ip forever...
+        More data, more data... I used the PixivUtil2 program. Hope pixiv doesn't block amazon's ip forever...
+        So far so good. It's getting around 60 gigs in the past 9 hours. By this time tomorrow I will have around
+        600000 training images... I think I might be able to do things even more interesting than filling in colors
+        given this dataset.
     2. Neural style
         More refactoring...
         Don't forget to investigate pattern size.
-
 
     3. CNN relation extraction
         Well I found several tensorflow repos but I forgot to bring data to try it out...
@@ -1048,3 +1049,5 @@ Plan:
         certainly not complete) and I may have to create a vector for the phrase by adding up the vectors for each
         word, but I don't know if that would make learning harder -- balanced tree is quite different from the word
         "balanced" and "tree" trained on other corpora.
+
+        Anyway this looks much better than the situation I was in before.

@@ -237,8 +237,6 @@ def main():
                                                                         print_iterations=options.print_iterations,
                                                                         checkpoint_iterations=options.checkpoint_iterations,
                                                                         save_dir=options.model_save_dir,
-                                                                        do_restore_and_generate=options.do_restore_and_generate,
-                                                                        do_restore_and_train=options.do_restore_and_train,
                                                                         content_folder=options.content_folder,
                                                                         use_semantic_masks=options.use_semantic_masks,
                                                                         mask_folder=options.mask_folder,
@@ -246,10 +244,12 @@ def main():
                                                                         style_semantic_masks=style_semantic_masks,
                                                                         semantic_masks_weight=options.semantic_masks_weight,
                                                                         semantic_masks_num_layers=options.semantic_masks_num_layers,
+                                                                        do_restore_and_train=options.do_restore_and_train,
+                                                                        do_restore_and_generate=options.do_restore_and_generate,
                                                                         test_img_dir=options.test_img,
+                                                                        one_hot_vector_for_restore_and_generate=one_hot_vector_for_restore_and_generate,
                                                                         content_img_style_weight_mask=content_img_style_weight_mask,
-                                                                        style_weight_mask_for_training=style_weight_mask_for_training,
-                                                                        one_hot_vector_for_restore_and_generate=one_hot_vector_for_restore_and_generate):
+                                                                        style_weight_mask_for_training=style_weight_mask_for_training):
         if options.do_restore_and_generate:
             imsave(options.output, image)
         else:
