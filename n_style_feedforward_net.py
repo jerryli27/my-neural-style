@@ -49,9 +49,6 @@ except:
 
 CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper https://arxiv.org/abs/1603.03417.
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # According to http://arxiv.org/abs/1603.03417
-# Another option for style layers :
-#  STYLE_LAYERS = (
-#     'relu1_2', 'relu2_2', 'relu3_2', 'relu4_2')  # Set according to https://github.com/DmitryUlyanov/texture_nets
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 def style_synthesis_net(path_to_network, height, width, styles, iterations, batch_size, content_weight=5.0,

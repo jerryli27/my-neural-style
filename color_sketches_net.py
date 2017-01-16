@@ -104,13 +104,13 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 adv_loss =  adv_loss_from_i + adv_loss_from_g
                 generator_loss_through_adv = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits_from_g, tf.ones([batch_size], dtype=tf.int64))) * adv_net_weight
                 # Beta1 = 0.5 according to dcgan paper
-                adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
+                adv_train_step = tf.train.AdamOptimizer(learning_rate_decayed * 0.05, beta1=0.5,
                                        beta2=0.999).minimize(adv_loss, var_list=adv_net_all_var)
-                adv_train_step_i = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
+                adv_train_step_i = tf.train.AdamOptimizer(learning_rate_decayed * 0.05, beta1=0.5,
                                        beta2=0.999).minimize(adv_loss_from_i, var_list=adv_net_all_var)
-                adv_train_step_g = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
+                adv_train_step_g = tf.train.AdamOptimizer(learning_rate_decayed * 0.05, beta1=0.5,
                                        beta2=0.999).minimize(adv_loss_from_g, var_list=adv_net_all_var)
-                generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.5,
+                generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed * 0.05, beta1=0.5,
                                        beta2=0.999).minimize(generator_loss_through_adv, var_list=generator_all_var)
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_l2)

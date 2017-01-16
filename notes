@@ -1004,8 +1004,9 @@ Plan:
         skip_noise_4_feedforward_net: Done, don't forget to delete commented out part after testing.
         johnson_feedforward_net_util: Done
         n_style_feedforward_net: Done, but it's still a mess.
-        faster_neural_style:
+        feed_forward_neural_style: Done
         real_time_neural_style:
+
 
     There's another thing that I noticed. The texture seems to also change with respect to the size of the style image.
     TODO: I will investigate throughly.
@@ -1035,6 +1036,8 @@ Plan:
         So far so good. It's getting around 60 gigs in the past 9 hours. By this time tomorrow I will have around
         600000 training images... I think I might be able to do things even more interesting than filling in colors
         given this dataset.
+
+        TODO: check network structure. Maybe there were some problems there.
     2. Neural style
         More refactoring...
         Don't forget to investigate pattern size.
@@ -1051,3 +1054,28 @@ Plan:
         "balanced" and "tree" trained on other corpora.
 
         Anyway this looks much better than the situation I was in before.
+
+
+2017/01/15
+    1. Nijigen
+        Still the same issues with the adversarial network... Fluctuating colors. Clearning up the dataset or
+        increasing the weight didn't fix it.
+        My last resorts are: increase the dataset size (which also means even longer training time), and decreasing the
+        learning rate only for the adversarial network. I'm trying the latter...
+    2. Neural style
+        More refactoring.
+
+    3. CNN relation extraction
+        I'm done with modifying the cnn repo for my project's purpose. All I need is more data and adding active
+        learning.
+
+2017/01/15
+    1. Nijigen
+        After training for such a long time (110000 batches), it still looked the same as if I've trained it on a
+        smaller dataset at a much smaller size for the same number of batches.
+
+        Although I do have the larger dataset, I don't want to work on this further until i find out why... It costs
+        money to train this thing overnight.
+     2. Neural style
+        Refactoring... maybe not today
+     3. CNN relation extraction.
