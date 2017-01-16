@@ -294,7 +294,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             2 * tf.nn.l2_loss(gram - style_gram) / style_gram_num_elements)
                 current_style_loss =  style_weight * style_blend_weights[i] * reduce(tf.add, style_losses_for_each_style_layer) / batch_size
                 style_loss_for_each_style.append(current_style_loss)
-                style_loss_summary_for_each_style.append(scalar_summary("style_loss_%d_summary" % i, style_loss_for_each_style))
+                style_loss_summary_for_each_style.append(scalar_summary("style_loss_%d_summary" % i,
+                                                                        style_loss_for_each_style[-1]))
             # According to https://arxiv.org/abs/1610.07629 when "zero-padding is replaced with mirror-padding,
             # and transposed convolutions (also sometimes called deconvolutions) are replaced with nearest-neighbor
             # upsampling followed by a convolution.", tv is no longer needed.

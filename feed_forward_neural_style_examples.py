@@ -97,7 +97,7 @@ if __name__=='__main__':
             os.makedirs(model_save_dir)  # TODO: add %s content_img_style_weight_mask_string to the model_save_dir
 
         os.system(
-            '~/anaconda2/bin/python feed_forward_neural_style.py --styles %s %s --learning_rate=%f '
+            'python feed_forward_neural_style.py --styles %s %s --learning_rate=%f '
             '--iterations=%d --batch_size=%d %s %s %s %s --style_weight=%d --content_weight=%d '
             '--checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s '
             '--output=%s --model_save_dir=%s --print_iterations=%d %s %s %s'
