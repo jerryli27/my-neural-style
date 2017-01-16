@@ -570,9 +570,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                 prev_content_preprocessed_file_i = current_content_preprocessed_file_i
                                 content_img_preprocessed = np.load(content_preprocessed_record[
                                                                        current_content_preprocessed_file_i][0])
-
                             content_pre_list = content_img_preprocessed[
-                                               index_within_preprocessed:index_within_preprocessed+batch_size,...]
+                                               index_within_preprocessed:index_within_preprocessed+batch_size,
+                                               ...].astype(np.float32)
                         else:
                             # Load content images
                             current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
