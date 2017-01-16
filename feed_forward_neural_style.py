@@ -52,7 +52,7 @@ def build_parser():
                         default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
     parser.add_argument('--content_preprocessed_folder', dest='content_preprocessed_folder',
                         help='TODO',
-                        metavar='CONTENT_PREPROCESSED_FOLDER', default='microsoft_coco_preprocessed_npy/')
+                        metavar='CONTENT_PREPROCESSED_FOLDER')
     parser.add_argument('--styles', dest='styles', nargs='+',
                         help='One or more style images.',
                         metavar='STYLE', required=True)
