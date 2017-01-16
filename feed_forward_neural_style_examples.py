@@ -55,7 +55,7 @@ if __name__=='__main__':
     end_iterations_dict = {128: 10000, 256: 15000, 512: 20000}
 
     for hw in [128, 256, 512]:
-        styles = ['feed_forward_examples/%d-style.jpg' % (i) for i in range(1, 10)]
+        styles = ['feed_forward_examples/%d-style.jpg' % (i) for i in range(1, 10)] # change this to (1,13)
         style_name = 'multi_style_feed_forward'
 
         learning_rate = 0.001
@@ -90,6 +90,8 @@ if __name__=='__main__':
         multi_style_offset_only_string = '--multiple_styles_train_scale_offset_only' if multi_style_offset_only else ''
         use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''
 
+
+        # TODO: change this dir
         checkpoint_output = 'output_checkpoint/feed_forward_example_1-stylenum-%s-iter-%s.jpg'
         output = 'output/feed_forward_example_1-stylenum-%s.jpg'
         model_save_dir = 'model/feed_forward_example_1/'

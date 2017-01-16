@@ -50,6 +50,9 @@ def build_parser():
                              'dataset.',
                         metavar='CONTENT_FOLDER',
                         default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
+    parser.add_argument('--content_preprocessed_folder', dest='content_preprocessed_folder',
+                        help='TODO',
+                        metavar='CONTENT_PREPROCESSED_FOLDER', default='microsoft_coco_preprocessed_npy/')
     parser.add_argument('--styles', dest='styles', nargs='+',
                         help='One or more style images.',
                         metavar='STYLE', required=True)
@@ -217,9 +220,23 @@ def main():
     if options.output and options.output.count("%s") != 1:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain only one `%s` (e.g. `foo_style_%s.jpg`).")
+
+    try:
+        output_file = options.output % (1)
+    except:
+        parser.error("To save intermediate images, the checkpoint output "
+                     "parameter must contain only one `%s` AND the %s must NOT be escaped like %%s (e.g. "
+                     "`foo_style_%s.jpg`).")
     if options.checkpoint_output and options.checkpoint_output.count("%s") != 2:
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain only two `%s` (e.g. `foo_style_%s_iteration_%s.jpg`).")
+
+    try:
+        output_file = options.checkpoint_output % (1, 1)
+    except:
+        parser.error("To save intermediate images, the checkpoint output "
+                     "parameter must contain only two `%s` AND the %s must NOT be escaped like %%s (e.g. "
+                     "`foo_style_%s_iteration_%s.jpg`).")
     if options.use_johnson and options.use_skip_noise_4:
         parser.error("use_johnson and use_skip_noise_4 can't both be true. Please choose only one generator network.")
 
@@ -231,9 +248,8 @@ def main():
     if options.do_restore_and_generate:
         assert options.restore_and_generate_style_num >= 0 and options.restore_and_generate_style_num < len(
             style_images)
-        one_hot_vector_for_restore_and_generate = np.array([[
-                                                                1.0 if options.restore_and_generate_style_num == style_j else 0.0
-                                                                for style_j in range(len(style_images))]])
+        one_hot_vector_for_restore_and_generate = np.array([[1.0 if options.restore_and_generate_style_num == style_j
+                                                             else 0.0 for style_j in range(len(style_images))]])
 
     for iteration, image in \
             n_style_feedforward_net.style_synthesis_net(path_to_network=options.network,
@@ -255,6 +271,7 @@ def main():
                                                         checkpoint_iterations=options.checkpoint_iterations,
                                                         save_dir=options.model_save_dir,
                                                         content_folder=options.content_folder,
+                                                        content_preprocessed_folder=options.content_preprocessed_folder,
                                                         use_semantic_masks=options.use_semantic_masks,
                                                         mask_folder=options.mask_folder,
                                                         mask_resize_as_feature=options.mask_resize_as_feature,

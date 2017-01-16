@@ -56,7 +56,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7, style_only=False,
                         multiple_styles_train_scale_offset_only=False, use_mrf=False, use_johnson=False,
                         use_skip_noise_4=False, print_iterations=None, checkpoint_iterations=None, save_dir="model/",
-                        content_folder=None, use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
+                        content_folder=None, content_preprocessed_folder = None,
+                        use_semantic_masks=False, mask_folder=None, mask_resize_as_feature=True,
                         style_semantic_masks=None, semantic_masks_weight=1.0, semantic_masks_num_layers=1,
                         do_restore_and_train=False, do_restore_and_generate=False, from_screenshot=False,
                         from_webcam=False, test_img_dir=None, one_hot_vector_for_restore_and_generate=None,
@@ -100,6 +101,9 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     :param save_dir: The folder to save the checkpoints.
     :param content_folder: The folder from where it collect content images for training if needed. A good choice would
     be the Microsoft COCO dataset.
+    :param content_preprocessed_folder: the folder from where it will read the preprocessed content images,
+    save them in the memory instead of read and preprocess the images during training. If the
+    folder is blank, then it will not save the preprocessed image and will instead read the images as it is training.
     :param use_semantic_masks: Whether we use semantic masks as additional semantic information. Please check the paper
     "Semantic Style Transfer and Turning Two-Bit Doodles into Fine Artworks" as well as the blog for the fast forward
     version of it for more information.
@@ -176,6 +180,8 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
     content_features = {}
     style_features = [{} for _ in styles]
     output_semantic_mask_features = {}
+    content_img_preprocessed = None
+    prev_content_preprocessed_file_i = 0
 
     # Read the vgg net
     vgg_data, mean_pixel = vgg.read_net(path_to_network)
@@ -186,6 +192,21 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
         for i in range(len(styles)):
             style_features[i] = precompute_image_features(styles[i], STYLE_LAYERS, style_shapes[i], vgg_data, mean_pixel, use_mrf, use_semantic_masks)
         print('Finished passing style images to VGG for precomputing features.')
+
+        if content_preprocessed_folder is not None and content_preprocessed_folder != '' and not style_only:
+            if not os.path.isfile(content_preprocessed_folder + 'record.txt'):
+                raise AssertionError('No preprocessed content images found in %s. To use this feature, first use some '
+                                     'other file to call read_resize_and_save_all_imgs_in_dir.'
+                                     % (content_preprocessed_folder))
+            content_preprocessed_record = read_preprocessed_npy_record(content_preprocessed_folder)
+            if content_preprocessed_record[0][1] != batch_size or content_preprocessed_record[0][2] != height or \
+                            content_preprocessed_record[0][3] != width :
+                raise AssertionError('The height, width, and batch size of the preprocessed numpy files does not '
+                                     'match those of the current setting.')
+            # Read the first file
+            print('Reading preprocessed content images.')
+            content_img_preprocessed = np.load(content_preprocessed_record[prev_content_preprocessed_file_i][0])
+
 
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
@@ -541,10 +562,22 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
 
                     if not style_only:
-                        # Load content images
-                        current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
-                        content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
-                                                                        input_shape[2])
+                        if content_preprocessed_folder is not None and content_preprocessed_folder != '':
+                            current_content_preprocessed_file_i, index_within_preprocessed =  \
+                                find_corresponding_npy_from_record(
+                                content_preprocessed_record, i * batch_size)
+                            if prev_content_preprocessed_file_i != current_content_preprocessed_file_i:
+                                prev_content_preprocessed_file_i = current_content_preprocessed_file_i
+                                content_img_preprocessed = np.load(content_preprocessed_record[
+                                                                       current_content_preprocessed_file_i][0])
+
+                            content_pre_list = content_img_preprocessed[
+                                               index_within_preprocessed:index_within_preprocessed+batch_size,...]
+                        else:
+                            # Load content images
+                            current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
+                            content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
+                                                                            input_shape[2])
 
                     # Load mask images
                     if use_semantic_masks:

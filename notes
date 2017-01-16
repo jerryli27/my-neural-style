@@ -1076,6 +1076,12 @@ Plan:
 
         Although I do have the larger dataset, I don't want to work on this further until i find out why... It costs
         money to train this thing overnight.
+        Cleaning up training data will take a while so I'm letting that run. Maybe I should also try to save the
+        preprocessed and resized images as .npy files and save them in the memory ready to be used. Don't know how much
+        speed up this will provide. It should be considerable enough though...
+
      2. Neural style
         Refactoring... maybe not today
+        Maybe I should try this: pretrain the model on say 8 style images, then use this as a base to train on
+        other style images only on the scale and offset variables.
      3. CNN relation extraction.

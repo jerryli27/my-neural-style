@@ -266,3 +266,86 @@ def download_if_not_exist(fileurl, file_save_path, helpmsg=''):
         except:
             print('Download failed.')
             return False
+
+
+def read_resize_and_save_batch_images(dirs, height, width, save_path, max_size_g=32):
+    # type: (List[str], int, int, str, object, int) -> np.ndarray
+    """
+    :param dirs: a list of strings of paths to images.
+    :param height: height of outputted images. If height and width are both None, then the images are not resized.
+    :param width: width of outputted images. If height and width are both None, then the images are not resized.
+    :param save_path: The path to save the preprocessed images (as numpy array).
+    :param max_size_g: the maximum size of the numpy array. If it exceeds this size, a warning will be displayed and
+    nothing will be saved.
+    :return: an numpy array representing the resized images. The shape is (num_image, height, width, 3). The numpy
+    array is also saved at "save_dir".
+    """
+    if height is None or width is None:
+        raise AssertionError('The height and width has to be both non None or both None.')
+    shape = (height, width)
+    estimated_size = height * width * 3 * len(dirs) * 1 # 1 for the size of np.uint8
+    max_bytes = max_size_g * (1024 ** 3)
+    if estimated_size > max_bytes:
+        raise AssertionError('The estimated size of the images (%fG) to be saved exceeds the max allowed size (%fG) '
+                             'specified. ' %(float(estimated_size) / (1024**3), float(max_size_g)))
+
+    images = np.array([imread(d, shape=shape) for d in dirs], np.uint8)
+    print('Saving numpy array with size %.3f G' %(images.nbytes / float(1024 ** 3)))
+    np.save(save_path, images)
+    return images
+
+def read_resize_and_save_all_imgs_in_dir(directory, height, width, save_dir, batch_size,
+                                         max_size_g=32):
+    assert save_dir[-1] == '/'
+    all_img_dirs = get_all_image_paths_in_dir(directory)
+    num_images = len(all_img_dirs)
+    image_per_file = max_size_g * (1024 ** 3) / (height * width * 3 * 1)
+    # Make sure that each file contains number of images that is divisible by batch size.
+    num_images = num_images - num_images % batch_size
+    image_per_file = image_per_file - image_per_file % batch_size
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    with open(save_dir + 'record.txt', 'w') as record_f:
+        i = 0
+        while i < num_images:
+            if (i + image_per_file > num_images):
+                end_i = num_images
+                current_file_image_dirs = get_batch_paths(all_img_dirs, i, num_images - i)
+            else:
+                end_i = i + image_per_file
+                current_file_image_dirs = get_batch_paths(all_img_dirs, i, image_per_file)
+
+            current_images_save_path = save_dir + '%dx%d_%d_to_%d.npy' % (height,width,i,end_i)
+            read_resize_and_save_batch_images(current_file_image_dirs, height, width, current_images_save_path,
+                                              max_size_g=max_size_g)
+
+            record_f.write('%s\t%d\t%d\t%d\t%d\t%d\n' %(current_images_save_path, batch_size,height,width,i,end_i))
+            i = end_i
+            print('%f Done.' %(float(end_i) / num_images))
+        assert i == num_images
+
+def read_preprocessed_npy_record(save_dir):
+    ret = []
+    with open(save_dir + 'record.txt', 'r') as record_f:
+        for line in record_f:
+            line_split = line.split('\t')
+            if len(line_split) == 6:
+                for item in range(1,6):
+                    line_split[item] = int(line_split[item])
+                ret.append(line_split)
+            elif len(line_split) == 0:
+                pass
+            else:
+                raise AssertionError('Error in read_preprocessed_npy_record. Format of record.txt is wrong.')
+    return ret
+
+def find_corresponding_npy_from_record(record_list, start_index):
+    num_images = record_list[-1][-1]
+    start_index = start_index % num_images
+    for record_i, record in enumerate(record_list):
+        if start_index >= record[4] and start_index < record[5]:
+            return record_i, start_index - record[4]
+    raise AssertionError('Error in find_corresponding_npy_from_record.')
+
