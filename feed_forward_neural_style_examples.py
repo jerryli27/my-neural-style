@@ -90,8 +90,8 @@ if __name__=='__main__':
         multi_style_offset_only_string = '--multiple_styles_train_scale_offset_only' if multi_style_offset_only else ''
         use_semantic_masks_string = '--use_semantic_masks' if use_semantic_masks else ''
 
-        checkpoint_output = 'output_checkpoint/feed_forward_example_1-stylenum-%%s-iter-%%s.jpg'
-        output = 'output/feed_forward_example_1-stylenum-%%s.jpg'
+        checkpoint_output = 'output_checkpoint/feed_forward_example_1-stylenum-%s-iter-%s.jpg'
+        output = 'output/feed_forward_example_1-stylenum-%s.jpg'
         model_save_dir = 'model/feed_forward_example_1/'
         if not os.path.exists(model_save_dir):
             os.makedirs(model_save_dir)  # TODO: add %s content_img_style_weight_mask_string to the model_save_dir
