@@ -237,6 +237,14 @@ def main():
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain only two `%s` AND the %s must NOT be escaped like %%s (e.g. "
                      "`foo_style_%s_iteration_%s.jpg`).")
+
+    checkpoint_dir = os.path.dirname(options.checkpoint_output)
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    output_dir = os.path.dirname(options.output)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     if options.use_johnson and options.use_skip_noise_4:
         parser.error("use_johnson and use_skip_noise_4 can't both be true. Please choose only one generator network.")
 

@@ -92,8 +92,8 @@ if __name__=='__main__':
 
 
         # TODO: change this dir
-        checkpoint_output = 'output_checkpoint/feed_forward_example_1-stylenum-%s-iter-%s.jpg'
-        output = 'output/feed_forward_example_1-stylenum-%s.jpg'
+        checkpoint_output = 'feed_forward_examples/output_checkpoint/feed_forward_example_1-stylenum-%s-iter-%s.jpg'
+        output = 'feed_forward_examples/output/feed_forward_example_1-stylenum-%s.jpg'
         model_save_dir = 'model/feed_forward_example_1/'
         if not os.path.exists(model_save_dir):
             os.makedirs(model_save_dir)  # TODO: add %s content_img_style_weight_mask_string to the model_save_dir

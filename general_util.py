@@ -14,7 +14,7 @@ from PIL import Image
 from typing import Union, List
 
 
-def imread(path, shape=None, bw=False, rgba=False):
+def imread(path, shape=None, bw=False, rgba=False, dtype=np.float32):
     # type: (str, tuple, bool, bool) -> np.ndarray
     """
 
@@ -33,9 +33,9 @@ def imread(path, shape=None, bw=False, rgba=False):
         convert_format = 'RGB'
 
     if shape is None:
-        return np.asarray(Image.open(path).convert(convert_format), np.float32)
+        return np.asarray(Image.open(path).convert(convert_format), dtype)
     else:
-        return np.asarray(Image.open(path).convert(convert_format).resize((shape[1], shape[0])), np.float32)
+        return np.asarray(Image.open(path).convert(convert_format).resize((shape[1], shape[0])), dtype)
 
 
 def imsave(path, img):
@@ -84,14 +84,15 @@ def read_and_resize_images(dirs, height=None, width=None, bw=False, rgba=False):
         return imread(dirs, shape=target_shape, bw=bw, rgba=rgba)
 
 
-def read_and_resize_batch_images(dirs, height, width):
+def read_and_resize_batch_images(dirs, height, width, dtype=np.float32):
     # type: (List[str], Union[int,None], Union[int,None]) -> np.ndarray
     """
 
     :param dirs: a list of strings of paths to images.
     :param height: height of outputted images. If height and width are both None, then the images are not resized.
     :param width: width of outputted images. If height and width are both None, then the images are not resized.
-    :return: an numpy array representing the resized images. The shape is (num_image, height, width, 3)
+    :return: an numpy array representing the resized images. The shape is (num_image, height, width, 3). Note this
+    takes a while to format an image (3-6 seconds per image on average on my laptop.)
     """
     if height is None and width is None:
         shape = None
@@ -99,8 +100,8 @@ def read_and_resize_batch_images(dirs, height, width):
         if height is None or width is None:
             raise AssertionError('The height and width has to be both non None or both None.')
         shape = (height, width)
-    images = [imread(d, shape=shape) for d in dirs]
-    return np.array(images)
+    images = [imread(d, shape=shape, dtype=dtype) for d in dirs]
+    return np.array(images,dtype=dtype)
 
 
 def read_and_resize_bw_mask_images(dirs, height, width, batch_size, semantic_masks_num_layers):
@@ -284,12 +285,13 @@ def read_resize_and_save_batch_images(dirs, height, width, save_path, max_size_g
         raise AssertionError('The height and width has to be both non None or both None.')
     shape = (height, width)
     estimated_size = height * width * 3 * len(dirs) * 1 # 1 for the size of np.uint8
+    print('Estimated numpy array size: %d' %estimated_size)
     max_bytes = max_size_g * (1024 ** 3)
     if estimated_size > max_bytes:
         raise AssertionError('The estimated size of the images (%fG) to be saved exceeds the max allowed size (%fG) '
                              'specified. ' %(float(estimated_size) / (1024**3), float(max_size_g)))
 
-    images = np.array([imread(d, shape=shape) for d in dirs], np.uint8)
+    images = np.array([imread(d, shape=shape, dtype=np.uint8) for d in dirs], np.uint8)
     print('Saving numpy array with size %.3f G' %(images.nbytes / float(1024 ** 3)))
     np.save(save_path, images)
     return images
@@ -323,7 +325,7 @@ def read_resize_and_save_all_imgs_in_dir(directory, height, width, save_dir, bat
 
             record_f.write('%s\t%d\t%d\t%d\t%d\t%d\n' %(current_images_save_path, batch_size,height,width,i,end_i))
             i = end_i
-            print('%f Done.' %(float(end_i) / num_images))
+            print('%.3f%% Done.' %(float(end_i) / num_images * 100.0))
         assert i == num_images
 
 def read_preprocessed_npy_record(save_dir):

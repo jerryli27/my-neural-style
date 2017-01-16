@@ -1085,3 +1085,4 @@ Plan:
         Maybe I should try this: pretrain the model on say 8 style images, then use this as a base to train on
         other style images only on the scale and offset variables.
      3. CNN relation extraction.
+        I will keep the notes of this in the NewMaster project.
