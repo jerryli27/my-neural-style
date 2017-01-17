@@ -1006,6 +1006,7 @@ Plan:
         n_style_feedforward_net: Done, but it's still a mess.
         feed_forward_neural_style: Done
         real_time_neural_style:
+        generate_masks
 
 
     There's another thing that I noticed. The texture seems to also change with respect to the size of the style image.
