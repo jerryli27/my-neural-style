@@ -1080,9 +1080,25 @@ Plan:
         preprocessed and resized images as .npy files and save them in the memory ready to be used. Don't know how much
         speed up this will provide. It should be considerable enough though...
 
+
+        I tested the resize function. It was pretty slow (3s on my laptop per image). Going to try to add preprocessed
+        data with test_multi_style.py. If that speed things up significantly, I will switch to using preprocessed ver.
+        Before switch, each batch with batch size 1, hw = 512, and 9 style images takes 8 seconds.
+
+        After modification: each batch with batch size 32, hw = 128, and 12 style images take 23 seconds.
+        each batch with batch size = 4 hw=512, and 12 style images takes 50 sec... Not so fast I guess..
+
+
      2. Neural style
         Refactoring... maybe not today
         Maybe I should try this: pretrain the model on say 8 style images, then use this as a base to train on
         other style images only on the scale and offset variables.
      3. CNN relation extraction.
         I will keep the notes of this in the NewMaster project.
+
+
+2017/01/16
+    1. Nijigen
+    2. Neural style
+
+        Note: I'll not be able to use the pretrained network in the example because I changed things around afterwards.

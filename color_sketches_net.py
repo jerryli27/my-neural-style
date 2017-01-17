@@ -11,6 +11,7 @@ import scipy
 import tensorflow as tf
 
 import adv_net_util
+import johnson_feedforward_net_util
 import sketches_util
 import unet_util
 from general_util import *
@@ -31,12 +32,13 @@ except:
 
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                        learning_rate, use_adversarial_net = False, use_hint = False, adv_net_weight = 10000000.0,
-                       lr_decay_steps=20000,
-                        min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
-                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
-                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
-                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
+                       learning_rate, generator_network='johnson',
+                       use_adversarial_net = False, use_hint = False,
+                       adv_net_weight = 10000000.0,lr_decay_steps=20000,
+                       min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
+                       checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
+                       do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
+                       from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
     TODO: modify the description.
@@ -61,7 +63,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
         assert test_img_hint is not None
 
     input_shape = (1, height, width, 3)
-    print('The input shape is: %s' % (str(input_shape)))
+    print('The input shape is: %s. Using %s generator network' % (str(input_shape), generator_network))
 
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
@@ -72,9 +74,20 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             input_hint = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 4], name='input_hint')
             input_concatenated = tf.concat(3, (input_sketches, input_hint))
-            generator_output = unet_util.net(input_concatenated)
+            if generator_network == 'unet':
+                generator_output = unet_util.net(input_concatenated)
+            elif generator_network == 'johnson':
+                generator_output = johnson_feedforward_net_util.net(input_concatenated)
+            else:
+                raise AssertionError("Please input a valid generator network name. Either unet or johnson")
+
         else:
-            generator_output = unet_util.net(input_sketches)
+            if generator_network == 'unet':
+                generator_output = unet_util.net(input_sketches)
+            elif generator_network == 'johnson':
+                generator_output = johnson_feedforward_net_util.net(input_sketches)
+            else:
+                raise AssertionError("Please input a valid generator network name. Either unet or johnson")
         expected_output = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 3], name='expected_output')
 
@@ -92,7 +105,13 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 adv_net_prediction_image_input = adv_net_util.net(adv_net_input)
                 adv_net_prediction_generator_input = adv_net_util.net(generator_output, reuse=True)
                 adv_net_all_var = adv_net_util.get_net_all_variables()
-                generator_all_var = unet_util.get_net_all_variables()
+
+                if generator_network == 'unet':
+                    generator_all_var = unet_util.get_net_all_variables()
+                elif generator_network == 'johnson':
+                    generator_all_var = johnson_feedforward_net_util.get_net_all_variables()
+                else:
+                    raise AssertionError("Please input a valid generator network name. Either unet or johnson")
 
                 logits_from_i = adv_net_prediction_image_input
                 logits_from_g = adv_net_prediction_generator_input

@@ -55,7 +55,7 @@ if __name__=='__main__':
     end_iterations_dict = {128: 10000, 256: 15000, 512: 20000}
 
     for hw in [128, 256, 512]:
-        styles = ['feed_forward_examples/%d-style.jpg' % (i) for i in range(1, 10)] # change this to (1,13)
+        styles = ['feed_forward_examples/%d-style.jpg' % (i) for i in range(1, 13)]
         style_name = 'multi_style_feed_forward'
 
         learning_rate = 0.001

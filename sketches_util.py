@@ -3,16 +3,14 @@
 This file provides functions for turning any image into a 'sketch'.
 """
 
-import os
 import random
 import shutil
 
 import cv2
-import numpy as np
-from PIL import Image, ImageStat
+from PIL import ImageStat
 from scipy.stats import threshold
 
-from general_util import get_all_image_paths_in_dir
+from general_util import *
 
 
 def image_to_sketch(img):
@@ -129,11 +127,25 @@ def detect_bw(file, thumb_size=40, MSE_cutoff=22, adjust_color_bias=True):
         return IMG_TYPE_UK
 
 
-def training_data_rename_bw(data_folder):
+def training_data_clean(data_folder, start_percentage = 0.0):
     all_img_paths = get_all_image_paths_in_dir(data_folder)
+    print('Read %d images.' %len(all_img_paths))
+    if start_percentage != 0.0:
+        all_img_paths = all_img_paths[int(len(all_img_paths) * start_percentage / 100.0):]
+        print("Starting at %f%% with %d images left" %(start_percentage, len(all_img_paths)))
     for i, img_path in enumerate(all_img_paths):
-        if not detect_bw(img_path) == IMG_TYPE_COLOR:
-            shutil.copy(img_path, img_path + '.bak')
+        try:
+            if not detect_bw(img_path) == IMG_TYPE_COLOR:
+                shutil.copy(img_path, img_path + '.bak')
+                os.remove(img_path)
+            else:
+                content_pre_list = read_and_resize_batch_images([img_path], None, None)
+                height = float(content_pre_list.shape[1])
+                width = float(content_pre_list.shape[2])
+                if height / width > 2.0 or width / height > 2.0:
+                    shutil.copy(img_path, img_path + '.bak')
+                    os.remove(img_path)
+            if i % 100 == 0:
+                print("%.3f%% done." % (100.0 * float(i) / len((all_img_paths))))
+        except:
             os.remove(img_path)
-        if i % 100 == 0:
-            print("%.3f%% done." % (100.0 * float(i) / len((all_img_paths))))

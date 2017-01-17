@@ -16,6 +16,7 @@ TV_WEIGHT = 2e2
 
 LEARNING_RATE = 0.0002  # Set according to the dcgan paper but it also works when we're not using adversarial net.
 ITERATIONS = 160000  # Change this according to the dataset used.
+num_epochs = 10
 # The larger batch size the more memory required and the slower the training is, but it provides stability. Usually 4
 # or 8 works well for non-adversarial condition.
 BATCH_SIZE = 64
@@ -24,9 +25,12 @@ PRINT_ITERATIONS = 100
 # TODO: fix comments for the color sketches net.
 def build_parser():
     parser = ArgumentParser()
+    # '/home/ubuntu/pixiv_full/pixiv/' or /home/ubuntu/pixiv/pixiv_training_filtered/' or
+    # '/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/'
     parser.add_argument('--content_folder', dest='content_folder',
-                        help='The path to the colored pixiv images for training. ',
-                        metavar='CONTENT_FOLDER', default='/home/ubuntu/pixiv_full/pixiv/')  # /home/ubuntu/pixiv/pixiv_training_filtered/'
+                        help='The path to the colored pixiv images for training. ', metavar='CONTENT_FOLDER',
+                        default='/home/ubuntu/pixiv_full/pixiv/')
+
     parser.add_argument('--output', dest='output',
                         help='Output path.',
                         metavar='OUTPUT', required=True)
@@ -34,6 +38,9 @@ def build_parser():
                         help='The checkpoint output format. It must contain 2 %s, the first one for content index '
                              'and the second one for style index.',
                         metavar='OUTPUT')
+    parser.add_argument('--generator_network', dest='generator_network', type=str,
+                        help='todo. which generator_network it should use.', metavar='GENERATOR_NETWORK',
+                        default='johnson')
     parser.add_argument('--use_adversarial_net', dest='use_adversarial_net',
                         help='If set, we train an adversarial network to distinguish between the image generated and '
                              'the real image. This will help the generator to generate more real looking images.',
@@ -46,10 +53,12 @@ def build_parser():
                         action='store_true')
     parser.set_defaults(use_hint=False)
 
-
-    parser.add_argument('--iterations', type=int, dest='iterations',
-                        help='Iterations (default %(default)s).',
-                        metavar='ITERATIONS', default=ITERATIONS)
+    parser.add_argument('--num_epochs', type=int, dest='num_epochs',
+                        help='num_epochs (default %(default)s).',
+                        metavar='num_epochs', default=num_epochs)
+    # parser.add_argument('--iterations', type=int, dest='iterations',
+    #                     help='Iterations (default %(default)s).',
+    #                     metavar='ITERATIONS', default=ITERATIONS)
     parser.add_argument('--batch_size', type=int, dest='batch_size',
                         help='Batch size (default %(default)s).',
                         metavar='BATCH_SIZE', default=BATCH_SIZE)
@@ -106,15 +115,21 @@ def build_parser():
 def main():
     parser = build_parser()
     options = parser.parse_args()
+    
+    num_images  = len(get_all_image_paths_in_dir(options.content_folder))
+    num_iterations = num_images * options.num_epochs
+    print("Number of images in content folder: %d. Number of epochs to train: %d (%d iterations)."
+          %(num_images, options.num_epochs ,num_iterations))
 
     for iteration, image in color_sketches_net.color_sketches_net(
             height=options.height,
             width=options.width,
-            iterations=options.iterations,
+            iterations=num_iterations,
             batch_size=options.batch_size,
             content_weight=options.content_weight,
             tv_weight=options.tv_weight,
             learning_rate=options.learning_rate,
+            generator_network=options.generator_network,
             use_adversarial_net=options.use_adversarial_net,
             use_hint=options.use_hint,
             print_iterations=options.print_iterations,
