@@ -15,7 +15,8 @@ def net(image, mirror_padding = True, one_hot_style_vector = None, reuse = False
     The network is a generator network that takes an image, tries to apply some nonlinear transformation, and outputs
     the result with the same shape as the input.
     :param image: tensor with shape (batch_size, height, width, num_features)
-    :param mirror_padding: If true it uses mirror padding. Otherwise it uses zero padding.
+    :param mirror_padding: If true it uses mirror padding. Otherwise it uses zero padding. Note that there's a bug
+    here if I use mirror padding in the conv-transpose layers, I will get errors during gradient computation.
     :param reuse: If true, it tries to reuse the variable previously defined by the same network.
     :return: tensor with shape (batch_size, height, width, num_features)
     """
@@ -31,11 +32,8 @@ def net(image, mirror_padding = True, one_hot_style_vector = None, reuse = False
         resid3 = residual_block(resid2, 3, mirror_padding = mirror_padding, name ='resid3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         resid4 = residual_block(resid3, 3, mirror_padding = mirror_padding, name ='resid4', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         resid5 = residual_block(resid4, 3, mirror_padding = mirror_padding, name ='resid5', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = mirror_padding, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = mirror_padding, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        # I was using mirror padding = False for the two layers for some reason.... Changed it to mirror padding.
-        # conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        # conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         conv_t3 = conv_layer(conv_t2, 3, 9, 1, elu=False, mirror_padding = mirror_padding, name ='conv_t3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         preds = tf.nn.tanh(conv_t3) * 150 + 255./2
 
