@@ -47,7 +47,7 @@ if not os.path.exists(model_save_dir):
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
 os.system('python ~/PycharmProjects/my-neural-style/color_sketches.py --learning_rate=%f --num_epochs=%d '
-          '--batch_size=%d --generator_network=%s'
+          '--batch_size=%d --generator_network=%s '
           '--content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --test_img_hint=%s --output=%s --model_save_dir=%s --print_iterations=%d %s %s %s %s'
           % (learning_rate, epochs, batch_size, generator_network, content_weight, checkpoint_iterations, width, height,
              checkpoint_output, test_img, test_img_hint, output, model_save_dir, print_iteration, do_restore_and_train_string, do_restore_and_generate_string, use_adversarial_net_string, use_hint_string))

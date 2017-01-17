@@ -79,7 +79,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             else:
-                raise AssertionError("Please input a valid generator network name. Either unet or johnson")
+                raise AssertionError("Please input a valid generator network name. Either unet or johnson. Got: %s"
+                                     % (generator_network))
 
         else:
             if generator_network == 'unet':
