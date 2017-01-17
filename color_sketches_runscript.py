@@ -5,10 +5,10 @@
 
 from general_util import *
 
-learning_rate=0.01 # 0.001
+learning_rate=0.001
 # iterations=800000# 800000
-epochs = 10
-batch_size=16  # The larger the better.
+epochs = 2
+batch_size=4  # The larger the better.
 # real_batch_size=2  # The larger the better.
 content_weight=5
 checkpoint_iterations=1000
@@ -16,7 +16,7 @@ height = 256
 width = 256
 generator_network='johnson'
 print_iteration = 100
-do_restore_and_train = False  # True
+do_restore_and_train = True  # True
 do_restore_and_generate = False
 use_adversarial_net = False
 # use_adversarial_net_real = True

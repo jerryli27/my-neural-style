@@ -31,8 +31,11 @@ def net(image, mirror_padding = True, one_hot_style_vector = None, reuse = False
         resid3 = residual_block(resid2, 3, mirror_padding = mirror_padding, name ='resid3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         resid4 = residual_block(resid3, 3, mirror_padding = mirror_padding, name ='resid4', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         resid5 = residual_block(resid4, 3, mirror_padding = mirror_padding, name ='resid5', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = mirror_padding, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = mirror_padding, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        # I was using mirror padding = False for the two layers for some reason.... Changed it to mirror padding.
+        # conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+        # conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         conv_t3 = conv_layer(conv_t2, 3, 9, 1, elu=False, mirror_padding = mirror_padding, name ='conv_t3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
         preds = tf.nn.tanh(conv_t3) * 150 + 255./2
 

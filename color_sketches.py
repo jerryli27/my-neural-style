@@ -117,7 +117,7 @@ def main():
     options = parser.parse_args()
     
     num_images  = len(get_all_image_paths_in_dir(options.content_folder))
-    num_iterations = num_images * options.num_epochs
+    num_iterations = int(num_images * options.num_epochs / options.batch_size)
     print("Number of images in content folder: %d. Number of epochs to train: %d (%d iterations)."
           %(num_images, options.num_epochs ,num_iterations))
 

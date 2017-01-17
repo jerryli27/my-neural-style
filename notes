@@ -1099,6 +1099,6 @@ Plan:
 
 2017/01/16
     1. Nijigen
+        TODO: study the other coloring methods that uses cnn.
     2. Neural style
-
         Note: I'll not be able to use the pretrained network in the example because I changed things around afterwards.

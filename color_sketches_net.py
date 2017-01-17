@@ -378,6 +378,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       1,
                                                                       content_weight, tv_weight,
                                                                       learning_rate,
+                                                                      generator_network=generator_network,
                                                                       use_adversarial_net=False,  # use_adversarial_net=use_adversarial_net,
                                                                       use_hint=use_hint,
                                                                       save_dir=save_dir,
