@@ -33,7 +33,6 @@ from general_util import *
 from mrf_util import mrf_loss
 from neural_util import gramian, total_variation, precompute_image_features
 
-
 # For compatibility among tensorflow versions.
 try:
     image_summary = tf.image_summary
@@ -266,11 +265,12 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
 
             # content loss
-            content_features_size = neural_util.get_tensor_num_elements(content_features[CONTENT_LAYER])
-            content_loss = content_weight * (2 * tf.nn.l2_loss(
-                net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) / content_features_size)
+            if not (style_only or use_semantic_masks):
+                content_features_size = neural_util.get_tensor_num_elements(content_features[CONTENT_LAYER])
+                content_loss = content_weight * (2 * tf.nn.l2_loss(
+                    net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) / content_features_size)
 
-            content_loss_summary = scalar_summary("content_loss_summary", content_loss)
+                content_loss_summary = scalar_summary("content_loss_summary", content_loss)
 
             if content_img_style_weight_mask is not None:
                 # *** TESTING
@@ -659,10 +659,18 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                         feed_dict_ready_time = time.time()
                         # TODO: testing logging loss summaries.
-                        _, content_loss_summary_str, style_loss_summary_str, tv_loss_summary_str = sess.run([train_step_for_each_style[style_i], content_loss_summary, style_loss_summary_for_each_style[style_i], tv_loss_summary], feed_dict=feed_dict)
+
+                        if style_only or use_semantic_masks:
+                            _, style_loss_summary_str, tv_loss_summary_str = sess.run(
+                                [train_step_for_each_style[style_i],
+                                 style_loss_summary_for_each_style[style_i], tv_loss_summary], feed_dict=feed_dict)
+
+                        else:
+                            _, content_loss_summary_str, style_loss_summary_str, tv_loss_summary_str = sess.run([train_step_for_each_style[style_i], content_loss_summary, style_loss_summary_for_each_style[style_i], tv_loss_summary], feed_dict=feed_dict)
                         training_ready_time = time.time()
 
-                        summary_writer.add_summary(content_loss_summary_str, i)
+                        if not (style_only or use_semantic_masks):
+                            summary_writer.add_summary(content_loss_summary_str, i)
                         summary_writer.add_summary(style_loss_summary_str, i)
                         summary_writer.add_summary(tv_loss_summary_str, i)
 
