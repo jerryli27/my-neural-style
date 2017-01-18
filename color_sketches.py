@@ -29,7 +29,7 @@ def build_parser():
     # '/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/'
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the colored pixiv images for training. ', metavar='CONTENT_FOLDER',
-                        default='/home/ubuntu/pixiv_full/pixiv/')
+                        default='/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/')
 
     parser.add_argument('--output', dest='output',
                         help='Output path.',
