@@ -1100,6 +1100,17 @@ Plan:
 
 2017/01/16
     1. Nijigen
-        TODO: study the other coloring methods that uses cnn.
+        TODO: study the other coloring methods that uses cnn. The one that seems most plausible currently is the
+        "Colorful Image Colorization" paper
+
     2. Neural style
         Note: I'll not be able to use the pretrained network in the example because I changed things around afterwards.
+
+2017/01/16
+    1. Nijigen
+        I will implement an algorithm similar to the paper "Colorful Image Colorization". One difference between my
+        algorithm and his is the choice of color space. Since bw images contains information on the color for each
+        pixel while the sketch does not, I can't use LAB color space. I have to use the rgb color space, which in
+        principle should work the same but may make the task harder for the network since it is now required to
+        predict not 313 classes of color but around 4096 classes. I will start from lower number of colors for now.
+        (I will use the 216 color pallate.)

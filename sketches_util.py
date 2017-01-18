@@ -149,3 +149,4 @@ def training_data_clean(data_folder, start_percentage = 0.0):
                 print("%.3f%% done." % (100.0 * float(i) / len((all_img_paths))))
         except:
             os.remove(img_path)
+

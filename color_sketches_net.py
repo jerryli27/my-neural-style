@@ -11,6 +11,7 @@ import scipy
 import tensorflow as tf
 
 import adv_net_util
+import colorful_img_network_util
 import johnson_feedforward_net_util
 import sketches_util
 import unet_util
@@ -30,9 +31,12 @@ except:
     merge_summary = tf.summary.merge
     SummaryWriter = tf.summary.FileWriter
 
+
+COLORFUL_IMG_NUM_BIN = 6  # Temporary
+
 # TODO: change rtype
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
-                       learning_rate, generator_network='johnson',
+                       learning_rate, generator_network='unet',
                        use_adversarial_net = False, use_hint = False,
                        adv_net_weight = 10000000.0,lr_decay_steps=20000,
                        min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
@@ -65,6 +69,9 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     input_shape = (1, height, width, 3)
     print('The input shape is: %s. Using %s generator network' % (str(input_shape), generator_network))
 
+    if generator_network == 'colorful_img':
+        img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
+
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
 
@@ -78,6 +85,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = unet_util.net(input_concatenated)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
+            elif generator_network == 'colorful_img':
+                generator_output = colorful_img_network_util.net(input_concatenated)
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson. Got: %s"
                                      % (generator_network))
@@ -87,17 +96,27 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = unet_util.net(input_sketches)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
+            elif generator_network == 'colorful_img':
+                generator_output = colorful_img_network_util.net(input_sketches)
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson")
-        expected_output = tf.placeholder(tf.float32,
-                                shape=[batch_size, input_shape[1], input_shape[2], 3], name='expected_output')
+
+
 
         if not do_restore_and_generate:
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
-
-            generator_loss_l2 = tf.nn.l2_loss(generator_output - expected_output) / batch_size
+            if generator_network == 'colorful_img':
+                expected_output = tf.placeholder(tf.float32,
+                                                 shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
+                                                 name='expected_output')
+                generator_loss_non_adv = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(generator_output, expected_output))
+            else:
+                expected_output = tf.placeholder(tf.float32,
+                                                 shape=[batch_size, input_shape[1], input_shape[2], 3],
+                                                 name='expected_output')
+                generator_loss_non_adv = tf.nn.l2_loss(generator_output - expected_output) / batch_size
             # tv_loss = tv_weight * total_variation(image)
 
             if use_adversarial_net:
@@ -133,7 +152,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_train_step_through_adv = tf.train.AdamOptimizer(learning_rate_decayed * 0.05, beta1=0.5,
                                        beta2=0.999).minimize(generator_loss_through_adv, var_list=generator_all_var)
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(generator_loss_l2)
+                                       beta2=0.999).minimize(generator_loss_non_adv)
 
                 with tf.control_dependencies([generator_train_step_through_adv, generator_train_step]):
                     generator_both_train = tf.no_op(name='generator_both_train')
@@ -144,7 +163,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                 generator_loss_through_adv_sum = scalar_summary("g_loss_through_adv", generator_loss_through_adv)
                 adv_loss_sum = scalar_summary("adv_loss", adv_loss)
-                generator_loss_l2_sum = scalar_summary("g_l2_loss", generator_loss_l2)
+                generator_loss_l2_sum = scalar_summary("generator_loss_non_adv", generator_loss_non_adv)
 
 
                 g_sum = merge_summary([generator_loss_through_adv_sum, generator_loss_l2_sum])
@@ -153,8 +172,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 # optimizer setup
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
-                                       beta2=0.999).minimize(generator_loss_l2)
-                g_loss_sum = scalar_summary("g_l2_loss", generator_loss_l2)
+                                       beta2=0.999).minimize(generator_loss_non_adv)
+                g_loss_sum = scalar_summary("generator_loss_non_adv", generator_loss_non_adv)
 
 
             def print_progress(i, feed_dict, adv_feed_dict, last=False):
@@ -162,7 +181,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     'Iteration %d/%d\n' % (i + 1, iterations))
                 if last or (print_iterations and i % print_iterations == 0):
                     stderr.write('Learning rate %f\n' % (learning_rate_decayed.eval()))
-                    stderr.write(' generator l2 loss: %g\n' % generator_loss_l2.eval(feed_dict=feed_dict))
+                    stderr.write(' generator l2 loss: %g\n' % generator_loss_non_adv.eval(feed_dict=feed_dict))
                     if use_adversarial_net:
                         stderr.write('   adv_from_i loss: %g\n' % adv_loss_from_i.eval(feed_dict=adv_feed_dict))
                         stderr.write('   adv_from_g loss: %g\n' % adv_loss_from_g.eval(feed_dict=adv_feed_dict))
@@ -222,7 +241,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     image_sketches = np.expand_dims(image_sketches, axis=3)
 
                     # Now generate an image using the style_blend_weights given.
-                    feed_dict = {expected_output:content_image, input_sketches:image_sketches}
+                    feed_dict = {input_sketches:image_sketches}
 
                     if use_hint:
                         image_hint = imread(test_img_hint, (input_shape[1], input_shape[2]), rgba=True)
@@ -298,7 +317,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     image_sketches = np.expand_dims(image_sketches, axis=3)
 
                     # Now generate an image using the style_blend_weights given.
-                    feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches}
+                    if generator_network == 'colorful_img':
+                        current_rgb_bin = img_to_rgb_bin_encoder.img_to_rgb_bin(content_pre_list)
+                        feed_dict = {expected_output: current_rgb_bin, input_sketches: image_sketches}
+                    else:
+                        feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches}
 
                     if use_hint:
                         image_hint = sketches_util.generate_hint_from_image(content_pre_list)
@@ -353,7 +376,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     # # TODO:
                     # if i%100==0:
                     #     with open(save_dir + 'loss.tsv','a') as loss_record_file:
-                    #         current_generator_l2_loss = generator_loss_l2.eval(feed_dict=feed_dict)
+                    #         current_generator_l2_loss = generator_loss_non_adv.eval(feed_dict=feed_dict)
                     #         loss_record_file.write('%d\t%g\n' % (i, current_generator_l2_loss))
                     #     if use_adversarial_net:
                     #         with open(save_dir + 'adv_loss.tsv', 'a') as loss_record_file:
@@ -390,7 +413,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       test_img_hint=test_img_hint):
                             pass
 
-                            best_image = generated_image
+                            if generator_network == 'colorful_img':
+                                best_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
+                            else:
+                                best_image = generated_image
 
                         # Because we now have batch, choose the first one in the batch as our sample image.
                         yield (

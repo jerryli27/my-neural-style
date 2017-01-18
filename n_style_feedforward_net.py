@@ -658,7 +658,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             feed_dict[content_img_style_weight_mask_placeholder] = style_weight_mask_for_training[content_img_style_weight_mask_batch_i, :, :, :]
 
                         feed_dict_ready_time = time.time()
-                        # TODO: testing logging loss summaries.
 
                         if style_only or use_semantic_masks:
                             _, style_loss_summary_str, tv_loss_summary_str = sess.run(
@@ -675,7 +674,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         summary_writer.add_summary(tv_loss_summary_str, i)
 
                         summary_done_time = time.time()
-
+                        # TODO: Logging time spent on each part. Don't forget to delete this after finished debugging.
                         print('Time spent on: feeddict: %.3f; training: %.3f, summary: %.3f.'
                               %(content_ready_time-start_time, training_ready_time-feed_dict_ready_time,
                                 summary_done_time-training_ready_time))

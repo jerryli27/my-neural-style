@@ -1,7 +1,7 @@
 from johnson_feedforward_net_util import *
 
 
-class SquareTest(tf.test.TestCase):
+class JohnsonTest(tf.test.TestCase):
     def test_get_johnson_scale_offset_var(self):
         with self.test_session():
             batch_size = 1

@@ -11,8 +11,8 @@ WEIGHTS_INIT_STDEV = .1
 
 
 def conv_layer(net, num_filters, filter_size, strides, elu=True, mirror_padding=True, one_hot_style_vector=None,
-               norm='instance_norm', name='', reuse=False):
-    # type: (tf.Tensor, int, int, int, bool, bool, Union[None,tf.Tensor], str, str, bool) -> tf.Tensor
+               norm='instance_norm', dilation = 1, name='', reuse=False):
+    # type: (tf.Tensor, int, int, int, bool, bool, Union[None,tf.Tensor], str, int, str, bool) -> tf.Tensor
     """
     This function generates a convolution layer given the input layer and the output shape info.
     :param net: tensor with shape (batch_size, height, width, num_input_features)
@@ -31,11 +31,14 @@ def conv_layer(net, num_filters, filter_size, strides, elu=True, mirror_padding=
     """
     with tf.variable_scope('conv_layer' + name, reuse=reuse):
         weights_init = conv_init_vars(net, num_filters, filter_size, name=name, reuse=reuse)
-        strides_shape = [1, strides, strides, 1]
         if mirror_padding:
-            net = conv2d_mirror_padding(net, weights_init, None, filter_size, stride=strides)
+            net = conv2d_mirror_padding(net, weights_init, None, filter_size, stride=strides, dilation=dilation)
         else:
-            net = tf.nn.conv2d(net, weights_init, strides_shape, padding='SAME')
+            if dilation == 1:
+                strides_shape = [1, strides, strides, 1]
+                net = tf.nn.conv2d(net, weights_init, strides_shape, padding='SAME')
+            else:
+                net = tf.nn.atrous_conv2d(net, weights_init, dilation, padding='SAME')
         if norm == 'instance_norm':
             net = instance_norm(net, name=name, one_hot_style_vector=one_hot_style_vector, reuse=reuse)
         elif norm == 'batch_norm':
@@ -197,7 +200,7 @@ def fully_connected(net, out_channels, activation_fn=None, name='', reuse=False)
         return fc1
 
 
-def conv2d_mirror_padding(input_layer, w, b, kernel_size, stride=1):
+def conv2d_mirror_padding(input_layer, w, b, kernel_size, stride=1, dilation=1):
     # type: (tf.Tensor, Union[tf.Tensor,tf.Variable], Union[tf.Tensor,tf.Variable], int, int) -> tf.Tensor
     """
     Apply mirror padding before doing a convolution on the input layer.
@@ -211,7 +214,11 @@ def conv2d_mirror_padding(input_layer, w, b, kernel_size, stride=1):
     n_pad = (kernel_size - 1) / 2
     padding = [[0, 0], [n_pad, n_pad], [n_pad, n_pad], [0, 0]]
     mirror_padded_input_layer = tf.pad(input_layer, padding, "REFLECT", name='mirror_padding')
-    conv_output = tf.nn.conv2d(mirror_padded_input_layer, w, strides=[1, stride, stride, 1], padding='VALID')
+    if dilation == 1:
+        # Maybe there will be problems in the padding... Not sure.
+        conv_output = tf.nn.atrous_conv2d(mirror_padded_input_layer, w, rate=dilation, padding='VALID')
+    else:
+        conv_output = tf.nn.conv2d(mirror_padded_input_layer, w, strides=[1, stride, stride, 1], padding='VALID')
     if b is not None:
         return tf.nn.bias_add(conv_output, b)
     else:

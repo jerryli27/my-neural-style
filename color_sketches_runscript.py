@@ -5,16 +5,17 @@
 
 from general_util import *
 
-learning_rate=0.001
+learning_rate=0.0001  # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
+# saytheir batch size.
 # iterations=800000# 800000
-epochs = 2
+epochs = 10
 batch_size=4  # The larger the better.
 # real_batch_size=2  # The larger the better.
 content_weight=5
 checkpoint_iterations=1000
 height = 256
 width = 256
-generator_network='johnson'
+generator_network='colorful_img'
 print_iteration = 100
 do_restore_and_train = False  # True
 do_restore_and_generate = False
