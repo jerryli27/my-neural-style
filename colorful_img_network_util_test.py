@@ -22,7 +22,5 @@ class ColorfulImgNetTest(tf.test.TestCase):
         img_reconstructed_expected = np.array([[[[0, 0, 0], [0, 0, 255]]]])
         np.testing.assert_array_equal(img_reconstructed_expected,img_reconstructed)
 
-
-
 if __name__ == '__main__':
     tf.test.main()

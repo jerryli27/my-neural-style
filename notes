@@ -1114,3 +1114,29 @@ Plan:
         principle should work the same but may make the task harder for the network since it is now required to
         predict not 313 classes of color but around 4096 classes. I will start from lower number of colors for now.
         (I will use the 216 color pallate.)
+
+        The reason I was using that was I could not get a satisfying result from the adversarial network. The
+        training was slow and I believe that further training will not improve things after training it for a night.
+        Also the paper I mentioned above stated the problem I was facing: images generated had very few colors and
+        had a sepia tone. It mentioned the reason that caused it: using the l2 loss will result in an optimal
+        solution of coloring everything gray if there are ambiguities. It also mentioned the solution, which is to
+        modify the loss as the cross entropy between two probability functions.
+
+        The problem I'm currently facing was that there were some parts missing in the model description. He went from
+        lower resolution directly to higher one. He said he used up-sampling but mine was giving a checkerboard like
+        result. I guessed that it was caused by the generator network and I deleted the softmax layer in the
+        generator network because the loss does that already. It seems to be working fine now.
+
+
+2017/01/17
+    1. Nijigen
+        For debugging, I'm trying to directly optimize the output image and that helped me to do some sanity checks
+        and discover more bugs. ( I forgot to normalize when I convert the rgb grid to image)
+        One thing I've found was that I cannot generate a satisfying image using back propagation. It gave me a gray
+        image. Only after I manually added a softmax layer to the optimized output image does the training give the
+        correct result. The reason was that if I take off the softmax layer, then the output can contain negative
+        values, which will create problems during normalization. The two models are essentially the same otherwise.
+        So I guess I shouldn't have deleted the softmax layer in the generator network...
+
+        After I made the changes, it turns out that the training last night actually worked! I'm now getting a black
+        and white image out of the sketch I gave to the network. To give it color, I need annealed-mean

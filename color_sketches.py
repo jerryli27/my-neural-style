@@ -26,7 +26,7 @@ PRINT_ITERATIONS = 100
 def build_parser():
     parser = ArgumentParser()
     # '/home/ubuntu/pixiv_full/pixiv/' or /home/ubuntu/pixiv/pixiv_training_filtered/' or
-    # '/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/'
+    # '/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/' -> Number of images  442701.
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the colored pixiv images for training. ', metavar='CONTENT_FOLDER',
                         default='/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/')

@@ -38,8 +38,8 @@ COLORFUL_IMG_NUM_BIN = 6  # Temporary
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
                        learning_rate, generator_network='unet',
                        use_adversarial_net = False, use_hint = False,
-                       adv_net_weight = 10000000.0,lr_decay_steps=20000,
-                       min_lr=0.00001, lr_decay_rate=0.7,print_iterations=None,
+                       adv_net_weight = 10000000.0,lr_decay_steps=2000,
+                       min_lr=0.000003, lr_decay_rate=0.9,print_iterations=None,
                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
@@ -69,7 +69,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     input_shape = (1, height, width, 3)
     print('The input shape is: %s. Using %s generator network' % (str(input_shape), generator_network))
 
-    if generator_network == 'colorful_img':
+    if generator_network == 'colorful_img' or generator_network =='backprop':
         img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
 
     # Define tensorflow placeholders and variables.
@@ -87,6 +87,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
                 generator_output = colorful_img_network_util.net(input_concatenated)
+            elif generator_network =='backprop':
+                generator_output = tf.get_variable('backprop_input_var',
+                                                   shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
+                                                   initializer=tf.random_normal_initializer()) + 0 * input_concatenated
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson. Got: %s"
                                      % (generator_network))
@@ -98,6 +102,11 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
             elif generator_network == 'colorful_img':
                 generator_output = colorful_img_network_util.net(input_sketches)
+            elif generator_network =='backprop':
+                generator_output = tf.get_variable('backprop_input_var',
+                                                   shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
+                                                   initializer=tf.random_normal_initializer()) + 0 * input_sketches
+                generator_output = tf.nn.softmax(generator_output)
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson")
 
@@ -107,7 +116,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
-            if generator_network == 'colorful_img':
+            if generator_network == 'colorful_img' or generator_network =='backprop':
                 expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
                                                  name='expected_output')
@@ -317,7 +326,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     image_sketches = np.expand_dims(image_sketches, axis=3)
 
                     # Now generate an image using the style_blend_weights given.
-                    if generator_network == 'colorful_img':
+                    if generator_network == 'colorful_img' or generator_network =='backprop':
                         current_rgb_bin = img_to_rgb_bin_encoder.img_to_rgb_bin(content_pre_list)
                         feed_dict = {expected_output: current_rgb_bin, input_sketches: image_sketches}
                     else:
@@ -413,7 +422,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       test_img_hint=test_img_hint):
                             pass
 
-                            if generator_network == 'colorful_img':
+                            if generator_network == 'colorful_img' or generator_network =='backprop':
                                 best_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
                             else:
                                 best_image = generated_image

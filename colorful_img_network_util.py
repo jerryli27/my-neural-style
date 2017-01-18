@@ -1,8 +1,8 @@
 
 """
 This file implements the network in "Colorful Image Colorization" paper (https://github.com/richzhang/colorization)
-...
-
+It is a generator network that is specifically created for coloring images. The usage of the network is slightly
+different from the original paper however. It is now used to color sketches instead of bw images.
 Some code comes directly from https://github.com/richzhang/colorization/blob/master/resources/caffe_traininglayers.py
 """
 
@@ -11,27 +11,41 @@ from sklearn.neighbors import NearestNeighbors
 
 from conv_util import *
 
+# TODO: add layers to make the final resolution larger.
 NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
-         'conv8_1','conv8_2','conv8_3']
-NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256]
-KERNEL_SIZES = [3] * 19 + [4,3,3]
-STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2  ,1,1]
+         'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv9_3','conv10_1','conv10_2','conv10_3',]
+NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,128,128,128,64,
+               64,64]
+KERNEL_SIZES = [3] * 19 + [4,3,3] * 3
+STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1] * 3
 NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
-         '', '', 'batch_norm','', '', 'batch_norm']
-DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
-assert len(NAMES) == len(NUM_OUTPUTS) and len(NAMES) == len(KERNEL_SIZES) and len(NAMES) == len(STRIDES) and len(NAMES) == len(NORMS) and len(NAMES) == len(DILATIONS)
+         '', '', 'batch_norm','', '', 'batch_norm','', '', 'batch_norm','', '', 'batch_norm']
+DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1]
+CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
+
+assert len(NAMES) == len(NUM_OUTPUTS) and len(NAMES) == len(KERNEL_SIZES) and len(NAMES) == len(STRIDES) and \
+       len(NAMES) == len(NORMS) and len(NAMES) == len(DILATIONS)
 
 
 def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
     # type: (tf.Tensor, bool, bool) -> tf.Tensor
     """
-    The network is a generator network that takes an image, tries to TODO
+    The network is a generator network that takes a sketch and tries to apply color to it.
+    Note: there is a slight modification in the network with respect to the one in the paper. For the one in the
+    paper, they directly upsampled an iamge that is 4 times small. This is fine for them since they have the black
+    and white image with the original resolution that can provide the detailed luminance information. In our case we
+    do not have such information and therefore it should be better to do deconvolution until we get an output image
+    with the same resolution as the input.
+    If you'd like to use this for the reimplementation of the original paper, just delete all layers after "conv8_3"
+    and do a nearest neighbor upsampling. You'd also need to modify the rgb bin into the lab bin.
     :param image: tensor with shape (batch_size, height, width, num_features)
     :param mirror_padding: If true it uses mirror padding. Otherwise it uses zero padding. Note that there's a bug
     here if I use mirror padding in the conv-transpose layers, I will get errors during gradient computation.
+    :param num_bin: The number of bins to divide each r,g,b channel into. If numbin = 6 then we will have 6 **3 = 216
+    different color encodings, with each color's possible value as: 0, 51, 102, ..., 255
     :param reuse: If true, it tries to reuse the variable previously defined by the same network.
-    :return: tensor with shape (batch_size, height, width, num_features)
+    :return: tensor with shape (batch_size, height, width, num_bin ** 3)
     """
 
     # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly
@@ -43,7 +57,7 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
 
         with tf.variable_scope('unet', reuse=reuse):
             for i in range(len(NAMES)):
-                if NAMES[i] != 'conv8_1':
+                if NAMES[i] not in CONV_TRANSPOSE_LAYERS:
                     current_layer = conv_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
                                                filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
                                                mirror_padding=mirror_padding, norm=NORMS[i], dilation=DILATIONS[i],
@@ -57,14 +71,13 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                 prev_layer_list.append(current_layer)
 
 
-
-        # DIalation = 1
-        conv8_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
-                                   name ='conv8_rgb_bin', reuse = reuse)
-        class8_rgb_bin = tf.nn.softmax(conv8_rgb_bin, name='class8_rgb_bin')
-
+        conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
+                                   name ='conv10_rgb_bin', reuse = reuse)
         image_shape = image.get_shape().as_list()
-        final = tf.image.resize_nearest_neighbor(class8_rgb_bin, [image_shape[1], image_shape[2]])
+        conv10_rgb_bin_shape = conv10_rgb_bin.get_shape().as_list()
+        if not (image_shape[1] == conv10_rgb_bin_shape[1] and image_shape[2] == conv10_rgb_bin_shape[2]):
+            conv10_rgb_bin = tf.image.resize_nearest_neighbor(conv10_rgb_bin, [image_shape[1], image_shape[2]])
+        final = tf.nn.softmax(conv10_rgb_bin,name='softmax_layer')
         # Do sanity check.
         final_shape = final.get_shape().as_list()
         if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
@@ -101,7 +114,7 @@ class ImgToRgbBinEncoder():
             r += step_size
         self.index_matrix = np.array(index_matrix, dtype=np.uint8)
         self.nnencode = NNEncode(5,5,cc=self.index_matrix)
-    def img_to_rgb_bin(self,img):
+    def img_to_rgb_bin(self,img, return_sparse = False):
 
         """
 
@@ -136,7 +149,7 @@ class ImgToRgbBinEncoder():
         #
         # return rgb_bin
 
-        return self.nnencode.encode_points_mtx_nd(img,axis=3)
+        return self.nnencode.encode_points_mtx_nd(img,axis=3, return_sparse=return_sparse)
 
 
     def rgb_bin_to_img(self,rgb_bin,t = 0.38):
@@ -152,8 +165,11 @@ class ImgToRgbBinEncoder():
         batch, height, width, num_channel = rgb_bin.shape
         if num_channel != self.bin_num**3:
             raise AssertionError("The rgb_bin must have bin_num**3 channels, not %d." % num_channel)
-        # TODO: implement annealed-mean
-        return self.nnencode.decode_points_mtx_nd(rgb_bin, axis=3)
+        rgb_bin_normalized = rgb_bin/np.sum(rgb_bin,axis=3,keepdims=True)
+
+        exp_log_z_div_t = np.exp(np.divide(np.log(rgb_bin_normalized),t))
+        annealed_mean = exp_log_z_div_t / np.sum(exp_log_z_div_t, axis=3, keepdims=True)
+        return self.nnencode.decode_points_mtx_nd(annealed_mean, axis=3)
 
     def gaussian_kernel(self,arr,std):
         return np.exp(np.square(arr) / (-2 * std**2)) / (std * np.sqrt(2 * np.pi))
@@ -171,10 +187,11 @@ class NNEncode():
         self.NN = int(NN)
         self.sigma = sigma
         self.nbrs = NearestNeighbors(n_neighbors=NN, algorithm='ball_tree').fit(self.cc)
+        self.closest_neighbor = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(self.cc)
 
         self.alreadyUsed = False
 
-    def encode_points_mtx_nd(self,pts_nd,axis=1,returnSparse=False,sameBlock=True):
+    def encode_points_mtx_nd(self,pts_nd,axis=1,return_sparse=False,sameBlock=True):
         pts_flt = flatten_nd_array(pts_nd,axis=axis)
         P = pts_flt.shape[0]
         if(sameBlock and self.alreadyUsed):
@@ -186,7 +203,10 @@ class NNEncode():
 
         P = pts_flt.shape[0]
 
-        (dists,inds) = self.nbrs.kneighbors(pts_flt)
+        if return_sparse:
+            (dists, inds) = self.nbrs.closest_neighbor(pts_flt)
+        else:
+            (dists,inds) = self.nbrs.kneighbors(pts_flt)
 
         wts = np.exp(-dists**2/(2*self.sigma**2))
         wts = wts/np.sum(wts,axis=1)[:,na()]
