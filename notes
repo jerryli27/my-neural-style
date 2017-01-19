@@ -1155,3 +1155,9 @@ Plan:
         it's the convolution, but there's no reason why it's showing up now instead of before. I haven't seen such a
         checkerboard effect before and the network architecture hasn't changed that much. Maybe it's the dilation
         layers. I will test it locally. Maybe the generator network is wrong somewhere.
+
+        Other reasons why this may fail:
+            It may not be able to recognize the color boundary so the result may look inconsistent.
+            Training data could be too complicated and not well selected.
+            Training takes too long
+                How do I know what lr to use?

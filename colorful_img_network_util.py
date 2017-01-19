@@ -11,20 +11,27 @@ from sklearn.neighbors import NearestNeighbors
 
 from conv_util import *
 
-# # TODO: add layers to make the final resolution larger.
+# Note: I modified the structure of the network in two ways:
+#  1. The network now will return an image with the same size as the input through convolution instead of direct
+# nearest neighbor image resizing. This is because coloring bw image and sketches are fundamentally different in that
+# bw images contains more information than sketches and it is ok for it to be a little bit lazier in the last few
+# layers.
+#  2. The network no longer does deconvolution but instead uses nearest neighbor resizing followed by a convolution
+# layer to achieve the same effect without checkerboard artifacts. Please read the excellent blog post at
+# http://distill.pub/2016/deconv-checkerboard/ for more information.
 NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
          'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv10_1','conv10_2']
 # the last few layers has to be large enough, or it won:t contain enough info to encode 216 channels
-NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,256,256,256,
-               256]
-KERNEL_SIZES = [3] * 19 + [4,3,3,4,3,4,3]
-STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1,2,1,2,1]
+NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,128,128,64,
+               64]
+KERNEL_SIZES = [3] * 19 + [3,3,3,3,3,3,3]
+STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [1,1,1,1,1,1,1]
 NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
          '', '', 'batch_norm','', '', 'batch_norm','', 'batch_norm','', 'batch_norm']
 DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1]
 CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
-# # TODO: add layers to make the final resolution larger.
+# The following is the original setting in the author's git repo.
 # NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
 #          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
 #          'conv8_1','conv8_2','conv8_3']
@@ -75,7 +82,14 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                                                mirror_padding=mirror_padding, norm=NORMS[i], dilation=DILATIONS[i],
                                                name=NAMES[i], reuse=reuse)
                 else:
-                    current_layer =  conv_tranpose_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
+                    # current_layer =  conv_tranpose_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
+                    #                            filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
+                    #                            mirror_padding=mirror_padding, norm=NORMS[i], name=NAMES[i],
+                    #                            reuse=reuse)
+                    prev_layer_shape = prev_layer.get_shape().as_list()
+                    current_layer = tf.image.resize_nearest_neighbor(prev_layer, (prev_layer_shape[1] * 2,
+                                                                                  prev_layer_shape[2] * 2))
+                    current_layer =  conv_layer(current_layer, num_filters=NUM_OUTPUTS[i],
                                                filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
                                                mirror_padding=mirror_padding, norm=NORMS[i], name=NAMES[i],
                                                reuse=reuse)
