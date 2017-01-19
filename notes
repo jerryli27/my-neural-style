@@ -1151,3 +1151,7 @@ Plan:
         The generated image was blurry. Trying to increase the resolution...First attempt failed but I think the
         reason was because the number of features in the final layers are too few to encode all info needed for the
         216 color bins.
+        No That's not the cause. I increased the embedding to 256 and it still has the checkerboard effect. Maybe
+        it's the convolution, but there's no reason why it's showing up now instead of before. I haven't seen such a
+        checkerboard effect before and the network architecture hasn't changed that much. Maybe it's the dilation
+        layers. I will test it locally. Maybe the generator network is wrong somewhere.
