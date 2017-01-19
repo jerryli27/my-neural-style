@@ -38,8 +38,8 @@ COLORFUL_IMG_NUM_BIN = 6  # Temporary
 def color_sketches_net(height, width, iterations, batch_size, content_weight, tv_weight,
                        learning_rate, generator_network='unet',
                        use_adversarial_net = False, use_hint = False,
-                       adv_net_weight = 10000000.0,lr_decay_steps=20000,
-                       min_lr=0.000003, lr_decay_rate=0.9,print_iterations=None,
+                       adv_net_weight = 10000000.0,lr_decay_steps=10000,
+                       min_lr=0.00003, lr_decay_rate=0.9,print_iterations=None,
                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):

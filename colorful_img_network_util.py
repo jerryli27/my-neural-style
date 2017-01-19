@@ -11,18 +11,30 @@ from sklearn.neighbors import NearestNeighbors
 
 from conv_util import *
 
-# TODO: add layers to make the final resolution larger.
+# # TODO: add layers to make the final resolution larger.
 NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
-         'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv9_3','conv10_1','conv10_2','conv10_3',]
-NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,128,128,128,64,
-               64,64]
-KERNEL_SIZES = [3] * 19 + [4,3,3] * 3
-STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1] * 3
+         'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv10_1','conv10_2']
+# the last few layers has to be large enough, or it won:t contain enough info to encode 216 channels
+NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,256,256,256,
+               256]
+KERNEL_SIZES = [3] * 19 + [4,3,3,4,3,4,3]
+STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1,2,1,2,1]
 NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
-         '', '', 'batch_norm','', '', 'batch_norm','', '', 'batch_norm','', '', 'batch_norm']
-DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1]
+         '', '', 'batch_norm','', '', 'batch_norm','', 'batch_norm','', 'batch_norm']
+DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1]
 CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
+# # TODO: add layers to make the final resolution larger.
+# NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
+#          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
+#          'conv8_1','conv8_2','conv8_3']
+# NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256]
+# KERNEL_SIZES = [3] * 19 + [4,3,3]
+# STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1]
+# NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
+#          '', '', 'batch_norm','', '', 'batch_norm']
+# DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
+# CONV_TRANSPOSE_LAYERS = {'conv8_1'}
 
 assert len(NAMES) == len(NUM_OUTPUTS) and len(NAMES) == len(KERNEL_SIZES) and len(NAMES) == len(STRIDES) and \
        len(NAMES) == len(NORMS) and len(NAMES) == len(DILATIONS)
@@ -71,19 +83,27 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                 prev_layer_list.append(current_layer)
 
 
-        conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
-                                   name ='conv10_rgb_bin', reuse = reuse)
+        # conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
+        #                            name ='conv10_rgb_bin', reuse = reuse)
+        conv8_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
+                                   name ='conv8_rgb_bin', reuse = reuse)
         image_shape = image.get_shape().as_list()
-        conv10_rgb_bin_shape = conv10_rgb_bin.get_shape().as_list()
-        if not (image_shape[1] == conv10_rgb_bin_shape[1] and image_shape[2] == conv10_rgb_bin_shape[2]):
-            conv10_rgb_bin = tf.image.resize_nearest_neighbor(conv10_rgb_bin, [image_shape[1], image_shape[2]])
-        final = tf.nn.softmax(conv10_rgb_bin,name='softmax_layer')
+        conv8_rgb_bin_shape = conv8_rgb_bin.get_shape().as_list()
+        if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
+            conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
+        final = tf.nn.softmax(conv8_rgb_bin,name='softmax_layer')
         # Do sanity check.
         final_shape = final.get_shape().as_list()
         if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
             print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' % (
             str(image_shape), str(final_shape)))
             raise AssertionError
+        # final_shape = final.get_shape().as_list()
+        # if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] * 4 and image_shape[2] ==
+        #     final_shape[2] * 4):
+        #     print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' % (
+        #     str(image_shape), str(final_shape)))
+        #     raise AssertionError
         return final
 
 def get_net_all_variables():

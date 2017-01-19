@@ -1139,4 +1139,15 @@ Plan:
         So I guess I shouldn't have deleted the softmax layer in the generator network...
 
         After I made the changes, it turns out that the training last night actually worked! I'm now getting a black
-        and white image out of the sketch I gave to the network. To give it color, I need annealed-mean
+        and white image out of the sketch I gave to the network. To give it color, I need annealed-mean.
+
+        Implemented annealed-mean. Finally saw some color. I think the method is working. So I'm switching to more
+        careful training with smaller lr. I also modified the network a little to fit this use case.
+        I'm planning to let it train for a whole day while I do other stuff.
+        TODO: I need to implement the per-pixel rare color balancing.
+
+2017/01/17
+    1. Nijigen
+        The generated image was blurry. Trying to increase the resolution...First attempt failed but I think the
+        reason was because the number of features in the final layers are too few to encode all info needed for the
+        216 color bins.
