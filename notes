@@ -1006,7 +1006,7 @@ Plan:
         n_style_feedforward_net: Done, but it's still a mess.
         feed_forward_neural_style: Done
         real_time_neural_style:
-        generate_masks
+        generate_masks:
 
 
     There's another thing that I noticed. The texture seems to also change with respect to the size of the style image.
@@ -1106,7 +1106,7 @@ Plan:
     2. Neural style
         Note: I'll not be able to use the pretrained network in the example because I changed things around afterwards.
 
-2017/01/16
+2017/01/17
     1. Nijigen
         I will implement an algorithm similar to the paper "Colorful Image Colorization". One difference between my
         algorithm and his is the choice of color space. Since bw images contains information on the color for each
@@ -1128,7 +1128,7 @@ Plan:
         generator network because the loss does that already. It seems to be working fine now.
 
 
-2017/01/17
+2017/01/18
     1. Nijigen
         For debugging, I'm trying to directly optimize the output image and that helped me to do some sanity checks
         and discover more bugs. ( I forgot to normalize when I convert the rgb grid to image)
@@ -1146,7 +1146,7 @@ Plan:
         I'm planning to let it train for a whole day while I do other stuff.
         TODO: I need to implement the per-pixel rare color balancing.
 
-2017/01/17
+2017/01/19
     1. Nijigen
         The generated image was blurry. Trying to increase the resolution...First attempt failed but I think the
         reason was because the number of features in the final layers are too few to encode all info needed for the
@@ -1160,4 +1160,7 @@ Plan:
             It may not be able to recognize the color boundary so the result may look inconsistent.
             Training data could be too complicated and not well selected.
             Training takes too long
-                How do I know what lr to use?
+                How do I know what lr to use? -- Use back propagation to test what lr can give satisfactory result
+                for one single image, then maybe 1/10~1/2 times that would be fine depending on the batch size
+    2. Neural style
+        Continue refactoring. Finish up stuff.

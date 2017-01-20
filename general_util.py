@@ -269,8 +269,8 @@ def download_if_not_exist(fileurl, file_save_path, helpmsg=''):
             return False
 
 
-def read_resize_and_save_batch_images(dirs, height, width, save_path, max_size_g=32):
-    # type: (List[str], int, int, str, object, int) -> np.ndarray
+def read_resize_and_save_batch_images(dirs, height, width, save_path, bw=False, max_size_g=32):
+    # type: (List[str], int, int, str, bool, int) -> np.ndarray
     """
     :param dirs: a list of strings of paths to images.
     :param height: height of outputted images. If height and width are both None, then the images are not resized.
@@ -284,24 +284,24 @@ def read_resize_and_save_batch_images(dirs, height, width, save_path, max_size_g
     if height is None or width is None:
         raise AssertionError('The height and width has to be both non None or both None.')
     shape = (height, width)
-    estimated_size = height * width * 3 * len(dirs) * 1 # 1 for the size of np.uint8
+    estimated_size = height * width * (1 if bw else 3) * len(dirs) * 1 # 1 for the size of np.uint8
     print('Estimated numpy array size: %d' %estimated_size)
     max_bytes = max_size_g * (1024 ** 3)
     if estimated_size > max_bytes:
         raise AssertionError('The estimated size of the images (%fG) to be saved exceeds the max allowed size (%fG) '
                              'specified. ' %(float(estimated_size) / (1024**3), float(max_size_g)))
 
-    images = np.array([imread(d, shape=shape, dtype=np.uint8) for d in dirs], np.uint8)
+    images = np.array([imread(d, shape=shape, dtype=np.uint8, bw=bw) for d in dirs], np.uint8)
     print('Saving numpy array with size %.3f G' %(images.nbytes / float(1024 ** 3)))
     np.save(save_path, images)
     return images
 
-def read_resize_and_save_all_imgs_in_dir(directory, height, width, save_dir, batch_size,
+def read_resize_and_save_all_imgs_in_dir(directory, height, width, save_dir, batch_size, bw=False,
                                          max_size_g=32):
     assert save_dir[-1] == '/'
     all_img_dirs = get_all_image_paths_in_dir(directory)
     num_images = len(all_img_dirs)
-    image_per_file = max_size_g * (1024 ** 3) / (height * width * 3 * 1)
+    image_per_file = max_size_g * (1024 ** 3) / (height * width * (1 if bw else 3) * 1)
     # Make sure that each file contains number of images that is divisible by batch size.
     num_images = num_images - num_images % batch_size
     image_per_file = image_per_file - image_per_file % batch_size
@@ -320,7 +320,7 @@ def read_resize_and_save_all_imgs_in_dir(directory, height, width, save_dir, bat
                 current_file_image_dirs = get_batch_paths(all_img_dirs, i, image_per_file)
 
             current_images_save_path = save_dir + '%dx%d_%d_to_%d.npy' % (height,width,i,end_i)
-            read_resize_and_save_batch_images(current_file_image_dirs, height, width, current_images_save_path,
+            read_resize_and_save_batch_images(current_file_image_dirs, height, width, current_images_save_path,bw=bw,
                                               max_size_g=max_size_g)
 
             record_f.write('%s\t%d\t%d\t%d\t%d\t%d\n' %(current_images_save_path, batch_size,height,width,i,end_i))

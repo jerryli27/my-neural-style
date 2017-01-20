@@ -16,10 +16,10 @@ import numpy as np
 import tensorflow as tf
 from typing import Union, Tuple, List, Iterable
 
-import experimental_util
 import neural_doodle_util
 import neural_util
 import vgg
+from experimental import experimental_util
 from general_util import get_np_array_num_elements
 from mrf_util import mrf_loss
 

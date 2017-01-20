@@ -1,4 +1,7 @@
-# Mainly took from Dmitry's github https://github.com/DmitryUlyanov/online-neural-doodle
+"""
+This file is for generating random masks to be used by the feed forward neural style network.
+Code is mainly taken from Dmitry's github https://github.com/DmitryUlyanov/online-neural-doodle
+"""
 
 import argparse
 
@@ -70,5 +73,4 @@ for i, mask in enumerate(gen_masks):
     for j in range(n_colors):
         mask_rgb = np.transpose(np.repeat(np.array([mask[j,:,:]]), 3, axis=0),(1,2,0))
         scipy.misc.imsave('%strain_mask_%d_%d.png' % (args.out_dir, i, j), mask_rgb)
-        # result = general_util.imread('%strain_mask_%d_%d.png' % (args.out_dir, i, j), bw=True)
-        # print(result)
+

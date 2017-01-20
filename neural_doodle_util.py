@@ -5,8 +5,8 @@
 import tensorflow as tf
 from typing import Tuple, Dict
 
-import experimental_util
 import vgg
+from experimental import experimental_util
 from general_util import *
 from neural_util import gramian
 
