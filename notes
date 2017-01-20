@@ -1177,3 +1177,8 @@ Plan:
 
         The network stopped improving after batch 9000. I will test the new unet_mod network. The only modification I
          made to unet is to make its output into 216 bins instead of rgb.
+
+         That should give better results than that of unet. If not, then there's something wierd going on.
+         If the result is better but still not satisfactory after the change, it means that the network cannot infer
+         from the given information about the color to use. Then I can modify the network (add the dilation layer for
+          example) or clean up training data to improve the result. I'm hopeful about this.
