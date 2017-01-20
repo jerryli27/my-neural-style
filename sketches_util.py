@@ -150,3 +150,107 @@ def training_data_clean(data_folder, start_percentage = 0.0):
         except:
             os.remove(img_path)
 
+
+def read_resize_and_save_batch_images_with_sketches(dirs, height, width, save_path, sketch_save_path, max_size_g=32):
+    # type: (List[str], int, int, str, str, int) -> None
+    """
+    Preprocessing the images and save them as npy will greatly increase the training speed since it decreased the
+    time spent on cpu trying to read images and convert them to sketches.
+    :param dirs: a list of strings of paths to images.
+    :param height: height of outputted images. If height and width are both None, then the images are not resized.
+    :param width: width of outputted images. If height and width are both None, then the images are not resized.
+    :param save_path: The path to save the preprocessed images (as numpy array).
+    :param max_size_g: the maximum size of the numpy array. If it exceeds this size, a warning will be displayed and
+    nothing will be saved.
+    :return: an numpy array representing the resized images. The shape is (num_image, height, width, 3). The numpy
+    array is also saved at "save_dir".
+    """
+    if height is None or width is None:
+        raise AssertionError('The height and width has to be both non None or both None.')
+    shape = (height, width)
+    estimated_size = height * width * (1 + 3) * len(dirs) * 1 # 1 for the size of np.uint8
+    print('Estimated numpy array size: %d' %estimated_size)
+    max_bytes = max_size_g * (1024 ** 3)
+    if estimated_size > max_bytes:
+        raise AssertionError('The estimated size of the images (%fG) to be saved exceeds the max allowed size (%fG) '
+                             'specified. ' %(float(estimated_size) / (1024**3), float(max_size_g)))
+
+    images = np.array([imread(d, shape=shape, dtype=np.uint8) for d in dirs], np.uint8)
+    print('Saving numpy array with size %.3f G' %(images.nbytes / float(1024 ** 3)))
+    np.save(save_path, images)
+    print('Finished saving. Now converting sketches')
+    image_sketches = image_to_sketch(images)
+    print('Finished converting sketches. Now saving it as np array with size %.3f G'
+          %(image_sketches.nbytes / float(1024 ** 3)))
+    np.save(sketch_save_path, image_sketches)
+    return
+
+def preprocess_img_in_dir_and_save(directory, height, width, save_dir, batch_size, max_size_g=32):
+    assert save_dir[-1] == '/'
+    all_img_dirs = get_all_image_paths_in_dir(directory)
+    num_images = len(all_img_dirs)
+    image_per_file = max_size_g * (1024 ** 3) / (height * width * (1 + 3) * 1)
+    # Make sure that each file contains number of images that is divisible by batch size.
+    num_images = num_images - num_images % batch_size
+    image_per_file = image_per_file - image_per_file % batch_size
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+        os.makedirs(save_dir+'images/')
+        os.makedirs(save_dir+'sketches/')
+
+    with open(save_dir + 'record.txt', 'w') as record_f:
+        i = 0
+        while i < num_images:
+            if (i + image_per_file > num_images):
+                end_i = num_images
+                current_file_image_dirs = get_batch_paths(all_img_dirs, i, num_images - i)
+            else:
+                end_i = i + image_per_file
+                current_file_image_dirs = get_batch_paths(all_img_dirs, i, image_per_file)
+
+            current_images_save_path = save_dir + 'images/%dx%d_%d_to_%d.npy' % (height,width,i,end_i)
+            current_sketches_save_path = save_dir + 'sketches/%dx%d_%d_to_%d.npy' % (height,width,i,end_i)
+            read_resize_and_save_batch_images_with_sketches(current_file_image_dirs, height, width,
+                                                            current_images_save_path,current_sketches_save_path,
+                                                            max_size_g=max_size_g)
+
+            record_f.write('%s\t%s\t%d\t%d\t%d\t%d\t%d\n' %(current_images_save_path, current_sketches_save_path,
+                                                        batch_size,height,width,i,end_i))
+            i = end_i
+            print('%.3f%% Done.' %(float(end_i) / num_images * 100.0))
+        assert i == num_images
+
+def read_preprocessed_sketches_npy_record(save_dir):
+    ret = []
+    with open(save_dir + 'record.txt', 'r') as record_f:
+        for line in record_f:
+            line_split = line.split('\t')
+            if len(line_split) == 7:
+                for item in range(2,7):
+                    line_split[item] = int(line_split[item])
+                ret.append(line_split)
+            elif len(line_split) == 0:
+                pass
+            else:
+                raise AssertionError('Error in read_preprocessed_npy_record. Format of record.txt is wrong.')
+    return ret
+
+def find_corresponding_sketches_npy_from_record(record_list, start_index):
+    num_images = record_list[-1][-1]
+    start_index = start_index % num_images
+    for record_i, record in enumerate(record_list):
+        if start_index >= record[5] and start_index < record[6]:
+            return record_i, start_index - record[5]
+    raise AssertionError('Error in find_corresponding_npy_from_record.')
+
+if __name__ == '__main__':
+    height = 256
+    width = 256
+    batch_size = 12
+
+    print('Directly calling this file will start the process to convert all training images to preprocessed numpy '
+          'files. Current setting is height = %d, width = %d, batch_size = %d' %(height, width, batch_size))
+
+    preprocess_img_in_dir_and_save('/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/',
+                                   height, width, 'pixiv_img_preprocessed_npy/256/',batch_size, max_size_g=16)

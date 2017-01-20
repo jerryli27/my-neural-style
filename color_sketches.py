@@ -30,6 +30,9 @@ def build_parser():
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the colored pixiv images for training. ', metavar='CONTENT_FOLDER',
                         default='/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/')
+    parser.add_argument('--content_preprocessed_folder', dest='content_preprocessed_folder',
+                        help='TODO',
+                        metavar='CONTENT_PREPROCESSED_FOLDER')
 
     parser.add_argument('--output', dest='output',
                         help='Output path.',
@@ -139,6 +142,7 @@ def main():
             do_restore_and_train=options.do_restore_and_train,
             restore_from_noadv_to_adv=options.restore_from_noadv_to_adv,
             content_folder=options.content_folder,
+            content_preprocessed_folder=options.content_preprocessed_folder,
             test_img_dir=options.test_img,
             test_img_hint=options.test_img_hint
     ):

@@ -1162,5 +1162,18 @@ Plan:
             Training takes too long
                 How do I know what lr to use? -- Use back propagation to test what lr can give satisfactory result
                 for one single image, then maybe 1/10~1/2 times that would be fine depending on the batch size
+
+
     2. Neural style
         Continue refactoring. Finish up stuff.
+
+2017/01/20
+    1 Nijigen
+        The network result was not so satisfactory. It's even less satisfactory than the unet. Probably that's
+        because it did not have direct connection between the layers before and after conv/deconv process. With that
+        connection, one can easily learn the identity function get at least the sketches part correct. Now it's
+        mostly giving black, white, and gray colors... It has the capacity of giving more colors than that, but
+        training is just not going in the direction where I want it to go.
+
+        The network stopped improving after batch 9000. I will test the new unet_mod network. The only modification I
+         made to unet is to make its output into 216 bins instead of rgb.

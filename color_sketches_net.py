@@ -4,6 +4,7 @@ I first saw it at http://qiita.com/taizan/items/cf77fd37ec3a0bef5d9d
 """
 
 # import gtk.gdk
+import time
 from sys import stderr
 
 import cv2
@@ -14,6 +15,7 @@ import adv_net_util
 import colorful_img_network_util
 import johnson_feedforward_net_util
 import sketches_util
+import unet_mod_util
 import unet_util
 from general_util import *
 
@@ -42,6 +44,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        min_lr=0.00003, lr_decay_rate=0.9,print_iterations=None,
                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
+                       content_preprocessed_folder = None,
                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
     """
     Stylize images.
@@ -69,8 +72,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     input_shape = (1, height, width, 3)
     print('The input shape is: %s. Using %s generator network' % (str(input_shape), generator_network))
 
-    if generator_network == 'colorful_img' or generator_network =='backprop':
+    if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod':
         img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
+
+    content_img_preprocessed = None
+    sketches_preprocessed = None
+    prev_content_preprocessed_file_i = 0
 
     # Define tensorflow placeholders and variables.
     with tf.Graph().as_default():
@@ -83,6 +90,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             input_concatenated = tf.concat(3, (input_sketches, input_hint))
             if generator_network == 'unet':
                 generator_output = unet_util.net(input_concatenated)
+            elif generator_network == 'unet_mod':
+                generator_output = unet_mod_util.net(input_concatenated)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
@@ -98,6 +107,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
         else:
             if generator_network == 'unet':
                 generator_output = unet_util.net(input_sketches)
+            elif generator_network == 'unet_mod':
+                generator_output = unet_mod_util.net(input_sketches)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
             elif generator_network == 'colorful_img':
@@ -116,7 +127,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             learning_rate_decayed_init = tf.constant(learning_rate)
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
-            if generator_network == 'colorful_img' or generator_network =='backprop':
+            if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod':
                 expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
                                                  name='expected_output')
@@ -269,6 +280,24 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 # Initialize log writer
                 summary_writer = SummaryWriter("./logs", sess.graph)
 
+                # initialize pre-processsed numpy array
+                if content_preprocessed_folder is not None:
+                    if not os.path.isfile(content_preprocessed_folder + 'record.txt'):
+                        raise AssertionError(
+                            'No preprocessed content images found in %s. To use this feature, first use some '
+                            'other file to call read_resize_and_save_all_imgs_in_dir.'
+                            % (content_preprocessed_folder))
+                    content_preprocessed_record = read_preprocessed_npy_record(content_preprocessed_folder)
+                    if content_preprocessed_record[0][1] != batch_size or content_preprocessed_record[0][2] != height or \
+                                    content_preprocessed_record[0][3] != width:
+                        raise AssertionError(
+                            'The height, width, and batch size of the preprocessed numpy files does not '
+                            'match those of the current setting.')
+                    # Read the first file
+                    print('Reading preprocessed content images.')
+                    content_img_preprocessed = np.load(content_preprocessed_record[prev_content_preprocessed_file_i][0])
+                    sketches_preprocessed = np.load(content_preprocessed_record[prev_content_preprocessed_file_i][1])
+
                 with open(save_dir + 'loss.tsv', 'w') as loss_record_file:
                     pass  # Clear the loss file before appending to it.
                 if use_adversarial_net:
@@ -317,16 +346,38 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     if (i % lr_decay_steps == 0 and i!= iter_start):
                         current_lr = learning_rate_decayed.eval()
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
+                    start_time = time.time()
+                    if content_preprocessed_folder is not None:
+                        current_content_preprocessed_file_i, index_within_preprocessed =  \
+                            sketches_util.find_corresponding_sketches_npy_from_record(
+                            content_preprocessed_record, i * batch_size)
+                        if prev_content_preprocessed_file_i != current_content_preprocessed_file_i:
+                            prev_content_preprocessed_file_i = current_content_preprocessed_file_i
+                            content_img_preprocessed = np.load(content_preprocessed_record[
+                                                                   current_content_preprocessed_file_i][0])
+                            sketches_preprocessed = np.load(content_preprocessed_record[
+                                                                   current_content_preprocessed_file_i][1])
+                        content_pre_list = content_img_preprocessed[
+                                           index_within_preprocessed:index_within_preprocessed+batch_size,
+                                           ...].astype(np.float32)
+                        image_sketches = sketches_preprocessed[
+                                           index_within_preprocessed:index_within_preprocessed+batch_size,
+                                           ...].astype(np.float32)
+                        image_sketches = np.expand_dims(image_sketches, axis=3)
+                    else:
 
-                    current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
-                    content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
-                                                                    input_shape[2])
+                        current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
+                        content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
+                                                                        input_shape[2])
 
-                    image_sketches = sketches_util.image_to_sketch(content_pre_list)
-                    image_sketches = np.expand_dims(image_sketches, axis=3)
+                        image_sketches = sketches_util.image_to_sketch(content_pre_list)
+                        image_sketches = np.expand_dims(image_sketches, axis=3)
+
+                    end_time = time.time()
+                    print('Time spent on: reading and preprocessing images: %.3f.'% (start_time - end_time))
 
                     # Now generate an image using the style_blend_weights given.
-                    if generator_network == 'colorful_img' or generator_network =='backprop':
+                    if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod':
                         current_rgb_bin = img_to_rgb_bin_encoder.img_to_rgb_bin(content_pre_list)
                         feed_dict = {expected_output: current_rgb_bin, input_sketches: image_sketches}
                     else:
@@ -422,7 +473,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       test_img_hint=test_img_hint):
                             pass
 
-                            if generator_network == 'colorful_img' or generator_network =='backprop':
+                            if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod':
                                 best_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
                             else:
                                 best_image = generated_image
