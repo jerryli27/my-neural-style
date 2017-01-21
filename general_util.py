@@ -351,3 +351,20 @@ def find_corresponding_npy_from_record(record_list, start_index):
             return record_i, start_index - record[4]
     raise AssertionError('Error in find_corresponding_npy_from_record.')
 
+def np_total_variation(image_batch):
+    batch_size, height, width, num_features = image_batch.shape
+    top = image_batch[:,1:height,...]
+    bottom = image_batch[:,0:height-1,...]
+
+    left = image_batch[:,:,0:width-1,...]
+    right = image_batch[:,:,1:width,...]
+
+    vertical_diff = np.subtract(top,bottom)
+    horizontal_diff = np.subtract(left,right)
+
+    vertical_diff_num_elements = get_np_array_num_elements(vertical_diff)
+    horizontal_diff_num_elements = get_np_array_num_elements(horizontal_diff)
+
+    total_var = 2 * (np.linalg.norm(vertical_diff) / vertical_diff_num_elements +
+                     np.linalg.norm(vertical_diff) / horizontal_diff_num_elements)
+    return total_var

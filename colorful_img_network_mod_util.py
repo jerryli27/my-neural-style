@@ -100,15 +100,22 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                 prev_layer_list.append(current_layer)
 
 
-        # conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
-        #                            name ='conv10_rgb_bin', reuse = reuse)
-        conv8_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
-                                   name ='conv8_rgb_bin', reuse = reuse)
+        # # conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
+        # #                            name ='conv10_rgb_bin', reuse = reuse)
+        # conv8_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
+        #                            name ='conv8_rgb_bin', reuse = reuse)
+        # image_shape = image.get_shape().as_list()
+        # conv8_rgb_bin_shape = conv8_rgb_bin.get_shape().as_list()
+        # if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
+        #     conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
+        # final = tf.nn.softmax(conv8_rgb_bin,name='softmax_layer')
+
+        final = conv_layer(prev_layer, 3, 1, 1, mirror_padding=mirror_padding, name ='conv10_rgb', reuse = reuse)
         image_shape = image.get_shape().as_list()
-        conv8_rgb_bin_shape = conv8_rgb_bin.get_shape().as_list()
-        if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
-            conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
-        final = tf.nn.softmax(conv8_rgb_bin,name='softmax_layer')
+        final_shape = final.get_shape().as_list()
+        if not (image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
+            final = tf.image.resize_nearest_neighbor(final, [image_shape[1], image_shape[2]])
+
         # Do sanity check.
         final_shape = final.get_shape().as_list()
         if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):

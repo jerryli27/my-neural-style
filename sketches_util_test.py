@@ -45,6 +45,21 @@ class TestImageToSketchesUtil(unittest.TestCase):
         # expected_output = 'y'
         # self.assertEqual(actual_output, expected_output)
 
+    def test_detect_complicated_img(self):
+
+        all_img_paths = general_util.get_all_image_paths_in_dir('/home/xor/pixiv_images/train_images/')
+
+        for img_path in all_img_paths[10:]:
+            print(img_path)
+            print(detect_complicated_img(img_path))
+
+
+            img = general_util.imread(img_path)
+            sketch = image_to_sketch(img)
+            cv2.imshow('Input', cv2.cvtColor(img, cv2.COLOR_RGB2BGR).astype(np.uint8))
+            cv2.imshow('Sketch', sketch.astype(np.uint8))
+            cv2.waitKey(0)
+
 
 if __name__ == '__main__':
     unittest.main()

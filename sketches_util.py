@@ -127,6 +127,17 @@ def detect_bw(file, thumb_size=40, MSE_cutoff=22, adjust_color_bias=True):
         return IMG_TYPE_UK
 
 
+def detect_complicated_img(file, threshold = 10.0):
+    img = imread(file)
+    sketch = image_to_sketch(img)
+    sketch = np.expand_dims(np.expand_dims(sketch,axis=0),axis=3)
+    total_var = np_total_variation(sketch)
+    print(total_var)
+    if total_var < threshold:
+        return False
+    else:
+        return True
+
 def training_data_clean(data_folder, start_percentage = 0.0):
     all_img_paths = get_all_image_paths_in_dir(data_folder)
     print('Read %d images.' %len(all_img_paths))
@@ -243,6 +254,10 @@ def find_corresponding_sketches_npy_from_record(record_list, start_index):
         if start_index >= record[5] and start_index < record[6]:
             return record_i, start_index - record[5]
     raise AssertionError('Error in find_corresponding_npy_from_record.')
+
+
+
+
 
 if __name__ == '__main__':
     height = 256

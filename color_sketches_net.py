@@ -11,6 +11,7 @@ import scipy
 import tensorflow as tf
 
 import adv_net_util
+import colorful_img_network_mod_util
 import colorful_img_network_util
 import johnson_feedforward_net_util
 import sketches_util
@@ -95,6 +96,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
                 generator_output = colorful_img_network_util.net(input_concatenated)
+            elif generator_network == 'colorful_img_mod':
+                generator_output = colorful_img_network_mod_util.net(input_concatenated)
             elif generator_network =='backprop':
                 generator_output = tf.get_variable('backprop_input_var',
                                                    shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
@@ -112,6 +115,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
             elif generator_network == 'colorful_img':
                 generator_output = colorful_img_network_util.net(input_sketches)
+            elif generator_network == 'colorful_img_mod':
+                generator_output = colorful_img_network_mod_util.net(input_sketches)
             elif generator_network =='backprop':
                 generator_output = tf.get_variable('backprop_input_var',
                                                    shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],

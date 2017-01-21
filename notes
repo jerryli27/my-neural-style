@@ -1187,4 +1187,28 @@ Plan:
         sketches program. I found that reading the images, resizing them, and generating their sketches are taking
         quite a while. By doing this I'm hoping to have a 25%~50% speed up on training speed.;
 
+2017/01/21
+    1. Nijigen
+        Summary of what failed and what sort of succeeded:
+            a. Failed:
+                color sketches modified by adding some more layers to enlarge the result image instead of nn upsample.
+                unet modified so that the last layer become rgb bin without changing anything else
+                    The output became just white after 2000ish rounds.
+                unet modified, just like above, but with the deconv layer being deeper and lower lr. (Got the same
+                result as unet mod above)
+                unet + adversarial
+                Only adversarial
+                unet first then only adversarial.
+            b. Sort of succeeded:
+                unet only
+                    The result always had sepia color or only black and white color. This is caused by the inherent
+                    uncertainty in the color to use for objects and the optimal choice for l2 loss was the mean.
+                color sketches
 
+
+        Plan:
+            Rerunning color sketches on unet with the larger dataset to make sure it was not the larger dataset's
+                problem.
+                I tried. That had no problem at all. But why did it failed on training the rgb bin? Why did the
+                result became just pure white image?
+            After that, run the color_sketches_net with directly connected conv-deconv layers.
