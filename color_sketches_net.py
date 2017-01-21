@@ -4,7 +4,6 @@ I first saw it at http://qiita.com/taizan/items/cf77fd37ec3a0bef5d9d
 """
 
 # import gtk.gdk
-import time
 from sys import stderr
 
 import cv2
@@ -287,9 +286,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                             'No preprocessed content images found in %s. To use this feature, first use some '
                             'other file to call read_resize_and_save_all_imgs_in_dir.'
                             % (content_preprocessed_folder))
-                    content_preprocessed_record = read_preprocessed_npy_record(content_preprocessed_folder)
-                    if content_preprocessed_record[0][1] != batch_size or content_preprocessed_record[0][2] != height or \
-                                    content_preprocessed_record[0][3] != width:
+                    content_preprocessed_record = sketches_util.read_preprocessed_sketches_npy_record(content_preprocessed_folder)
+                    if content_preprocessed_record[0][2] % batch_size != 0 \
+                            or content_preprocessed_record[0][3] != height\
+                            or content_preprocessed_record[0][4] != width:
                         raise AssertionError(
                             'The height, width, and batch size of the preprocessed numpy files does not '
                             'match those of the current setting.')
@@ -346,7 +346,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     if (i % lr_decay_steps == 0 and i!= iter_start):
                         current_lr = learning_rate_decayed.eval()
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
-                    start_time = time.time()
                     if content_preprocessed_folder is not None:
                         current_content_preprocessed_file_i, index_within_preprocessed =  \
                             sketches_util.find_corresponding_sketches_npy_from_record(
@@ -373,11 +372,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         image_sketches = sketches_util.image_to_sketch(content_pre_list)
                         image_sketches = np.expand_dims(image_sketches, axis=3)
 
-                    end_time = time.time()
-                    print('Time spent on: reading and preprocessing images: %.3f.'% (start_time - end_time))
-
                     # Now generate an image using the style_blend_weights given.
                     if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod':
+                        # Encoding image into rgb bins takes a while. It takes about 1s to convert one batch of 12
+                        # images with shape 256x256 into rgb bins. It is not really possible to preprocess this step
+                        # though since it will take up too much space. (Maybe not so much space if I do it smartly.)
+                        # It's not a huge issue for now...
                         current_rgb_bin = img_to_rgb_bin_encoder.img_to_rgb_bin(content_pre_list)
                         feed_dict = {expected_output: current_rgb_bin, input_sketches: image_sketches}
                     else:
