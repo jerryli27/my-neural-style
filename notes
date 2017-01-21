@@ -1211,4 +1211,14 @@ Plan:
                 problem.
                 I tried. That had no problem at all. But why did it failed on training the rgb bin? Why did the
                 result became just pure white image?
+
+                TODO: think about why...
+
+            Testing color_sketches_net with last layer replaced by rgb layer. This is to test whether I really need
+            to add the direct connection between conv-deconv layers
+
+
+
+
+
             After that, run the color_sketches_net with directly connected conv-deconv layers.

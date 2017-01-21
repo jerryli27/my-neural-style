@@ -31,20 +31,8 @@ NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','
          '', '', 'batch_norm','', '', 'batch_norm','', 'batch_norm','', 'batch_norm']
 DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1]
 CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
-
-
-
-# The following is the original setting in the author's git repo.
-# NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
-#          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
-#          'conv8_1','conv8_2','conv8_3']
-# NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256]
-# KERNEL_SIZES = [3] * 19 + [4,3,3]
-# STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1]
-# NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
-#          '', '', 'batch_norm','', '', 'batch_norm']
-# DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
-# CONV_TRANSPOSE_LAYERS = {'conv8_1'}
+CONV_DOWN_LAYERS = {'conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3'}
+CONV_UP_LAYERS = {'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv10_1','conv10_2'}
 
 assert len(NAMES) == len(NUM_OUTPUTS) and len(NAMES) == len(KERNEL_SIZES) and len(NAMES) == len(STRIDES) and \
        len(NAMES) == len(NORMS) and len(NAMES) == len(DILATIONS)
@@ -72,32 +60,64 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
 
     # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly
     # by 4.
-    with tf.variable_scope('johnson', reuse=reuse):
+    with tf.variable_scope('colorful_img_network_connected', reuse=reuse):
 
         prev_layer = image
         prev_layer_list = [image]
 
-        with tf.variable_scope('unet', reuse=reuse):
-            for i in range(len(NAMES)):
-                if NAMES[i] not in CONV_TRANSPOSE_LAYERS:
-                    current_layer = conv_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
-                                               filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
-                                               mirror_padding=mirror_padding, norm=NORMS[i], dilation=DILATIONS[i],
-                                               name=NAMES[i], reuse=reuse)
-                else:
-                    # current_layer =  conv_tranpose_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
-                    #                            filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
-                    #                            mirror_padding=mirror_padding, norm=NORMS[i], name=NAMES[i],
-                    #                            reuse=reuse)
-                    prev_layer_shape = prev_layer.get_shape().as_list()
-                    current_layer = tf.image.resize_nearest_neighbor(prev_layer, (prev_layer_shape[1] * 2,
-                                                                                  prev_layer_shape[2] * 2))
-                    current_layer =  conv_layer(current_layer, num_filters=NUM_OUTPUTS[i],
-                                               filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
-                                               mirror_padding=mirror_padding, norm=NORMS[i], name=NAMES[i],
-                                               reuse=reuse)
-                prev_layer = current_layer
-                prev_layer_list.append(current_layer)
+
+        for i in range(len(CONV_DOWN_LAYERS)):
+            current_layer = conv_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
+                                       filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
+                                       mirror_padding=mirror_padding, norm=NORMS[i], dilation=DILATIONS[i],
+                                       name=NAMES[i], reuse=reuse)
+            prev_layer = current_layer
+            prev_layer_list.append(current_layer)
+
+        # I call the layers in the middle the "semantic layers".
+        for semantic_layers_i in range(len(NAMES) - len(CONV_UP_LAYERS) - len(CONV_DOWN_LAYERS)):
+            i = semantic_layers_i + len(CONV_DOWN_LAYERS)
+
+            current_layer = conv_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
+                                       filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
+                                       mirror_padding=mirror_padding, norm=NORMS[i], dilation=DILATIONS[i],
+                                       name=NAMES[i], reuse=reuse)
+            prev_layer = current_layer
+
+        for conv_up_layers_i in range(len(CONV_UP_LAYERS)):
+            i = conv_up_layers_i + (len(NAMES) - len(CONV_UP_LAYERS))
+            if NAMES[i] not in CONV_TRANSPOSE_LAYERS:
+                current_layer = conv_layer(prev_layer, num_filters=NUM_OUTPUTS[i],
+                                           filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
+                                           mirror_padding=mirror_padding, norm=NORMS[i], dilation=DILATIONS[i],
+                                           name=NAMES[i], reuse=reuse)
+            else:
+                # The size of the prev_layer may be different from prev_layer_list[-i-1] due to height or width being
+                # not divisible by powers of 2. In that case, we should use the size of the prev_layer_list[-i-1]
+                # Because that will lead to the correct output dimensions.
+                layer_to_be_concatenated_shape = map(lambda dummy: dummy.value,
+                                                     prev_layer_list[-conv_up_layers_i - 1].get_shape())
+                prev_layer_shape = map(lambda dummy: dummy.value, prev_layer.get_shape())
+                if prev_layer_shape[1] != layer_to_be_concatenated_shape[1] or prev_layer_shape[2] != \
+                        layer_to_be_concatenated_shape[2]:
+                    if not (abs(prev_layer_shape[1] - layer_to_be_concatenated_shape[1]) <= 3 and abs(
+                                prev_layer_shape[2] - layer_to_be_concatenated_shape[2]) <= 3):
+                        raise AssertionError('The layers to be concatenated differ too much in shape. Something is '
+                                             'wrong. Their shapes are: %s and %s'
+                                             % (str(prev_layer_shape), str(layer_to_be_concatenated_shape)))
+                    prev_layer = tf.image.resize_nearest_neighbor(prev_layer, [layer_to_be_concatenated_shape[1],
+                                                                               layer_to_be_concatenated_shape[2]])
+                concat_layer = tf.concat(3, [prev_layer_list[-conv_up_layers_i - 1], prev_layer])
+                # Instead of deconv layer, we do nn resize followed by conv layer
+                prev_layer_shape = prev_layer.get_shape().as_list()
+                current_layer = tf.image.resize_nearest_neighbor(concat_layer, (prev_layer_shape[1] * 2,
+                                                                              prev_layer_shape[2] * 2))
+                current_layer =  conv_layer(current_layer, num_filters=NUM_OUTPUTS[i],
+                                           filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
+                                           mirror_padding=mirror_padding, norm=NORMS[i], name=NAMES[i],
+                                           reuse=reuse)
+            prev_layer = current_layer
+
 
 
         # # conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
@@ -338,3 +358,16 @@ def unflatten_2d_array(pts_flt,pts_nd,axis=1,squeeze=False):
         pts_out = pts_out.transpose(axorder_rev)
 
     return pts_out
+
+
+if __name__ == "__main__":
+    with tf.Graph().as_default():
+        batch_size = 1
+        height = 32
+        width = 32
+        num_features = 3
+
+        input_layer = tf.placeholder(dtype=tf.float32, shape=(batch_size, height, width, num_features))
+        network = net(input_layer)
+
+        assert network != None

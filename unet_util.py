@@ -73,7 +73,7 @@ def net(image, mirror_padding=False, reuse=False):
             print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
             raise AssertionError
 
-    return final
+        return final
 
 
 def get_net_all_variables():
