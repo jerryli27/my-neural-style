@@ -1006,7 +1006,7 @@ Plan:
         n_style_feedforward_net: Done, but it's still a mess.
         feed_forward_neural_style: Done
         real_time_neural_style: Done
-        generate_masks:
+        generate_masks: Done
 
 
     There's another thing that I noticed. The texture seems to also change with respect to the size of the style image.
@@ -1256,8 +1256,23 @@ Plan:
         and the input size are different... gg. I should've rerun all the tests after I make the changes..
 
         That's why shit was not working.. Oh god. I should've written more assert clauses.
-
         But that has nothing to do with the unet though... wait no it does. It turned all strides into 1
+
+        I fixed the bug and tried with colorful_img_connected_rgbbin. The result was way better than I thought it
+        would (after seeing so many images with really terrible outcome, an image with "normal looking" black and
+        white color was a huge releaf.
 
 
     2. Neural style
+        a. Don't forget to investigate the relationship between texture size and size of content/style images.
+        b. The refactoring is largely done. I will now create another project solely for the neural style stuff.
+
+        I was writing the readme file and here's what I've concluded:
+        P.S. During this project, I found that sometimes it is hard to know what "looks correct" and what does not.
+        It is hard to debug any neural network so it's good to know what you should be expecting beforehand.
+        Lots of times I found myself stuck in a situation when I was not sure if the code had a bug, or if the
+        learning rate wasn't low enough, or it's just I did not train the model long enough, or I was just using the
+        wrong model for the task.
+        There are thousands of ways things can go wrong and I don't have a solution to these problems.
+        But during those times, I found that looking at what programs can achieve nowadays can keep me motivated and
+        push me a little bit further.

@@ -192,11 +192,11 @@ class ImgToRgbBinEncoder():
         return self.nnencode.encode_points_mtx_nd(img,axis=3, return_sparse=return_sparse)
 
 
-    def rgb_bin_to_img(self,rgb_bin,t = 0.38):
+    def rgb_bin_to_img(self,rgb_bin,t = 0.8):
         """
         This function uses annealed-mean technique in the paper.
         :param rgb_bin:
-        :param t:
+        :param t: t = 0.38 in the original paper
         """
 
 
