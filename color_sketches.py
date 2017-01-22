@@ -46,8 +46,8 @@ def build_parser():
                         default='johnson')
     parser.add_argument('--input_mode', dest='input_mode', type=str,
                         help='Whether we should use sketches or black-white images as input. Possible values = '
-                             'sketches or bw',
-                        metavar='INPUT_MODE', default='sketches')
+                             'sketch or bw',
+                        metavar='INPUT_MODE', default='sketch')
 
     parser.add_argument('--use_adversarial_net', dest='use_adversarial_net',
                         help='If set, we train an adversarial network to distinguish between the image generated and '

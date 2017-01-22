@@ -1257,4 +1257,7 @@ Plan:
 
         That's why shit was not working.. Oh god. I should've written more assert clauses.
 
+        But that has nothing to do with the unet though... wait no it does. It turned all strides into 1
+
+
     2. Neural style

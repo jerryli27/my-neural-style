@@ -507,7 +507,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       from_screenshot=False,
                                                                       from_webcam=False,
                                                                       test_img_dir=test_img_dir,
-                                                                      test_img_hint=test_img_hint):
+                                                                      test_img_hint=test_img_hint,
+                                                                      input_mode=input_mode):
                             pass
 
                             if generator_network == 'colorful_img' or generator_network =='backprop' \

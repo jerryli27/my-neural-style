@@ -15,6 +15,7 @@ checkpoint_iterations=500
 height = 256
 width = 256
 generator_network= 'colorful_img_connected_rgbbin' # 'colorful_img'
+input_mode = 'sketch'
 print_iteration = 100
 do_restore_and_train = False  # True
 do_restore_and_generate = False
@@ -33,13 +34,14 @@ use_adversarial_net_string = '--use_adversarial_net' if use_adversarial_net else
 use_hint_string = '--use_hint' if use_hint else ''
 # restore_from_noadv_to_adv_string = '--restore_from_noadv_to_adv' if use_adversarial_net_real != use_adversarial_net else ''
 
-checkpoint_output='output_checkpoint/colorsketches-%s-adv_net-%s-hint-%s-epochs-%d-batchsize-%d-lr-%f-content-%d_%%s' \
-                  '.jpg' % (generator_network, str(use_adversarial_net), str(use_hint), epochs, batch_size,
+checkpoint_output='output_checkpoint/colorsketches-%s-input_mode-%s-adv_net-%s-hint-%s-epochs-%d-batchsize-%d-lr-%f' \
+                  '-content-%d_%%s' \
+                  '.jpg' % (generator_network, input_mode, str(use_adversarial_net), str(use_hint), epochs, batch_size,
                             learning_rate, content_weight)
-output='output/colorsketches-%s-adv_net-%s-hint-%s-epochs-%d-batchsize-%d-lr-%f-content-%d.jpg' % \
-       (generator_network, str(use_adversarial_net), str(use_hint), epochs, batch_size, learning_rate, content_weight)
-model_save_dir='model/colorsketches-%s-adv_net-%s-hint-%s-epochs-batchsize-%d-%d-lr-%f-content-%d/' % \
-               (generator_network, str(use_adversarial_net), str(use_hint), epochs, batch_size, learning_rate, content_weight)
+output='output/colorsketches-%s-input_mode-%s-adv_net-%s-hint-%s-epochs-%d-batchsize-%d-lr-%f-content-%d.jpg' % \
+       (generator_network, input_mode, str(use_adversarial_net), str(use_hint), epochs, batch_size, learning_rate, content_weight)
+model_save_dir='model/colorsketches-%s-input_mode-%s-adv_net-%s-hint-%s-epochs-batchsize-%d-%d-lr-%f-content-%d/' % \
+               (generator_network, input_mode, str(use_adversarial_net), str(use_hint), epochs, batch_size, learning_rate, content_weight)
 if not os.path.exists(model_save_dir):
     os.makedirs(model_save_dir) # TODO: add %s content_img_style_weight_mask_string to the model_save_dir
 
@@ -49,10 +51,10 @@ if not os.path.exists(model_save_dir):
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
 os.system('python ~/PycharmProjects/my-neural-style/color_sketches.py --learning_rate=%f --num_epochs=%d '
-          '--batch_size=%d --generator_network=%s --content_preprocessed_folder=%s '
+          '--batch_size=%d --generator_network=%s --input_mode=%s --content_preprocessed_folder=%s '
           '--content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --test_img_hint=%s --output=%s --model_save_dir=%s --print_iterations=%d %s %s %s %s'
-          % (learning_rate, epochs, batch_size, generator_network, content_preprocessed_folder, content_weight,
-             checkpoint_iterations, width, height,
+          % (learning_rate, epochs, batch_size, generator_network, input_mode, content_preprocessed_folder,
+             content_weight, checkpoint_iterations, width, height,
              checkpoint_output, test_img, test_img_hint, output, model_save_dir, print_iteration, do_restore_and_train_string, do_restore_and_generate_string, use_adversarial_net_string, use_hint_string))
 
 """
