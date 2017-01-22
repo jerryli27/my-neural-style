@@ -137,6 +137,8 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
         if not (image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
             final = tf.image.resize_nearest_neighbor(final, [image_shape[1], image_shape[2]])
 
+        final = tf.nn.tanh(final) * 150 + 255. / 2
+
         # Do sanity check.
         final_shape = final.get_shape().as_list()
         if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):

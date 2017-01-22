@@ -74,7 +74,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     input_shape = (1, height, width, 3)
     print('The input shape is: %s. Using %s generator network' % (str(input_shape), generator_network))
 
-    if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod':
+    if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod' \
+            or generator_network == 'colorful_img_connected_rgbbin':
         img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
 
     content_img_preprocessed = None
