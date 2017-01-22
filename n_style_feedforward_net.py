@@ -51,6 +51,11 @@ CONTENT_LAYER = 'relu4_2'  # Same setting as in the paper https://arxiv.org/abs/
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1') # According to http://arxiv.org/abs/1603.03417
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
+# This class is only used to pass a variable one_hot_vector to the style_synthesis_net function.
+class one_hot_vector_container:
+    def __init__(self,vec):
+        self.vec = vec
+
 def style_synthesis_net(path_to_network, height, width, styles, iterations, batch_size, content_weight=5.0,
                         style_weight=100.0, tv_weight=100.0, style_blend_weights=None, learning_rate=0.001,
                         lr_decay_steps=200, min_lr=0.001, lr_decay_rate=0.7, style_only=False,
@@ -483,10 +488,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                     if one_hot_style_vector is not None:
                         if from_webcam:
-                            # TODO: since webcam is updating the one_hot_vector_for_restore_and_generate constantly,
+                            # Since webcam is updating the one_hot_vector_for_restore_and_generate constantly,
                             # I must do something different.
-                            assert one_hot_vector_for_restore_and_generate is not None
-                            feed_dict[one_hot_style_vector] = one_hot_vector_for_restore_and_generate
+                            assert one_hot_vector_for_restore_and_generate is not None and isinstance(
+                                one_hot_vector_for_restore_and_generate,one_hot_vector_container)
+                            feed_dict[one_hot_style_vector] = one_hot_vector_for_restore_and_generate.vec
                         else:
                             assert one_hot_vector_for_restore_and_generate is not None
                             feed_dict[one_hot_style_vector] = one_hot_vector_for_restore_and_generate

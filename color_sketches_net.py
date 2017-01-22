@@ -279,7 +279,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         image_sketches = sketches_util.image_to_sketch(content_image)
                         image_sketches = np.expand_dims(image_sketches, axis=3)
                     elif input_mode == 'bw':
-                        image_sketches = rgb2gray(content_image)
+                        image_sketches = np.expand_dims(rgb2gray(content_image), axis=3)
                     else:
                         raise AssertionError('Input mode error.')
 
@@ -391,7 +391,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                ...].astype(np.float32)
                             image_sketches = np.expand_dims(image_sketches, axis=3)
                         elif input_mode == 'bw':
-                            image_sketches = rgb2gray(content_pre_list)
+                            image_sketches = np.expand_dims(rgb2gray(content_pre_list), axis=3)
                         else:
                             raise AssertionError('Input mode error.')
                     else:
@@ -404,7 +404,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                             image_sketches = sketches_util.image_to_sketch(content_pre_list)
                             image_sketches = np.expand_dims(image_sketches, axis=3)
                         elif input_mode == 'bw':
-                            image_sketches = rgb2gray(content_pre_list)
+                            image_sketches = np.expand_dims(rgb2gray(content_pre_list), axis=3)
                         else:
                             raise AssertionError('Input mode error.')
 
@@ -450,7 +450,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         summary_writer.add_summary(summary_str, i)
 
                         # Update G network
-                        # TODO: Try to update the generator network with loss both from adversarial net and from l2.
                         _, summary_str = sess.run([generator_both_train, g_sum],
                                                        feed_dict=adv_feed_dict)
                         summary_writer.add_summary(summary_str, i)

@@ -1005,7 +1005,7 @@ Plan:
         johnson_feedforward_net_util: Done
         n_style_feedforward_net: Done, but it's still a mess.
         feed_forward_neural_style: Done
-        real_time_neural_style:
+        real_time_neural_style: Done
         generate_masks:
 
 

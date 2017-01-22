@@ -1,5 +1,6 @@
 """
 This file is used to run feed-forward style transfer nets on real time inputs such as the camera or the screen.
+You must provide a path to a pretrained network as well as the style images it used.
 """
 
 import time
@@ -72,13 +73,16 @@ def main():
 
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
+    if not os.path.isfile(options.model_save_dir + 'checkpoint'):
+        parser.error("Pretrained model %s does not exist.)" % options.network)
+    if not options.from_webcam or options.from_screenshot:
+        parser.error("You must choose either getting the image from webcam or from screen shot." % options.network)
 
-    target_shape = (options.height, options.width)
     style_images = [imread(style) for style in options.styles]
 
-    # Default is equal weights.
-    # current_style_blend_weights = [1.0/len(style_images) for _ in style_images]
+    # Start with the first one with 1.0 weight and 0.0 for all other ones.
     current_style_blend_weights = [1.0 if i == 0 else 0.0 for i,_ in enumerate(style_images)]
+    one_hot_vector_container = n_style_feedforward_net.one_hot_vector_container(np.array([current_style_blend_weights]))
 
     plt.ion()
     fig, ax = plt.subplots()
@@ -98,15 +102,17 @@ def main():
         # TODO: Test if we need to normalize the style weights.
         for i, slider in enumerate(sliders):
             current_style_blend_weights[i] = slider.val
+        one_hot_vector_container.vec = np.array([current_style_blend_weights])
 
     for slider in sliders:
         slider.on_changed(update)
+
 
     for iteration, image in n_style_feedforward_net.style_synthesis_net(path_to_network=options.network,
                                                                         height=options.height, width=options.width,
                                                                         styles=style_images, iterations=None,
                                                                         batch_size=1,
-                                                                        one_hot_vector_for_restore_and_generate=np.array([current_style_blend_weights]),
+                                                                        one_hot_vector_for_restore_and_generate=one_hot_vector_container,
                                                                         style_only=options.texture_synthesis_only,
                                                                         use_johnson=options.use_johnson,
                                                                         use_skip_noise_4=options.use_skip_noise_4,
@@ -124,7 +130,6 @@ def main():
         im.axes.figure.canvas.draw()
         plt.pause(0.001)
         print ('FPS:', iteration / (time.time() - tstart + 0.001))
-        print('outside: %s' %(str(current_style_blend_weights)))
     plt.ioff()
     plt.show()
 
