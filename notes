@@ -1213,12 +1213,31 @@ Plan:
                 result became just pure white image?
 
                 TODO: think about why...
+                    There are several reasons I can think of:
+                    First it might be the problem of the training data. I sorted the order of training set and
+                    it might happen that all the manga images got clustered together. This is unlikely to be the
+                    cause though in my opinion
+                    Second, it might be caused by normalization before applying softmax. Again I don't see why
+                    mathematically it make sense that way, but it's just a possibility
+                    Third, it might be caused by the task being too hard and the most common color in the training
+                    images happens to be white...
 
             Testing color_sketches_net with last layer replaced by rgb layer. This is to test whether I really need
             to add the direct connection between conv-deconv layers
 
-
-
-
-
             After that, run the color_sketches_net with directly connected conv-deconv layers.
+
+
+            colorful_img_network_mod => modified last layer into rgb.
+            colorful_img_network_connected => Connected the conv and deconv layers. Substituted the deconv with nn
+            resize plus conv layer. Also modified last layer into rgb.
+            colorful_img_network_connected_rgbbin => Connected the conv and deconv layers. Substituted the deconv with
+            nn resize plus conv layer. Last layer is kept to be rgbbin. NOTE: I've also taken out the norm in the
+            last conv layer just before softmax. I thought the norm might be affecting the softmax layer (Don't see
+            why it would mathematically since softmax is already a sort of normalization. But who knows)
+
+            Sanity tested most of them.
+            Now running colorful_img_connected
+2017/01/22
+    1. Nijigen
+        Result was not satisfactory. I forgot to add the tanh after the final layer...

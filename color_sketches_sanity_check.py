@@ -5,7 +5,7 @@
 
 from general_util import *
 
-learning_rate=0.001 # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
+learning_rate=0.01 # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
 # saytheir batch size.
 # iterations=800000# 800000
 epochs = 1000
