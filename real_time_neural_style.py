@@ -1,19 +1,15 @@
 """
-This file uses the texture nets technique to generate an image by combining style of an input and the content of
-another input. The code skeleton mainly comes from https://github.com/anishathalye/neural-style.
+This file is used to run feed-forward style transfer nets on real time inputs such as the camera or the screen.
 """
 
 import time
 from argparse import ArgumentParser
 
-import scipy.misc
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
 
 import n_style_feedforward_net
 from general_util import *
-
-# TODO: Needs reformatting.
 
 # default arguments
 CONTENT_WEIGHT = 5e0
@@ -26,71 +22,47 @@ BATCH_SIZE = 1
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 
+
+
 def build_parser():
     parser = ArgumentParser()
-    parser.add_argument('--styles',
-            dest='styles',
-            nargs='+', help='one or more style images',
-            metavar='STYLE', required=True)
-    parser.add_argument('--texture_synthesis_only',
-                        dest='texture_synthesis_only', help='If true, we only generate the texture of the style images.'
-                                                            'No content image will be used.', action='store_true')
+    parser.add_argument('--styles', dest='styles', nargs='+',
+                        help='One or more style images.',
+                        metavar='STYLE', required=True)
+    parser.add_argument('--texture_synthesis_only', dest='texture_synthesis_only',
+                        help='If true, we only generate the texture of the style images. '
+                             'No content image will be used.',
+                        action='store_true')
     parser.set_defaults(texture_synthesis_only=False)
-
-    parser.add_argument('--output',
-            dest='output', help='output path',
-            metavar='OUTPUT', required=True)
-    parser.add_argument('--batch_size', type=int,
-            dest='batch_size', help='batch size (default %(default)s)',
-            metavar='BATCH_SIZE', default=BATCH_SIZE)
-    parser.add_argument('--height', type=int,
-            dest='height', help='output height',
-            metavar='HEIGHT', default=256)
-    parser.add_argument('--width', type=int,
-            dest='width', help='output width',
-            metavar='WIDTH', default=256)
-    parser.add_argument('--style-scales', type=float,
-            dest='style_scales',
-            nargs='+', help='one or more style scales',
-            metavar='STYLE_SCALE')
+    parser.add_argument('--height', type=int, dest='height',
+                        help='Input and output height. All content images should be automatically scaled accordingly.',
+                        metavar='HEIGHT', default=256)
+    parser.add_argument('--width', type=int, dest='width',
+                        help='Input and output width. All content images should be automatically scaled accordingly.',
+                        metavar='WIDTH', default=256)
     parser.add_argument('--network',
-            dest='network', help='path to network parameters (default %(default)s)',
-            metavar='VGG_PATH', default=VGG_PATH)
-    parser.add_argument('--use_mrf',
-                        dest='use_mrf', help='If true, we use Markov Random Fields loss instead of Gramian loss.'
-                                             ' (default %(default)s).', action='store_true')
-    parser.set_defaults(use_mrf=False)
-    parser.add_argument('--use_johnson',
-                        dest='use_johnson', help='If true, we use the johnson generator net instead of pyramid net'
-                                             ' (default %(default)s).', action='store_true')
+                        dest='network', help='path to pre-trained vgg 19 network (default %(default)s).',
+                        metavar='VGG_PATH', default=VGG_PATH)
+    parser.add_argument('--use_johnson', dest='use_johnson',
+                        help='If true, we use the johnson generator network. (default %(default)s). Please see '
+                             'johnson_feedforward_net_util.py for more details.',
+                        action='store_true')
     parser.set_defaults(use_johnson=False)
-    parser.add_argument('--content-weight', type=float,
-            dest='content_weight', help='content weight (default %(default)s)',
-            metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
-    parser.add_argument('--style-weight', type=float,
-            dest='style_weight', help='style weight (default %(default)s)',
-            metavar='STYLE_WEIGHT', default=STYLE_WEIGHT)
-    parser.add_argument('--style-blend-weights', type=float,
-            dest='style_blend_weights', help='style blending weights',
-            nargs='+', metavar='STYLE_BLEND_WEIGHT')
-    parser.add_argument('--tv-weight', type=float,
-            dest='tv_weight', help='total variation regularization weight (default %(default)s)',
-            metavar='TV_WEIGHT', default=TV_WEIGHT)
-    parser.add_argument('--model_save_dir',
-            dest='model_save_dir', help='The directory to save trained model and its checkpoints.',
-            metavar='MODEL_SAVE_DIR', default='models/')
+    parser.add_argument('--use_skip_noise_4', dest='use_skip_noise_4',
+                        help='If true, we use the skip_noise_4 generator network (default %(default)s). Please see '
+                             'skip_noise_4_feedforward_net.py for more details.',
+                        action='store_true')
+    parser.set_defaults(use_skip_noise_4=False)
+    parser.add_argument('--model_save_dir', dest='model_save_dir',
+                        help='The directory to save trained model and its checkpoints.',
+                        metavar='MODEL_SAVE_DIR', default='model/feed_forward_example_1/')
     parser.add_argument('--from_screenshot',
-            dest='from_screenshot', help='If true, the content image is the screen shot', action='store_true')
+                        dest='from_screenshot', help='If true, the content image is the screen shot',
+                        action='store_true')
     parser.set_defaults(from_screenshot=False)
     parser.add_argument('--from_webcam',
-            dest='from_webcam', help='If true, the content image is the webcam', action='store_true')
+                        dest='from_webcam', help='If true, the content image is the webcam', action='store_true')
     parser.set_defaults(from_webcam=False)
-    parser.add_argument('--test_img', type=str,
-                        dest='test_img', help='test image path',
-                        metavar='TEST_IMAGE')
-    parser.add_argument('--ablation_layer', type=int,
-            dest='ablation_layer', help='If not none, all noise layer except for the given ablation layer will be zero.',
-            metavar='ABLATION_LAYER', default=None)
     return parser
 
 
@@ -101,25 +73,12 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    dummy_content = [np.zeros((options.height, options.width, 3))]
     target_shape = (options.height, options.width)
-    style_images = [imread(style, shape=target_shape) for style in options.styles]
+    style_images = [imread(style) for style in options.styles]
 
-    for i in range(len(style_images)):
-        style_scale = STYLE_SCALE
-        if options.style_scales is not None:
-            style_scale = options.style_scales[i]
-        style_images[i] = scipy.misc.imresize(style_images[i], style_scale *
-                target_shape[1] / style_images[i].shape[1])
-
-    style_blend_weights = options.style_blend_weights
-    if style_blend_weights is None:
-        # Default is equal weights.
-        style_blend_weights = [1.0/len(style_images) for _ in style_images]
-    else:
-        total_blend_weight = sum(style_blend_weights)
-        style_blend_weights = [weight/total_blend_weight
-                               for weight in style_blend_weights]
+    # Default is equal weights.
+    # current_style_blend_weights = [1.0/len(style_images) for _ in style_images]
+    current_style_blend_weights = [1.0 if i == 0 else 0.0 for i,_ in enumerate(style_images)]
 
     plt.ion()
     fig, ax = plt.subplots()
@@ -127,8 +86,9 @@ def main():
     ax.set_title("Real Time Neural Style")
     im = ax.imshow(np.zeros((options.height, options.width, 3)) + 128,vmin=0,vmax=255)  # Blank starting image
     axcolor = 'lightgoldenrodyellow'
-    slider_axes = [plt.axes([0.25, 0.21 - i * 0.03, 0.65, 0.02], axisbg=axcolor) for i, style in enumerate(options.styles)]
-    sliders = [Slider(slider_axes[i], style, 0.0, 1.0, valinit=style_blend_weights[i]) for i, style in enumerate(options.styles)]
+    slider_axes = [plt.axes([0.25, 0.21 - i * 0.02, 0.65, 0.02], axisbg=axcolor) for i, style in enumerate(
+        options.styles)]
+    sliders = [Slider(slider_axes[i], style, 0.0, 1.0, valinit=current_style_blend_weights[i]) for i, style in enumerate(options.styles)]
     fig.show()
     im.axes.figure.canvas.draw()
     plt.pause(0.001)
@@ -137,7 +97,7 @@ def main():
     def update(val):
         # TODO: Test if we need to normalize the style weights.
         for i, slider in enumerate(sliders):
-            style_blend_weights[i] = slider.val
+            current_style_blend_weights[i] = slider.val
 
     for slider in sliders:
         slider.on_changed(update)
@@ -145,22 +105,15 @@ def main():
     for iteration, image in n_style_feedforward_net.style_synthesis_net(path_to_network=options.network,
                                                                         height=options.height, width=options.width,
                                                                         styles=style_images, iterations=None,
-                                                                        batch_size=options.batch_size,
-                                                                        content_weight=options.content_weight,
-                                                                        style_weight=options.style_weight,
-                                                                        tv_weight=options.tv_weight,
-                                                                        style_blend_weights=style_blend_weights,
-                                                                        learning_rate=1,
+                                                                        batch_size=1,
+                                                                        one_hot_vector_for_restore_and_generate=np.array([current_style_blend_weights]),
                                                                         style_only=options.texture_synthesis_only,
-                                                                        use_mrf=options.use_mrf,
                                                                         use_johnson=options.use_johnson,
-                                                                        print_iterations=None,
-                                                                        checkpoint_iterations=None,
+                                                                        use_skip_noise_4=options.use_skip_noise_4,
                                                                         save_dir=options.model_save_dir,
                                                                         do_restore_and_generate=True,
                                                                         from_screenshot=options.from_screenshot,
-                                                                        from_webcam=options.from_webcam,
-                                                                        test_img_dir=options.test_img):
+                                                                        from_webcam=options.from_webcam):
         # We must do this clip step before we display the image. Otherwise the color will be off.
         image = np.clip(image, 0, 255).astype(np.uint8)
         if tstart is None:
@@ -171,6 +124,7 @@ def main():
         im.axes.figure.canvas.draw()
         plt.pause(0.001)
         print ('FPS:', iteration / (time.time() - tstart + 0.001))
+        print('outside: %s' %(str(current_style_blend_weights)))
     plt.ioff()
     plt.show()
 

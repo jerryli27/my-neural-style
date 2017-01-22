@@ -1038,7 +1038,7 @@ Plan:
         600000 training images... I think I might be able to do things even more interesting than filling in colors
         given this dataset.
 
-        TODO: check network structure. Maybe there were some problems there.
+        Plan: check network structure. Maybe there were some problems there.
     2. Neural style
         More refactoring...
         Don't forget to investigate pattern size.
@@ -1100,7 +1100,7 @@ Plan:
 
 2017/01/16
     1. Nijigen
-        TODO: study the other coloring methods that uses cnn. The one that seems most plausible currently is the
+        Plan: study the other coloring methods that uses cnn. The one that seems most plausible currently is the
         "Colorful Image Colorization" paper
 
     2. Neural style
@@ -1240,4 +1240,21 @@ Plan:
             Now running colorful_img_connected
 2017/01/22
     1. Nijigen
-        Result was not satisfactory. I forgot to add the tanh after the final layer...
+        I tried to train colorful_img_network_connected on l2 loss.
+        Result was not satisfactory. It did not even learn where should be brighter and where should be darker. Unet
+        gave a better result than this.
+        I forgot to add the tanh after the final layer...
+
+        I'm thinking what is causing the difference between my result and taizan's result... There's one thing I have
+        yet to try. I did not try to increase the lr to like 0.01 or 0.1. I did not try to adjust the hyperparameters.
+        Maybe I should do that... on the unet setting.
+
+
+        I found a bug... in the conv_net padding thing. After I added the dilation, I checked whether dilation = 1.
+        That is the bug. I did it the other way around. It should be "if dilation != 1" but  I wrote "if dilation ==1".
+        I found the bug when I was trying to use the johnson network and it gave me an error saying the output size
+        and the input size are different... gg. I should've rerun all the tests after I make the changes..
+
+        That's why shit was not working.. Oh god. I should've written more assert clauses.
+
+    2. Neural style

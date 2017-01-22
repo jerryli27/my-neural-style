@@ -5,8 +5,8 @@ class JohnsonTest(tf.test.TestCase):
     def test_get_johnson_scale_offset_var(self):
         with self.test_session():
             batch_size = 1
-            height = 2
-            width = 3
+            height = 24
+            width = 32
             num_features = 2
 
             input_layer = tf.placeholder(dtype=tf.float32, shape=(batch_size, height, width, num_features))

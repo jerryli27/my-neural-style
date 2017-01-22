@@ -7,10 +7,6 @@ import unittest
 from general_util import *
 
 
-def _rgb2gray(rgb):
-    return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
-
-
 class TestDataUtilMethods(unittest.TestCase):
     def test_get_global_step_from_save_dir(self):
         save_dir = 'model/savedir/model.ckpt-5000'
@@ -122,7 +118,7 @@ class TestDataUtilMethods(unittest.TestCase):
             height, width, batch_size, semantic_masks_num_layers)
 
         temp = np.array(random_images)
-        expected_answer = np.ndarray.astype(np.transpose(_rgb2gray(temp), (0, 2, 3, 1)), np.int32)
+        expected_answer = np.ndarray.astype(np.transpose(rgb2gray(temp), (0, 2, 3, 1)), np.int32)
         np.testing.assert_almost_equal(expected_answer, content_pre_list)
 
         shutil.rmtree(content_folder)
@@ -174,7 +170,7 @@ class TestDataUtilMethods(unittest.TestCase):
 
         actual_output = imread(get_all_image_paths_in_dir(content_folder + '/')[0], bw=True)
 
-        expected_answer = np.floor(_rgb2gray(np.array(current_image)))
+        expected_answer = np.floor(rgb2gray(np.array(current_image)))
         np.testing.assert_almost_equal(expected_answer, actual_output)
 
     def test_imread_and_imsave_utf8(self):

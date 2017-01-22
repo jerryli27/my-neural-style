@@ -389,7 +389,7 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
                 else:
-                    stderr("No checkpoint found. Exiting program")
+                    stderr("No checkpoint found at %s. Exiting program" %(save_dir))
                     return
 
                 if from_screenshot:
@@ -482,8 +482,16 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                                                                        batch_size, semantic_masks_num_layers)
 
                     if one_hot_style_vector is not None:
-                        assert one_hot_vector_for_restore_and_generate is not None
-                        feed_dict[one_hot_style_vector] = one_hot_vector_for_restore_and_generate
+                        if from_webcam:
+                            # TODO: since webcam is updating the one_hot_vector_for_restore_and_generate constantly,
+                            # I must do something different.
+                            assert one_hot_vector_for_restore_and_generate is not None
+                            feed_dict[one_hot_style_vector] = one_hot_vector_for_restore_and_generate
+                        else:
+                            assert one_hot_vector_for_restore_and_generate is not None
+                            feed_dict[one_hot_style_vector] = one_hot_vector_for_restore_and_generate
+
+
 
                     if use_johnson:
                         if use_semantic_masks:

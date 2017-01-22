@@ -104,6 +104,12 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
         image_shape = image.get_shape().as_list()
         conv8_rgb_bin_shape = conv8_rgb_bin.get_shape().as_list()
         if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
+            if not (abs(image_shape[1] - conv8_rgb_bin_shape[1]) <= 3 and abs(
+                        image_shape[2] - conv8_rgb_bin_shape[2]) <= 3):
+                raise AssertionError('The layers to be concatenated differ too much in shape. Something is '
+                                     'wrong. Their shapes are: %s and %s'
+                                     % (str(image_shape), str(conv8_rgb_bin_shape)))
+
             conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
         final = tf.nn.softmax(conv8_rgb_bin,name='softmax_layer')
         # Do sanity check.

@@ -77,7 +77,7 @@ def main():
     fig.show()
     plt.pause(0.001)
 
-    losses =  loss_visualize_util.style_synthesis_net(content_image, style_image,layers, loss_visualize_util.per_pixel_gram_loss, options.network)
+    losses =  loss_visualize_util.style_synthesis_net(content_image, style_image, layers, loss_visualize_util.per_pixel_gram_loss, options.network)
     
     
     for layer in layers:

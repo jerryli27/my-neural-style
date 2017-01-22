@@ -368,3 +368,6 @@ def np_total_variation(image_batch):
     total_var = 2 * (np.linalg.norm(vertical_diff) / vertical_diff_num_elements +
                      np.linalg.norm(vertical_diff) / horizontal_diff_num_elements)
     return total_var
+
+def rgb2gray(rgb):
+    return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])

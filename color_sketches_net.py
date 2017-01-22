@@ -47,7 +47,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
                        content_preprocessed_folder = None,
-                       from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None):
+                       from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None,
+                       input_mode = 'sketch'):
     """
     Stylize images.
     TODO: modify the description.
@@ -72,7 +73,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
         assert test_img_hint is not None
 
     input_shape = (1, height, width, 3)
-    print('The input shape is: %s. Using %s generator network' % (str(input_shape), generator_network))
+    print('The input shape is: %s. Input mode is: %s. Using %s generator network' % (str(input_shape),
+          input_mode, generator_network))
 
     if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod' \
             or generator_network == 'colorful_img_connected_rgbbin':
@@ -273,8 +275,14 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     else:
                         content_image = imread(test_img_dir, (input_shape[1], input_shape[2]))
                     content_image = np.array([content_image])
-                    image_sketches = sketches_util.image_to_sketch(content_image)
-                    image_sketches = np.expand_dims(image_sketches, axis=3)
+                    if input_mode == 'sketch':
+                        image_sketches = sketches_util.image_to_sketch(content_image)
+                        image_sketches = np.expand_dims(image_sketches, axis=3)
+                    elif input_mode == 'bw':
+                        image_sketches = rgb2gray(content_image)
+                    else:
+                        raise AssertionError('Input mode error.')
+
 
                     # Now generate an image using the style_blend_weights given.
                     feed_dict = {input_sketches:image_sketches}
@@ -376,18 +384,29 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         content_pre_list = content_img_preprocessed[
                                            index_within_preprocessed:index_within_preprocessed+batch_size,
                                            ...].astype(np.float32)
-                        image_sketches = sketches_preprocessed[
-                                           index_within_preprocessed:index_within_preprocessed+batch_size,
-                                           ...].astype(np.float32)
-                        image_sketches = np.expand_dims(image_sketches, axis=3)
+
+                        if input_mode == 'sketch':
+                            image_sketches = sketches_preprocessed[
+                                               index_within_preprocessed:index_within_preprocessed+batch_size,
+                                               ...].astype(np.float32)
+                            image_sketches = np.expand_dims(image_sketches, axis=3)
+                        elif input_mode == 'bw':
+                            image_sketches = rgb2gray(content_pre_list)
+                        else:
+                            raise AssertionError('Input mode error.')
                     else:
 
                         current_content_dirs = get_batch_paths(content_dirs, i * batch_size, batch_size)
                         content_pre_list = read_and_resize_batch_images(current_content_dirs, input_shape[1],
                                                                         input_shape[2])
 
-                        image_sketches = sketches_util.image_to_sketch(content_pre_list)
-                        image_sketches = np.expand_dims(image_sketches, axis=3)
+                        if input_mode == 'sketch':
+                            image_sketches = sketches_util.image_to_sketch(content_pre_list)
+                            image_sketches = np.expand_dims(image_sketches, axis=3)
+                        elif input_mode == 'bw':
+                            image_sketches = rgb2gray(content_pre_list)
+                        else:
+                            raise AssertionError('Input mode error.')
 
                     # Now generate an image using the style_blend_weights given.
                     if generator_network == 'colorful_img' or generator_network =='backprop' \

@@ -214,7 +214,7 @@ def conv2d_mirror_padding(input_layer, w, b, kernel_size, stride=1, dilation=1):
     n_pad = (kernel_size - 1) / 2
     padding = [[0, 0], [n_pad, n_pad], [n_pad, n_pad], [0, 0]]
     mirror_padded_input_layer = tf.pad(input_layer, padding, "REFLECT", name='mirror_padding')
-    if dilation == 1:
+    if dilation != 1:
         # Maybe there will be problems in the padding... Not sure.
         conv_output = tf.nn.atrous_conv2d(mirror_padded_input_layer, w, rate=dilation, padding='VALID')
     else:

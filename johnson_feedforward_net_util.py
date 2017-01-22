@@ -23,28 +23,49 @@ def net(image, mirror_padding = True, one_hot_style_vector = None, reuse = False
 
     # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly
     # by 4.
-    with tf.variable_scope('johnson', reuse=reuse):
-        conv1 = conv_layer(image, 32, 9, 1, mirror_padding = mirror_padding, name ='conv1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv2 = conv_layer(conv1, 64, 3, 2, mirror_padding = mirror_padding, name ='conv2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv3 = conv_layer(conv2, 128, 3, 2, mirror_padding = mirror_padding, name ='conv3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        resid1 = residual_block(conv3, 3, mirror_padding = mirror_padding, name ='resid1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        resid2 = residual_block(resid1, 3, mirror_padding = mirror_padding, name ='resid2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        resid3 = residual_block(resid2, 3, mirror_padding = mirror_padding, name ='resid3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        resid4 = residual_block(resid3, 3, mirror_padding = mirror_padding, name ='resid4', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        resid5 = residual_block(resid4, 3, mirror_padding = mirror_padding, name ='resid5', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        conv_t3 = conv_layer(conv_t2, 3, 9, 1, elu=False, mirror_padding = mirror_padding, name ='conv_t3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
-        preds = tf.nn.tanh(conv_t3) * 150 + 255./2
+    # with tf.variable_scope('johnson', reuse=reuse):
+    #     conv1 = conv_layer(image, 32, 9, 1, mirror_padding = mirror_padding, name ='conv1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     conv2 = conv_layer(conv1, 64, 3, 2, mirror_padding = mirror_padding, name ='conv2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     conv3 = conv_layer(conv2, 128, 3, 2, mirror_padding = mirror_padding, name ='conv3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     resid1 = residual_block(conv3, 3, mirror_padding = mirror_padding, name ='resid1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     resid2 = residual_block(resid1, 3, mirror_padding = mirror_padding, name ='resid2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     resid3 = residual_block(resid2, 3, mirror_padding = mirror_padding, name ='resid3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     resid4 = residual_block(resid3, 3, mirror_padding = mirror_padding, name ='resid4', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     resid5 = residual_block(resid4, 3, mirror_padding = mirror_padding, name ='resid5', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     conv_t3 = conv_layer(conv_t2, 3, 9, 1, elu=False, mirror_padding = mirror_padding, name ='conv_t3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    #     preds = tf.nn.tanh(conv_t3) * 150 + 255./2
+    #
+    #     # Do sanity check.
+    #     image_shape = image.get_shape().as_list()
+    #     final_shape = preds.get_shape().as_list()
+    #     if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
+    #         print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' % (
+    #         str(image_shape), str(final_shape)))
+    #         raise AssertionError
+    #     return preds
+    conv1 = conv_layer(image, 32, 9, 1, mirror_padding = mirror_padding, name ='conv1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    conv2 = conv_layer(conv1, 64, 3, 2, mirror_padding = mirror_padding, name ='conv2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    conv3 = conv_layer(conv2, 128, 3, 2, mirror_padding = mirror_padding, name ='conv3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    resid1 = residual_block(conv3, 3, mirror_padding = mirror_padding, name ='resid1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    resid2 = residual_block(resid1, 3, mirror_padding = mirror_padding, name ='resid2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    resid3 = residual_block(resid2, 3, mirror_padding = mirror_padding, name ='resid3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    resid4 = residual_block(resid3, 3, mirror_padding = mirror_padding, name ='resid4', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    resid5 = residual_block(resid4, 3, mirror_padding = mirror_padding, name ='resid5', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    conv_t1 = conv_tranpose_layer(resid5, 64, 3, 2, mirror_padding = False, name ='conv_t1', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    conv_t2 = conv_tranpose_layer(conv_t1, 32, 3, 2, mirror_padding = False, name ='conv_t2', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    conv_t3 = conv_layer(conv_t2, 3, 9, 1, elu=False, mirror_padding = mirror_padding, name ='conv_t3', one_hot_style_vector = one_hot_style_vector, reuse = reuse)
+    preds = tf.nn.tanh(conv_t3) * 150 + 255./2
 
-        # Do sanity check.
-        image_shape = image.get_shape().as_list()
-        final_shape = preds.get_shape().as_list()
-        if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
-            print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' % (
-            str(image_shape), str(final_shape)))
-            raise AssertionError
-        return preds
+    # Do sanity check.
+    image_shape = image.get_shape().as_list()
+    final_shape = preds.get_shape().as_list()
+    if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
+        print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' % (
+        str(image_shape), str(final_shape)))
+        raise AssertionError
+    return preds
 
 def get_johnson_scale_offset_var():
     # type: () -> List[tf.Variable]

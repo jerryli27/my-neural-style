@@ -44,6 +44,11 @@ def build_parser():
     parser.add_argument('--generator_network', dest='generator_network', type=str,
                         help='todo. which generator_network it should use.', metavar='GENERATOR_NETWORK',
                         default='johnson')
+    parser.add_argument('--input_mode', dest='input_mode', type=str,
+                        help='Whether we should use sketches or black-white images as input. Possible values = '
+                             'sketches or bw',
+                        metavar='INPUT_MODE', default='sketches')
+
     parser.add_argument('--use_adversarial_net', dest='use_adversarial_net',
                         help='If set, we train an adversarial network to distinguish between the image generated and '
                              'the real image. This will help the generator to generate more real looking images.',
@@ -133,6 +138,7 @@ def main():
             tv_weight=options.tv_weight,
             learning_rate=options.learning_rate,
             generator_network=options.generator_network,
+            input_mode=options.input_mode,
             use_adversarial_net=options.use_adversarial_net,
             use_hint=options.use_hint,
             print_iterations=options.print_iterations,
