@@ -1295,4 +1295,8 @@ Plan:
          the image just within a few thousand iterations... Ah..
 
          One thing I noticed in the conv_util: I for some reason did not add bias for all conv layers. This is wierd.
-         TODO: investigate the bias...
+         It was probably because one of the repo I checked did not have bias. But it should... I didn't see papers
+         saying that it doesn't need bias layers. Could this be the reason??? But it didn't cause any problem before...
+        TODO: investigate the bias... I will try to run the color sketches net first without bias then with bias.
+        TODO: not a huge deal, but shuffing the training set might be better... But it would require messing with the
+        preprocessed npy files...

@@ -14,6 +14,7 @@ import adv_net_util
 import colorful_img_network_connected_rgbbin_util
 import colorful_img_network_connected_util
 import colorful_img_network_mod_util
+import colorful_img_network_bias_util
 import colorful_img_network_util
 import johnson_feedforward_net_util
 import sketches_util
@@ -77,7 +78,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
           input_mode, generator_network))
 
     if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod' \
-            or generator_network == 'colorful_img_connected_rgbbin':
+            or generator_network == 'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
         img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
 
     content_img_preprocessed = None
@@ -107,6 +108,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = colorful_img_network_connected_util.net(input_concatenated)
             elif generator_network == 'colorful_img_connected_rgbbin':
                 generator_output = colorful_img_network_connected_rgbbin_util.net(input_concatenated)
+            elif generator_network == 'colorful_img_bias':
+                generator_output = colorful_img_network_bias_util.net(input_concatenated)
             elif generator_network =='backprop':
                 generator_output = tf.get_variable('backprop_input_var',
                                                    shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
@@ -130,6 +133,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = colorful_img_network_connected_util.net(input_sketches)
             elif generator_network == 'colorful_img_connected_rgbbin':
                 generator_output = colorful_img_network_connected_rgbbin_util.net(input_sketches)
+            elif generator_network == 'colorful_img_bias':
+                generator_output = colorful_img_network_bias_util.net(input_sketches)
             elif generator_network =='backprop':
                 generator_output = tf.get_variable('backprop_input_var',
                                                    shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
@@ -145,7 +150,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             learning_rate_decayed = tf.get_variable(name='learning_rate_decayed', trainable=False,
                                                     initializer=learning_rate_decayed_init)
             if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod'\
-                    or generator_network == 'colorful_img_connected_rgbbin':
+                    or generator_network == 'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
                 expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
                                                  name='expected_output')
@@ -296,7 +301,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                     if generator_network == 'colorful_img' or generator_network == 'backprop' \
                             or generator_network == 'unet_mod' or generator_network == \
-                            'colorful_img_connected_rgbbin':
+                            'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
                         generated_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
 
                     yield (iterator, generated_image)
@@ -411,7 +416,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                     # Now generate an image using the style_blend_weights given.
                     if generator_network == 'colorful_img' or generator_network =='backprop' \
-                            or generator_network == 'unet_mod' or generator_network == 'colorful_img_connected_rgbbin':
+                            or generator_network == 'unet_mod' or generator_network == 'colorful_img_connected_rgbbin' \
+                            or generator_network == 'colorful_img_bias':
                         # Encoding image into rgb bins takes a while. It takes about 1s to convert one batch of 12
                         # images with shape 256x256 into rgb bins. It is not really possible to preprocess this step
                         # though since it will take up too much space. (Maybe not so much space if I do it smartly.)

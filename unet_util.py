@@ -57,7 +57,7 @@ def net(image, mirror_padding=False, reuse=False):
                 prev_layer = current_layer
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init = conv_init_vars(prev_layer, CONV_UP_NUM_FILTERS[-1], CONV_UP_KERNEL_SIZES[-1], name='final_conv', reuse=reuse)
+        weights_init,_ = conv_init_vars(prev_layer, CONV_UP_NUM_FILTERS[-1], CONV_UP_KERNEL_SIZES[-1], name='final_conv', reuse=reuse)
         strides_shape = [1, CONV_UP_STRIDES[-1], CONV_UP_STRIDES[-1], 1]
         final = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME')
 

@@ -23,7 +23,7 @@ def net(image, mirror_padding=True, reuse=False):
     :param reuse: If true, it tries to reuse the variable previously defined by the same network.
     :return: tensor with shape (batch_size, height, width, num_features)
     """
-
+    # TODO: Does this network need bias in convolution layers?
     # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly
     # by 4.
     image_shape = image.get_shape().as_list()
@@ -68,7 +68,7 @@ def net(image, mirror_padding=True, reuse=False):
             prev_layer = deconv_2
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init = conv_init_vars(prev_layer, 3, 1, name='final_conv', reuse=reuse)
+        weights_init, _ = conv_init_vars(prev_layer, 3, 1, name='final_conv', reuse=reuse)
         strides_shape = [1, 1, 1, 1]
         final = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME')
 
