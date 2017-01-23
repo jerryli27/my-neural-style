@@ -99,7 +99,6 @@ def main():
     tstart = None
 
     def update(val):
-        # TODO: Test if we need to normalize the style weights.
         for i, slider in enumerate(sliders):
             current_style_blend_weights[i] = slider.val
         one_hot_vector_container.vec = np.array([current_style_blend_weights])

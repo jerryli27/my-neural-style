@@ -6,7 +6,6 @@ import tensorflow as tf
 from typing import Tuple, Dict
 
 import vgg
-from experimental import experimental_util
 from general_util import *
 from neural_util import gramian
 
@@ -19,31 +18,6 @@ def concatenate_mask_layer_tf(mask_layer, vgg_feature_layer):
     :param vgg_feature_layer: The vgg feature layer with shape (num_batch, height, width, num_features)
     :return: The two layers concatenated in their last dimension.
     """
-    # # TODO: test rescaling the mask layer to the same distribution as the vgg feature layer. It didn't work yet...
-    # if not isinstance(vgg_feature_layer, tf.Tensor):
-    #     vgg_feature_layer_variance = np.var(vgg_feature_layer, dtype=np.float64)
-    #     vgg_feature_layer_mean = np.mean(vgg_feature_layer, dtype=np.float32)
-    # else:
-    #     vgg_feature_layer_mean, vgg_feature_layer_variance = tf.nn.moments(vgg_feature_layer, [0, 1, 2, 3])
-    #     # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
-    #     vgg_feature_layer_variance = tf.abs(vgg_feature_layer_variance)
-    #
-    # if not isinstance(mask_layer, tf.Tensor):
-    #     mask_layer_variance = np.var(mask_layer, dtype=np.float32)
-    #     mask_layer_mean = np.mean(mask_layer, dtype=np.float32)
-    #
-    # else:
-    #     mask_layer_mean, mask_layer_variance = tf.nn.moments(mask_layer, [0, 1, 2, 3])
-    #     # NOTE: Tensorflow norm has some issues when the actual variance is near zero. I have to apply abs on it.
-    #     mask_layer_variance = tf.abs(mask_layer_variance)
-    #
-    #
-    # variance_epsilon = tf.constant(0.00001, dtype=tf.float32)
-    #
-    # mask_layer_rescaled = (mask_layer - mask_layer_mean) / tf.sqrt(mask_layer_variance + variance_epsilon) * tf.sqrt(vgg_feature_layer_variance + variance_epsilon) + vgg_feature_layer_mean
-    #
-    # return tf.concat(3, [mask_layer_rescaled, vgg_feature_layer])
-
     return tf.concat(3, [mask_layer, vgg_feature_layer])
 
 def vgg_layer_dot_mask(masks, vgg_layer):
@@ -102,19 +76,15 @@ def masks_average_pool(masks):
     return ret
 
 
-def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride = None):
-    # type: (Union[np.ndarray,tf.Tensor], tf.Tensor, bool, int, int) -> tf.Tensor
+def gramian_with_mask(layer, masks):
+    # type: (Union[np.ndarray,tf.Tensor], tf.Tensor, bool) -> tf.Tensor
     """
     It computes the gramian of the given layer with given masks. Each mask will have its independent gramian for that
     layer.
     :param layer: The vgg feature layer with shape (num_batch, height, width, num_features)
     :param masks: mask with shape (num_batch, height, width, num_masks)
-    :param new_gram: Whether we use the experimental gramian. Should be set to False unless experimenting.
-    :param shift_size: Parameter for the experimental gramian.
-    :param stride: Parameter for the experimental gramian.
     :return: a tensor with dimension gramians of dimension (num_masks, num_batch, num_features, num_features)
     """
-    assert new_gram is False or shift_size is not None
     mask_list = tf.unpack(masks, axis=3) # A list of masks with dimension (1,height, width)
 
     gram_list = []
@@ -122,10 +92,7 @@ def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride 
     for mask in mask_list:
         mask = tf.expand_dims(mask, dim=3)
         layer_dotted_with_mask = vgg_layer_dot_mask(mask, layer)
-        if new_gram:
-            layer_dotted_with_mask_gram = experimental_util.gram_stacks(layer_dotted_with_mask, shift_size, stride)
-        else:
-            layer_dotted_with_mask_gram = gramian(layer_dotted_with_mask)
+        layer_dotted_with_mask_gram = gramian(layer_dotted_with_mask)
         # Normalization is very importantant here. Because otherwise there is no way to compare two gram matrices
         # with different masks applied to them.
         layer_dotted_with_mask_gram_normalized = layer_dotted_with_mask_gram / (tf.reduce_mean(mask) + 0.000001) # Avoid division by zero.
@@ -137,10 +104,7 @@ def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride 
     else:
         _,_,_,num_features  =  map(lambda i: i.value, layer.get_shape())
 
-    if new_gram:
-        number_colors, _, gram_height, gram_width, new_gram_num_additional_features = map(lambda i: i.value, grams.get_shape())
-    else:
-        number_colors,_, gram_height, gram_width,  = map(lambda i: i.value, grams.get_shape())
+    number_colors,_, gram_height, gram_width,  = map(lambda i: i.value, grams.get_shape())
 
     assert num_features == gram_height
     assert num_features == gram_width
@@ -149,8 +113,8 @@ def gramian_with_mask(layer, masks, new_gram = False, shift_size = None, stride 
     return grams
 
 
-def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, new_gram = False, shift_size = None, stride = None, average_pool = False):
-    # type: (List[np.ndarray], List[np.ndarray], List[Dict[str,np.ndarray]], int, int, int, int, List[str], Dict[str,Union[List[int],Tuple[int]]], float, Dict[str,np.ndarray], Union[List[float],Tuple[float]], bool, bool, bool, Union[int,None], Union[int,None], bool) -> Tuple[Dict[str,np.ndarray],List[Dict[str,np.ndarray]],tf.Tensor,List[tf.Tensor]]
+def construct_masks_and_features(style_semantic_masks, styles, style_features, batch_size, height, width, semantic_masks_num_layers, style_layer_names, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature, use_mrf, average_pool = False):
+    # type: (List[np.ndarray], List[np.ndarray], List[Dict[str,np.ndarray]], int, int, int, int, List[str], Dict[str,Union[List[int],Tuple[int]]], float, Dict[str,np.ndarray], Union[List[float],Tuple[float]], bool, bool, bool) -> Tuple[Dict[str,np.ndarray],List[Dict[str,np.ndarray]],tf.Tensor,List[tf.Tensor]]
     """
     This is a wrapper for computing the features for the style image as well as constructing the placeholders for
     the semantic masks.
@@ -227,9 +191,11 @@ def construct_masks_and_features(style_semantic_masks, styles, style_features, b
                 features = semantic_mask_net[layer]
             features = tf.mul(features, semantic_masks_weight)
             if use_mrf:
-                style_features[i][layer] = concatenate_mask_layer_tf(features, style_features[i][layer]) # TODO: maybe I should change the magnetude of the mask layers as i'm concatenating it with the vgg feature layers so that they're on the same magnitude.
+                # TODO: maybe I should change the magnetude of the mask layers as i'm concatenating it with the vgg feature layers so that they're on the same magnitude.
+                # I tried that but didn't find the setting that make it work yet.
+                style_features[i][layer] = concatenate_mask_layer_tf(features, style_features[i][layer])
             else:
-                gram = gramian_with_mask(style_features[i][layer], features, new_gram=new_gram, shift_size=shift_size, stride=stride)
+                gram = gramian_with_mask(style_features[i][layer], features)
                 style_features[i][layer] = gram
 
     return output_semantic_mask_features, style_features, output_semantic_mask_placeholder, style_semantic_masks_placeholders

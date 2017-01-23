@@ -7,6 +7,9 @@ from general_util import *
 
 if __name__=='__main__':
     # First download the required files.
+    print("Don't forget to manually download the Microsoft COCO dataset before you run this code! "
+          "You can download it here http://msvocds.blob.core.windows.net/coco2014/train2014.zip")
+
     download_if_not_exist(
         'http://www.vlfeat.org/matconvnet/models/imagenet-vgg-verydeep-19.mat',
         'imagenet-vgg-verydeep-19.mat', 'Pretrained vgg 19')
@@ -77,6 +80,10 @@ if __name__=='__main__':
         multi_style_offset_only = False
         use_semantic_masks = False
 
+        # Change this path to where you put the Microsoft COCO dataset.
+        # If you want to speed up training a little, run read_resize_and_save_all_imgs_in_dir first on the dataset
+        # you're using with the corresponding height and width and feed in the path to the pre-resized images.
+        content_folder = '../johnson-fast-neural-style/fast-style-transfer/data/train2014/'
         test_img = 'feed_forward_examples/1-content.jpg'
 
         style_or_texture_string = 'texture' if texture_synthesis_only else 'nstyle'
@@ -99,11 +106,11 @@ if __name__=='__main__':
             os.makedirs(model_save_dir)
 
         os.system(
-            'python feed_forward_neural_style.py --styles %s %s --learning_rate=%f '
+            'python feed_forward_neural_style.py --styles %s %s --content_folder=%s --learning_rate=%f '
             '--iterations=%d --batch_size=%d %s %s %s %s --style_weight=%d --content_weight=%d '
             '--checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s '
             '--output=%s --model_save_dir=%s --print_iterations=%d %s %s %s'
-            % (' '.join(styles), texture_synthesis_only_string, learning_rate, current_end_iterations,
+            % (' '.join(styles), texture_synthesis_only_string, content_folder, learning_rate, current_end_iterations,
                batch_size, use_mrf_string, use_johnson_string, use_skip_noise_4_string, multi_style_offset_only_string,
                style_weight, content_weight, checkpoint_iterations, width, height, checkpoint_output, test_img, output,
                model_save_dir, print_iteration, do_restore_and_train_string, do_restore_and_generate_string,

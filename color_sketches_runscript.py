@@ -14,10 +14,10 @@ content_weight=5
 checkpoint_iterations=500
 height = 256
 width = 256
-generator_network= 'colorful_img_connected_rgbbin' # 'colorful_img'
+generator_network= 'colorful_img' # 'colorful_img'
 input_mode = 'bw'
 print_iteration = 100
-do_restore_and_train = True  # True
+do_restore_and_train = False  # True
 do_restore_and_generate = False
 use_adversarial_net = False
 # use_adversarial_net_real = True
@@ -57,6 +57,8 @@ os.system('python ~/PycharmProjects/my-neural-style/color_sketches.py --learning
              content_weight, checkpoint_iterations, width, height,
              checkpoint_output, test_img, test_img_hint, output, model_save_dir, print_iteration, do_restore_and_train_string, do_restore_and_generate_string, use_adversarial_net_string, use_hint_string))
 
+
+# TODO: resume training in the resume runscript
 """
 Trained directories:
 colorsketches-adv_net-False-hint-True-iter-batchsize-800000-8-lr-0.000200-content-5

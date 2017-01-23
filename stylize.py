@@ -19,7 +19,6 @@ from typing import Union, Tuple, List, Iterable
 import neural_doodle_util
 import neural_util
 import vgg
-from experimental import experimental_util
 from general_util import get_np_array_num_elements
 from mrf_util import mrf_loss
 
@@ -29,18 +28,17 @@ except NameError:
     from functools import reduce
 
 CONTENT_LAYER = 'relu4_2'
-STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5 1')  # This is used for texture generation (without content)
-STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5 1')
+STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')  # This is used for texture generation (without content)
+STYLE_LAYERS_WITH_CONTENT = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 STYLE_LAYERS_MRF = ('relu3_1', 'relu4_1')  # According to https://arxiv.org/abs/1601.04589.
 
 
 def stylize(network, content, styles, shape, iterations, content_weight=5.0, style_weight=100.0, tv_weight=100.0,
             style_blend_weights=None, learning_rate=10.0, initial=None, use_mrf=False, use_semantic_masks=False,
             mask_resize_as_feature=True, output_semantic_mask=None, style_semantic_masks=None,
-            semantic_masks_weight=1.0, print_iterations=None, checkpoint_iterations=None, new_gram=False,
-            new_gram_shift_size=4, new_gram_stride=1, semantic_masks_num_layers=4, content_img_style_weight_mask=None,
-            feature_size=1):
-    # type: (str, Union[None,np.ndarray], List[np.ndarray], Tuple[int,int,int,int], int, float, float, float, Union[None,List[float]],  Union[None,np.ndarray], bool, bool, bool, Union[None,np.ndarray], Union[None,List[np.ndarray], float, Union[None,int], Union[None,int], bool, Union[None,int], Union[None,int], Union[None,int], Union[None,int], Union[None,np.ndarray], Union[None,int]]) -> Iterable[Tuple[Union[None,int],np.ndarray]]
+            semantic_masks_weight=1.0, print_iterations=None, checkpoint_iterations=None,
+            semantic_masks_num_layers=4, content_img_style_weight_mask=None):
+    # type: (str, Union[None,np.ndarray], List[np.ndarray], Tuple[int,int,int,int], int, float, float, float, Union[None,List[float]], float, Union[None,np.ndarray], bool, bool, bool, Union[None,np.ndarray], Union[None,List[np.ndarray], float, Union[None,int], Union[None,int], Union[None,int], Union[None,np.ndarray], Union[None,int]]) -> Iterable[Tuple[Union[None,int],np.ndarray]]
     """
     Stylize images.
     :param network: Path to pretrained vgg19 network. It can be downloaded at
@@ -75,16 +73,12 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
     semantic information obtained through passing the image through vgg network. Default is 1.0.
     :param print_iterations: Print loss information every n iterations.
     :param checkpoint_iterations: Save a checkpoint as well as the best image so far every n iterations.
-    :param new_gram: Experimental feature. Don't use.
-    :param new_gram_shift_size: Experimental feature. Don't use.
-    :param new_gram_stride: Experimental feature. Don't use.
     :param semantic_masks_num_layers: The number of semantic masks each image have.
     :param content_img_style_weight_mask: One black-and-white mask specifying how much we should "stylize" each pixel
     in the outputted image. The areas where the mask has higher value would be stylized more than other areas. A
     completely white mask would mean that we stylize the output image just as before, while a completely dark mask
     would mean that we do not stylize the output image at all, so it should look pretty much the same as content image.
     If you do not wish to use this feature, just leave it as None.
-    :param feature_size: Experimental feature. Don't use. I was trying to vary the size of texture patterns.
     :return: a tuple where the first item is either the current iteration or None, indicating it has finished training.
     The second item is the image that has the lowest loss so far. The tuples are yielded every 'checkpoint_iterations'
     iterations as well as the last iteration.
@@ -107,11 +101,6 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
         if content_img_style_weight_mask.dtype != np.float32:
             raise AssertionError('The dtype of style_weight_mask must be float32. it is now %s' % str(
                 content_img_style_weight_mask.dtype))
-    assert isinstance(feature_size, int) and feature_size >= 1
-
-    # Note: the "feature size' option is not so well developed yet. I tried to use it to enlarge the features.
-    # The following is for preventing the usage of experimental feature "feature_size". It is not doing what I want.
-    assert feature_size == 1
 
     # Append a (1,) in front of the shapes of the style images. So the style_shapes contains (1, height, width, 3).
     # 3 corresponds to rgb.
@@ -130,7 +119,7 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
 
         # Compute content features in feed-forward mode
         content_image = tf.placeholder('float', shape=shape, name='content_image')
-        net = vgg.pre_read_net(vgg_data, content_image, stride_multiplier=feature_size)
+        net = vgg.pre_read_net(vgg_data, content_image)
         content_features[CONTENT_LAYER] = net[CONTENT_LAYER]
         net_layer_sizes = vgg.get_net_layer_sizes(net)
 
@@ -150,8 +139,7 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
             output_semantic_mask_features, style_features, content_semantic_mask, style_semantic_masks_images = neural_doodle_util.construct_masks_and_features(
                 style_semantic_masks, styles, style_features, shape[0], shape[1], shape[2], semantic_masks_num_layers,
                 STYLE_LAYERS, net_layer_sizes, semantic_masks_weight, vgg_data, mean_pixel, mask_resize_as_feature,
-                use_mrf, new_gram=new_gram, shift_size=new_gram_shift_size, stride=new_gram_stride,
-                average_pool=False)  # TODO: average pool is not working so well in practice??
+                use_mrf, average_pool=False)  # TODO: average pool is not working so well in practice??
 
         if initial is None:
             initial = tf.random_normal(shape) * 0.256
@@ -159,7 +147,7 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
             initial = np.array([vgg.preprocess(initial, mean_pixel)])
             initial = initial.astype('float32')
         image = tf.Variable(initial)
-        net, _ = vgg.net(network, image, stride_multiplier=feature_size)
+        net, _ = vgg.net(network, image)
 
         # content loss
         _, height, width, number = map(lambda i: i.value, content_features[CONTENT_LAYER].get_shape())
@@ -188,21 +176,11 @@ def stylize(network, content, styles, shape, iterations, content_weight=5.0, sty
                     style_losses.append(mrf_loss(style_features[i][style_layer], layer, name='%d%s' % (i, style_layer)))
                 else:
                     if use_semantic_masks:
-                        gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer],
-                                                                    new_gram=new_gram, shift_size=new_gram_shift_size,
-                                                                    stride=new_gram_stride)
+                        gram = neural_doodle_util.gramian_with_mask(layer, output_semantic_mask_features[style_layer])
                     else:
-                        if new_gram:
-                            gram = experimental_util.gram_stacks(layer, shift_size=new_gram_shift_size,
-                                                                 stride=new_gram_stride)
-                        else:
-                            gram = neural_util.gramian(layer)
+                        gram = neural_util.gramian(layer)
                     style_gram = style_features[i][style_layer]
-                    if new_gram:
-                        style_gram_size = get_np_array_num_elements(style_gram) / (
-                        new_gram_shift_size ** 2)  # 2 is the shift size, 3 squared is the number of gram matrices we have.
-                    else:
-                        style_gram_size = get_np_array_num_elements(style_gram)
+                    style_gram_size = get_np_array_num_elements(style_gram)
                     style_losses.append(tf.nn.l2_loss(
                         gram - style_gram) / style_gram_size)  # TODO: Check normalization constants. the style loss is way too big compared to the other two.
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)

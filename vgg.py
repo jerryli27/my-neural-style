@@ -7,7 +7,7 @@ import tensorflow as tf
 
 
 
-def net(data_path, input_image, stride_multiplier = 1):
+def net(data_path, input_image):
     # The stride multiplier feature is an attempt to make the style/texture features look larger. It is not fully
     # developed yet so please keep it at 1.
     layers = (
@@ -40,11 +40,11 @@ def net(data_path, input_image, stride_multiplier = 1):
             # tensorflow: weights are [height, width, in_channels, out_channels]
             kernels = np.transpose(kernels, (1, 0, 2, 3))
             bias = bias.reshape(-1)
-            current = _conv_layer(current, kernels, bias, stride_multiplier=stride_multiplier)
+            current = _conv_layer(current, kernels, bias)
         elif kind == 'relu':
             current = tf.nn.relu(current)
         elif kind == 'pool':
-            current = _pool_layer(current, stride_multiplier=stride_multiplier)
+            current = _pool_layer(current)
         net[name] = current
 
     assert len(net) == len(layers)
@@ -58,7 +58,7 @@ def read_net(data_path):
     return data, mean_pixel
 
 # Given the data from scipy.io.loadmat(data_path), generate the net directly
-def pre_read_net(data, input_image, stride_multiplier = 1):
+def pre_read_net(data, input_image):
     layers = (
         'conv1_1', 'relu1_1', 'conv1_2', 'relu1_2', 'pool1',
 
@@ -86,52 +86,28 @@ def pre_read_net(data, input_image, stride_multiplier = 1):
             # tensorflow: weights are [height, width, in_channels, out_channels]
             kernels = np.transpose(kernels, (1, 0, 2, 3))
             bias = bias.reshape(-1)
-            current = _conv_layer(current, kernels, bias, stride_multiplier=stride_multiplier)
+            current = _conv_layer(current, kernels, bias)
         elif kind == 'relu':
             current = tf.nn.relu(current)
         elif kind == 'pool':
-            current = _pool_layer(current, stride_multiplier=stride_multiplier)
+            current = _pool_layer(current)
         net[name] = current
 
     assert len(net) == len(layers)
     return net
 
 
-def _conv_layer(input, weights, bias, stride_multiplier = 1):
-    # The stride multiplier feature is an attempt to make the style/texture features look larger. It is not fully
-    # developed yet so please keep it at 1.
-    if stride_multiplier == 1:
-        conv = tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1, 1, 1),
-                padding='SAME')
-    else:
-        weights_repeated = np.repeat(np.repeat(weights, 2, axis=0), stride_multiplier, axis=1) / float(stride_multiplier ** 2)
-        assert weights_repeated.shape[1] == weights.shape[1] * stride_multiplier and weights_repeated.shape[0] == weights.shape[0] * stride_multiplier
-        conv = tf.nn.conv2d(input, tf.constant(weights_repeated), strides=(1, 1, 1, 1),
-                padding='SAME')
-
-    # conv = tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1 * stride_multiplier, 1 * stride_multiplier, 1),
-    #         padding='SAME')
-
-    # weights_repeated = weights_shape_multiply(weights, stride_multiplier) / float(stride_multiplier ** 2)
-    # assert weights_repeated.shape[1] == weights.shape[1] * stride_multiplier and weights_repeated.shape[0] == weights.shape[0] * stride_multiplier
-    # conv = tf.nn.conv2d(input, tf.constant(weights_repeated), strides=(1, 1, 1, 1),
-    #         padding='SAME')
+def _conv_layer(input, weights, bias):
+    conv = tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1, 1, 1), padding='SAME')
     return tf.nn.bias_add(conv, bias)
 
 
-def _pool_layer(input, stride_multiplier = 1):
-    # The stride multiplier feature is an attempt to make the style/texture features look larger. It is not fully
-    # developed yet so please keep it at 1.
-    # Multiply the ksize and strides by the stride multiplier will have an effect similar to making the features look
-    # a little bit smaller.
-    # return tf.nn.max_pool(input, ksize=(1, 2 * stride_multiplier, 2 * stride_multiplier, 1), strides=(1, 2 * stride_multiplier, 2 * stride_multiplier, 1),
-    #         padding='SAME')
+def _pool_layer(input):
     return tf.nn.max_pool(input, ksize=(1, 2, 2, 1), strides=(1, 2, 2, 1),
             padding='SAME')
 
 def preprocess(image, mean_pixel):
     return image - mean_pixel
-
 
 def unprocess(image, mean_pixel):
     return image + mean_pixel
@@ -141,7 +117,3 @@ def get_net_layer_sizes(net):
     for key, val in net.iteritems():
         net_layer_sizes[key] = map(lambda i: i.value, val.get_shape())
     return net_layer_sizes
-
-def weights_shape_multiply(weights, shape_multiplier):
-    resized = scipy.ndimage.zoom(weights, (shape_multiplier,shape_multiplier,1,1), order=1)
-    return resized

@@ -1283,3 +1283,16 @@ Plan:
         There are thousands of ways things can go wrong and I don't have a solution to these problems.
         But during those times, I found that looking at what programs can achieve nowadays can keep me motivated and
         push me a little bit further.
+
+2017/01/22
+    1. Nijigen
+        I just realized... I was training using input mode = bw. That's why the output bw image looked so perfect and
+         it did not come from averaging the color bins. That's why adjusting t did not help.
+         One lesson learned: connecting conv-deconv made the network lazy and it just spent a night learning identity
+          function...
+         I was thinking if at least I can color the bw images, it would be a start. Then I forgot about it...
+         ..... I thought the network was working and it was smart enough to figure out the black-white coloring of
+         the image just within a few thousand iterations... Ah..
+
+         One thing I noticed in the conv_util: I for some reason did not add bias for all conv layers. This is wierd.
+         TODO: investigate the bias...

@@ -18,7 +18,6 @@ Related papers (and one blog):
 """
 
 # import gtk.gdk
-import time
 from sys import stderr
 
 import cv2
@@ -551,11 +550,13 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                 else:
                     sess.run(tf.initialize_all_variables())
 
-                # Get path to all content images.
-                content_dirs = get_all_image_paths_in_dir(content_folder)
-                # Ignore the ones at the end.
-                if batch_size != 1:
-                    content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
+                if not (style_only or use_semantic_masks or content_preprocessed_folder is None or
+                                content_preprocessed_folder == ''):
+                    # Get path to all content images.
+                    content_dirs = get_all_image_paths_in_dir(content_folder)
+                    # Ignore the ones at the end.
+                    if batch_size != 1:
+                        content_dirs = content_dirs[:-(len(content_dirs) % batch_size)]
 
                 if use_semantic_masks:
                     # Get path to all mask images.
@@ -576,7 +577,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         current_lr = learning_rate_decayed.eval()
                         sess.run(learning_rate_decayed.assign(max(min_lr, current_lr * lr_decay_rate)))
 
-                    start_time = time.time()
                     if not style_only:
                         if content_preprocessed_folder is not None and content_preprocessed_folder != '':
                             current_content_preprocessed_file_i, index_within_preprocessed =  \
@@ -612,7 +612,6 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                         mask_pre_list = read_and_resize_bw_mask_images(current_mask_dirs, input_shape[1],
                                                                        input_shape[2], batch_size,
                                                                        semantic_masks_num_layers)
-                    content_ready_time = time.time()
                     for style_i in range(len(styles)):
                         last_step = (i == iterations - 1)
                         # Feed the content image.
@@ -661,17 +660,12 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
                             raise NotImplementedError
 
                         if content_img_style_weight_mask is not None:
-                            # TODO: check if we can just feed in completely random tensor. because in real life
-                            # the tensor should be continuous, more like the heat map. So maybe I should use the
-                            # Diamond generator again, but with more output than just 0 and 255.
                             content_img_style_weight_mask_shape = map(lambda s: s.value, content_img_style_weight_mask_placeholder.get_shape())
                             style_weight_mask_for_training_shape = style_weight_mask_for_training.shape
                             if content_img_style_weight_mask_shape[1] != style_weight_mask_for_training_shape[1] or content_img_style_weight_mask_shape[2] != style_weight_mask_for_training_shape[2]:
                                 print("The training masks' shape does not correspond with the place holder's shape. The training mask shape is: %s and the place holder shape is: %s. They should have the same height and width." %(str(style_weight_mask_for_training_shape), str(content_img_style_weight_mask_shape)))
                             content_img_style_weight_mask_batch_i = get_batch_indices(style_weight_mask_for_training_shape[0], i * batch_size, batch_size)
                             feed_dict[content_img_style_weight_mask_placeholder] = style_weight_mask_for_training[content_img_style_weight_mask_batch_i, :, :, :]
-
-                        feed_dict_ready_time = time.time()
 
                         if style_only or use_semantic_masks:
                             _, style_loss_summary_str, tv_loss_summary_str = sess.run(
@@ -680,18 +674,11 @@ def style_synthesis_net(path_to_network, height, width, styles, iterations, batc
 
                         else:
                             _, content_loss_summary_str, style_loss_summary_str, tv_loss_summary_str = sess.run([train_step_for_each_style[style_i], content_loss_summary, style_loss_summary_for_each_style[style_i], tv_loss_summary], feed_dict=feed_dict)
-                        training_ready_time = time.time()
 
                         if not (style_only or use_semantic_masks):
                             summary_writer.add_summary(content_loss_summary_str, i)
                         summary_writer.add_summary(style_loss_summary_str, i)
                         summary_writer.add_summary(tv_loss_summary_str, i)
-
-                        summary_done_time = time.time()
-                        # TODO: Logging time spent on each part. Don't forget to delete this after finished debugging.
-                        print('Time spent on: feeddict: %.3f; training: %.3f, summary: %.3f.'
-                              %(content_ready_time-start_time, training_ready_time-feed_dict_ready_time,
-                                summary_done_time-training_ready_time))
 
                         # train_step_for_each_style[style_i].run(feed_dict=feed_dict)
 

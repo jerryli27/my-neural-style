@@ -35,7 +35,6 @@ STYLE_SCALE = 1.0
 ITERATIONS = 160000  # 40000 in https://arxiv.org/abs/1610.07629
 BATCH_SIZE = 4  # 16 in https://arxiv.org/abs/1610.07629, but higher value requires more memory.
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
-STYLE_WEIGHT_MASKS_FOR_TRAINING = 'style_weight_train_masks.npy'
 PRINT_ITERATIONS = 100
 CHECKPOINT_ITERATIONS = 100
 MASK_FOLDER = 'random_masks/'
@@ -48,8 +47,7 @@ def build_parser():
     parser.add_argument('--content_folder', dest='content_folder',
                         help='The path to the content images for training. In the papers they used the Microsoft COCO '
                              'dataset.',
-                        metavar='CONTENT_FOLDER',
-                        default='../johnson-fast-neural-style/fast-style-transfer/data/train2014/')
+                        metavar='CONTENT_FOLDER')
     parser.add_argument('--content_preprocessed_folder', dest='content_preprocessed_folder',
                         help='TODO',
                         metavar='CONTENT_PREPROCESSED_FOLDER')
@@ -84,10 +82,11 @@ def build_parser():
                         dest='network', help='path to pre-trained vgg 19 network (default %(default)s).',
                         metavar='VGG_PATH', default=VGG_PATH)
     parser.add_argument('--style_weight_mask_for_training', dest='style_weight_mask_for_training',
-                        help='Path to style_weight_mask_for_training (default %(default)s).',
-                        default=STYLE_WEIGHT_MASKS_FOR_TRAINING)
+                        help='This is an experimental feature! '
+                             'Path to style_weight_mask_for_training  (default %(default)s).')
     parser.add_argument('--use_mrf', dest='use_mrf',
-                        help='If true, it uses Markov Random Fields loss instead of Gramian loss. '
+                        help='This is an experimental feature! '
+                             'If true, it uses Markov Random Fields loss instead of Gramian loss. '
                              '(default %(default)s).', action='store_true')
     parser.set_defaults(use_mrf=False)
     parser.add_argument('--use_johnson', dest='use_johnson',
@@ -193,6 +192,8 @@ def main():
 
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
+    if options.content_folder and not os.path.exists(options.content_folder):
+        parser.error("Training image does not exist in %s" % options.content_folder)
 
     style_images = read_and_resize_images(options.styles, options.height, options.width)
 
@@ -300,7 +301,7 @@ def main():
                     if iteration is not None:
                         output_file = options.checkpoint_output % (style_i, iteration)
                     else:
-                        output_file = options.output % (style_i)  # TODO: add test for legal output.
+                        output_file = options.output % (style_i)
                     if output_file:
                         imsave(output_file, image[style_i])
 

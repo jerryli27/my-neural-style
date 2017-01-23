@@ -45,14 +45,6 @@ def build_parser():
     parser.add_argument('--semantic_masks_num_layers', type=int, dest='semantic_masks_num_layers',
                         help='number of semantic masks per content or style image (default %(default)s).',
                         metavar='SEMANTIC_MASKS_NUM_LAYERS', default=SEMANTIC_MASKS_NUM_LAYERS)
-    parser.add_argument('--new_gram',
-                        dest='new_gram', help='This is an experimental option. If true, it uses a new loss function '
-                                              'instead of the gram loss. (default %(default)s).', action='store_true')
-    parser.set_defaults(new_gram=False)
-    parser.add_argument('--new_gram_shift_size', type=int,
-                        dest='new_gram_shift_size', help='This is an experimental option.', default=4)
-    parser.add_argument('--new_gram_stride', type=int,
-                        dest='new_gram_stride', help='This is an experimental option.', default=1)
     parser.add_argument('--content_img_style_weight_mask', dest='content_img_style_weight_mask',
                         help='The path to one black-and-white mask specifying how much we should "stylize" each pixel '
                              'in the outputted image. The areas where the mask has higher value would be stylized more '
@@ -189,9 +181,7 @@ def main():
                                     style_semantic_masks=style_semantic_masks,
                                     semantic_masks_weight=options.semantic_masks_weight,
                                     print_iterations=options.print_iterations,
-                                    checkpoint_iterations=options.checkpoint_iterations, new_gram=options.new_gram,
-                                    new_gram_shift_size=options.new_gram_shift_size,
-                                    new_gram_stride=options.new_gram_stride,
+                                    checkpoint_iterations=options.checkpoint_iterations,
                                     semantic_masks_num_layers=options.semantic_masks_num_layers,
                                     content_img_style_weight_mask=content_img_style_weight_mask):
         output_file = None
