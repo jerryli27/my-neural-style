@@ -293,11 +293,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                     generated_image = generator_output.eval(feed_dict=feed_dict)
                     iterator += 1
-                    # Can't return because we are in a generator.
-                    # yield (iterator, vgg.unprocess(
-                    #     scipy.misc.imresize(generated_image[0, :, :, :], (input_shape[1], input_shape[2])), mean_pixel))
-                    # No need to unprocess it because we've preprocessed the generated image in the network. That means
-                    # the generated image is before preprocessing.
+
+                    if generator_network == 'colorful_img' or generator_network == 'backprop' \
+                            or generator_network == 'unet_mod' or generator_network == \
+                            'colorful_img_connected_rgbbin':
+                        generated_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
+
                     yield (iterator, generated_image)
 
             else:
@@ -509,13 +510,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       test_img_hint=test_img_hint,
                                                                       input_mode=input_mode):
                             pass
-
-                            if generator_network == 'colorful_img' or generator_network =='backprop' \
-                                    or generator_network == 'unet_mod' or generator_network == \
-                                    'colorful_img_connected_rgbbin':
-                                best_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
-                            else:
-                                best_image = generated_image
+                        best_image = generated_image
 
                         # Because we now have batch, choose the first one in the batch as our sample image.
                         yield (

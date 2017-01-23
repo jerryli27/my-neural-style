@@ -1262,6 +1262,13 @@ Plan:
         would (after seeing so many images with really terrible outcome, an image with "normal looking" black and
         white color was a huge releaf.
 
+        But is it learning colors? I'll find out by changing t close to 0.Hopefully it is, but if it's not, then
+        either the network cannot learn color, or it's simply not trained enough.
+        Nope, the network is still stubbornly only learning gray images.
+
+        In the colorful image colorization paper, they used batch size 40 and trained for at least 200k iterations.
+        That would take forever... And cost a lot. Dunno how long theirs ran... A week?
+
 
     2. Neural style
         a. Don't forget to investigate the relationship between texture size and size of content/style images.
