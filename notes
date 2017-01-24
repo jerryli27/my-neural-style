@@ -1300,3 +1300,36 @@ Plan:
         TODO: investigate the bias... I will try to run the color sketches net first without bias then with bias.
         TODO: not a huge deal, but shuffing the training set might be better... But it would require messing with the
         preprocessed npy files...
+
+        TODO: maybe check the initialization method. the nn or whatever...
+
+
+        The bias did not seem to provide benefits during the first few thousand iterations.
+
+
+2017/01/23
+    1. Nijigen
+        Training is slow... I tried to run colorful_img_bias, which is just the original network with bias variables.
+        As mentioned above, at first it did not show advantage over the one without bias. After more than 12 hours of
+        training, it is still pretty slow in learning at least the identity function. Maybe my lr was too low, but
+        that's already higher than what the original paper suggested.
+
+        Should I keep running that? Yes. I want to see how the network works if it works at all. I can work on the
+        master project for now.
+
+        Modified unet_mod to include the bias. A small difference between unet_mod and colorful_img_network_bias is
+        I added bias in the layer right before softmax in unet_mod but not in colorful_img_network_bias. I first
+        thought that adding the bias does not make sense in the last layer before softmax because softmax will just
+        sort of normalize the bias added. Now I think that maybe by adding a bias layer it can make the job of previous
+        layers easier since it now does not have to produce a negative result for units not activated. It can just
+        set the bias to negative.
+
+        Anyway... It will probably be a while before I can test the unet_mod... Hope it will run faster than the
+        colorful_img.
+
+2017/01/24
+    1. Nijigen
+        Training takes too long and I'm impatient... It didn't learn the identity function yet.
+        I'm planning to switch back to unet_mod and hope that can improve things a little.
+
+        TODO: I need to implement the color rebalancing since it help learning rare colors...

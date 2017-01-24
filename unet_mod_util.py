@@ -26,6 +26,7 @@ def net(image, mirror_padding=False,num_bin = 6 , reuse=False):
         for i in range(len(CONV_DOWN_NUM_FILTERS)):
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
                                        filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
+                                       with_bias=True,
                                        mirror_padding=mirror_padding, norm='batch_norm', name='conv_down_%d' %i, reuse=reuse)
             prev_layer = current_layer
             prev_layer_list.append(current_layer)
@@ -48,19 +49,22 @@ def net(image, mirror_padding=False,num_bin = 6 , reuse=False):
                 concat_layer = tf.concat(3, [prev_layer_list[-i-1], prev_layer])
                 current_layer = conv_tranpose_layer(concat_layer, num_filters=CONV_UP_NUM_FILTERS[i],
                                                     filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
+                                                    with_bias=True,
                                                     mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
             else:
                 current_layer = conv_layer(prev_layer, num_filters=CONV_UP_NUM_FILTERS[i],
-                                                    filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
-                                                    mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
+                                           filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
+                                           with_bias=True,
+                                           mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init,_ = conv_init_vars(prev_layer, num_bin ** 3, CONV_UP_KERNEL_SIZES[-1], name='final_conv',
+        weights_init,bias_init = conv_init_vars(prev_layer, num_bin ** 3, CONV_UP_KERNEL_SIZES[-1], name='final_conv',
                                       reuse=reuse)
         strides_shape = [1, CONV_UP_STRIDES[-1], CONV_UP_STRIDES[-1], 1]
         rgb_bin = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME',name='rgb_bin')
+        rgb_bin = tf.nn.bias_add(rgb_bin,bias_init,name='rgb_bin_bias_added')
         final = tf.nn.softmax(rgb_bin, name='softmax_layer')
 
 
