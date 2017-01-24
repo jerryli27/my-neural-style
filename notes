@@ -1341,5 +1341,10 @@ Plan:
         I also realized that I was doing the wrong thing. I was added a softmax layer while if I use the
         tf.nn.softmax_cross_entropy_with_logits loss I don't need that layer since it does it for me. Applying an
         additional softmax layer will make matters worse. gg... so many bugs
+            Another reason I did softmax was because this line:
+            "rgb_bin_normalized = rgb_bin/np.sum(rgb_bin,axis=3,keepdims=True)"
+            Without softmax, the sum can be negative and the probability wouldn't have been correct. But I should've
+            just apply the softmax there instead of messing around with the output...
+
 
         TODO: I need to implement the color rebalancing since it help learning rare colors...

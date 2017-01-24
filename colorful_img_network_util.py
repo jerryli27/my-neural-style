@@ -205,9 +205,14 @@ class ImgToRgbBinEncoder():
         batch, height, width, num_channel = rgb_bin.shape
         if num_channel != self.bin_num**3:
             raise AssertionError("The rgb_bin must have bin_num**3 channels, not %d." % num_channel)
-        rgb_bin_normalized = rgb_bin/np.sum(rgb_bin,axis=3,keepdims=True)
 
-        exp_log_z_div_t = np.exp(np.divide(np.log(rgb_bin_normalized),t))
+        # This is not the correct way to normalize. The correct way is to just apply a softmax...
+        # rgb_bin_normalized = rgb_bin/np.sum(rgb_bin,axis=3,keepdims=True)
+
+        rgb_bin_exp = np.exp(rgb_bin)
+        rgb_bin_softmax = rgb_bin_exp / np.sum(rgb_bin_exp, axis=3,keepdims=True)
+
+        exp_log_z_div_t = np.exp(np.divide(np.log(rgb_bin_softmax),t))
         annealed_mean = exp_log_z_div_t / np.sum(exp_log_z_div_t, axis=3, keepdims=True)
         return self.nnencode.decode_points_mtx_nd(annealed_mean, axis=3)
 
