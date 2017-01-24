@@ -25,7 +25,7 @@ def net(image, mirror_padding=False, reuse=False):
     with tf.variable_scope('unet', reuse=reuse):
         for i in range(len(CONV_DOWN_NUM_FILTERS)):
             current_layer = conv_layer(prev_layer, num_filters=CONV_DOWN_NUM_FILTERS[i],
-                                       filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i],
+                                       filter_size=CONV_DOWN_KERNEL_SIZES[i], strides=CONV_DOWN_STRIDES[i], with_bias=True,
                                        mirror_padding=mirror_padding, norm='batch_norm', name='conv_down_%d' %i, reuse=reuse)
             prev_layer = current_layer
             prev_layer_list.append(current_layer)
@@ -47,20 +47,20 @@ def net(image, mirror_padding=False, reuse=False):
                     prev_layer = tf.image.resize_nearest_neighbor(prev_layer, [layer_to_be_concatenated_shape[1], layer_to_be_concatenated_shape[2]])
                 concat_layer = tf.concat(3, [prev_layer_list[-i-1], prev_layer])
                 current_layer = conv_tranpose_layer(concat_layer, num_filters=CONV_UP_NUM_FILTERS[i],
-                                                    filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
+                                                    filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i], with_bias=True,
                                                     mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
             else:
                 current_layer = conv_layer(prev_layer, num_filters=CONV_UP_NUM_FILTERS[i],
-                                                    filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i],
+                                                    filter_size=CONV_UP_KERNEL_SIZES[i], strides=CONV_UP_STRIDES[i], with_bias=True,
                                                     mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init,_ = conv_init_vars(prev_layer, CONV_UP_NUM_FILTERS[-1], CONV_UP_KERNEL_SIZES[-1], name='final_conv', reuse=reuse)
+        weights_init,bias_init = conv_init_vars(prev_layer, CONV_UP_NUM_FILTERS[-1], CONV_UP_KERNEL_SIZES[-1], with_bias=True, name='final_conv', reuse=reuse)
         strides_shape = [1, CONV_UP_STRIDES[-1], CONV_UP_STRIDES[-1], 1]
         final = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME')
-
+        final = tf.nn.bias_add(final, bias_init, name='bias_init_bias_added')
         # TODO: Maybe I should add this to make training a little bit easier?
         final = tf.nn.tanh(final) * 150 + 255. / 2
 
