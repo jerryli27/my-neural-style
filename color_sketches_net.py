@@ -47,7 +47,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        min_lr=0.00003, lr_decay_rate=0.5,print_iterations=None,
                        checkpoint_iterations=None, save_dir="model/", do_restore_and_generate=False,
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
-                       content_preprocessed_folder = None,
+                       content_preprocessed_folder = None, color_rebalancing_folder = None,
                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None,
                        input_mode = 'sketch'):
     """
@@ -80,6 +80,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
     if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod' \
             or generator_network == 'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
         img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
+
+        if color_rebalancing_folder is not None:
+            assert color_rebalancing_folder[-1] == '/'
+            rgb_bin_weights = np.load(color_rebalancing_folder + 'weights.npy')
+        else:
+            rgb_bin_weights = None
 
     content_img_preprocessed = None
     sketches_preprocessed = None
@@ -139,7 +145,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = tf.get_variable('backprop_input_var',
                                                    shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
                                                    initializer=tf.random_normal_initializer()) + 0 * input_sketches
-                generator_output = tf.nn.softmax(generator_output)
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson")
 
@@ -154,7 +159,13 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
                                                  name='expected_output')
-                generator_loss_non_adv = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(generator_output, expected_output))
+
+                if color_rebalancing_folder is not None:
+                    # TODO: THIS IS WRONG... I SHOULD MODIFY THE GRADIENT...SOME HOW.OR COMPUTE LOSS MANUALLY
+                    generator_output = tf.mul(generator_output,rgb_bin_weights,'generator_output_rebalanced')
+                    expected_output = tf.mul(expected_output,rgb_bin_weights,'expected_output_rebalanced')
+                else:
+                    generator_loss_non_adv = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(generator_output, expected_output))
             else:
                 expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], 3],

@@ -9,7 +9,7 @@ CONV_DOWN_NUM_FILTERS=[32, 64, 64, 128, 128, 256, 256, 512, 512]
 CONV_DOWN_KERNEL_SIZES=[3, 4, 3, 4, 3, 4, 3, 4, 3]
 CONV_DOWN_STRIDES=[1, 2, 1, 2, 1, 2, 1, 2, 1]
 
-CONV_UP_NUM_FILTERS=[512, 256, 256, 256, 256, 256, 256, 256, None]
+CONV_UP_NUM_FILTERS=[512, 256, 256, 128, 128, 64, 64, 32, None]
 CONV_UP_KERNEL_SIZES=[4, 3, 4, 3, 4, 3, 4, 3, 3]
 CONV_UP_STRIDES=[2, 1, 2, 1, 2, 1, 2, 1, 1]
 
@@ -66,7 +66,8 @@ def net(image, mirror_padding=False,num_bin = 6 , reuse=False):
         strides_shape = [1, CONV_UP_STRIDES[-1], CONV_UP_STRIDES[-1], 1]
         rgb_bin = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME',name='rgb_bin')
         rgb_bin = tf.nn.bias_add(rgb_bin,bias_init,name='rgb_bin_bias_added')
-        final = tf.nn.softmax(rgb_bin, name='softmax_layer')
+        # final = tf.nn.softmax(rgb_bin, name='softmax_layer')
+        final = rgb_bin
 
 
         # Do sanity check.

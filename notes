@@ -1332,4 +1332,14 @@ Plan:
         Training takes too long and I'm impatient... It didn't learn the identity function yet.
         I'm planning to switch back to unet_mod and hope that can improve things a little.
 
+        Caught a bug just in time... I was running unet_mod and it was wierdly slow. Then I found that the upsampling
+        layers was modified to all 256... Changed them back to the same as down sampling ones.
+
+        I tried to set the lr to 0.002 and the result became completely white after the second checkpoint. Maybe high
+        is the cause to having completely white outputs... But I didn't expect it to saturate so quickly.
+
+        I also realized that I was doing the wrong thing. I was added a softmax layer while if I use the
+        tf.nn.softmax_cross_entropy_with_logits loss I don't need that layer since it does it for me. Applying an
+        additional softmax layer will make matters worse. gg... so many bugs
+
         TODO: I need to implement the color rebalancing since it help learning rare colors...

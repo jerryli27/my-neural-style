@@ -112,7 +112,7 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                                      % (str(image_shape), str(conv8_rgb_bin_shape)))
 
             conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
-        final = tf.nn.softmax(conv8_rgb_bin,name='softmax_layer')
+        final = conv8_rgb_bin
         # Do sanity check.
         final_shape = final.get_shape().as_list()
         if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):

@@ -5,7 +5,7 @@
 
 from general_util import *
 
-learning_rate=0.002 # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
+learning_rate=0.0002 # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
 # saytheir batch size.
 # iterations=800000# 800000
 epochs = 10
@@ -14,7 +14,7 @@ content_weight=5
 checkpoint_iterations=500
 height = 256
 width = 256
-generator_network= 'unet_mod' # 'colorful_img'
+generator_network= 'unet' # 'colorful_img'
 input_mode = 'sketch'
 print_iteration = 100
 do_restore_and_train = False  # True
