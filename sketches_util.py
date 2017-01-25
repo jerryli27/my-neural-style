@@ -272,15 +272,13 @@ def calc_rgb_bin_distr_and_weights(directory, save_dir, bin_num = 6, lambd = 0.5
     start_time = time.time()
 
     for i, img_dir in enumerate(all_img_dirs):
-        img = Image.open(img_dir).convert('RGB')
-        img.thumbnail((64,64)) # This maybe faster than reshaping?
-        image = np.asarray(img, np.int)
+        image = imread(img_dir,(64,64))
         image_rgbbin = img2rgbbin_encoder.nnencode.encode_points_mtx_nd(image,axis=2, return_sparse=False)
         image_rgbbin_mean = np.mean(image_rgbbin,axis=(0,1))
         rgbbin_sum = rgbbin_sum + image_rgbbin_mean
         if i % 100 == 0:
             end_time = time.time()
-            remaining_time = (num_imgs - i) * (float(end_time-start_time) / i)
+            remaining_time = 0.0 if i == 0 else (num_imgs - i) * (float(end_time-start_time) / i)
             print('%.3f%% done. Remaining time: %.1fs' %(float(i) / num_imgs * 100, remaining_time))
 
     rgbbin_avg = rgbbin_sum / num_imgs
@@ -306,6 +304,54 @@ def calc_rgb_bin_distr_and_weights(directory, save_dir, bin_num = 6, lambd = 0.5
     np.save(weights_dir,weights)
 
 
+def calc_ab_bin_distr_and_weights(directory, save_dir, lambd = 0.5):
+    assert save_dir[-1] == '/'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    all_img_dirs = get_all_image_paths_in_dir(directory)
+    random.shuffle(all_img_dirs)
+    all_img_dirs = all_img_dirs[:len(all_img_dirs) / 10] # Only sample 10% of all the images to save time.
+    num_imgs = len(all_img_dirs)
+    img2bin_encoder = colorful_img_network_util.ImgToABBinEncoder()
+
+    bin_sum = np.zeros((colorful_img_network_util.LAB_NUM_BINS))
+    start_time = time.time()
+
+    for i, img_dir in enumerate(all_img_dirs):
+        image = imread(img_dir,(64,64))
+        image_lab = colorful_img_network_util.rgb_to_lab(image)
+        image_bin = img2bin_encoder.nnencode.encode_points_mtx_nd(image_lab[...,1:],axis=2, return_sparse=False)
+        image_bin_mean = np.mean(image_bin,axis=(0,1))
+        bin_sum = bin_sum + image_bin_mean
+        if i % 100 == 0:
+            end_time = time.time()
+            remaining_time = 0.0 if i == 0 else (num_imgs - i) * (float(end_time-start_time) / i)
+            print('%.3f%% done. Remaining time: %.1fs' %(float(i) / num_imgs * 100, remaining_time))
+
+    bin_avg = bin_sum / num_imgs
+    print(bin_avg)
+    np.testing.assert_almost_equal(np.sum(bin_avg),1.0)
+
+    rgbbin_avg_dir = save_dir + 'rgbbin_avg.npy'
+    np.save(rgbbin_avg_dir,bin_avg)
+
+    # Didn't understand what the smoothing part is doing in the paper. It doesn't make sense to smooth a probability
+    # distribution with a gaussian kernel... So I left it as it is
+    # rgbbin_avg_smoothed = img2rgbbin_encoder.gaussian_kernel(rgbbin_avg, std=0.005)
+    # rgbbin_avg_smoothed = rgbbin_avg_smoothed / np.sum(rgbbin_avg_smoothed)
+    # print(rgbbin_avg_smoothed)
+    bin_avg_smoothed = bin_avg
+    weights = np.divide(1.0, (bin_avg_smoothed * (1-lambd) + lambd / colorful_img_network_util.LAB_NUM_BINS ** 3))
+    weights = weights / np.sum(np.multiply(weights,bin_avg_smoothed))
+    print(weights)
+
+    np.testing.assert_almost_equal(np.sum(np.multiply(weights, bin_avg_smoothed)),1.0)
+
+    weights_dir = save_dir + 'weights.npy'
+    np.save(weights_dir,weights)
+
+
 if __name__ == '__main__':
     # height = 256
     # width = 256
@@ -317,5 +363,8 @@ if __name__ == '__main__':
     # preprocess_img_in_dir_and_save('/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/',
     #                                height, width, 'pixiv_img_preprocessed_npy/256/',batch_size, max_size_g=16)
 
-    print('testing calc_rgb_bin_distr_and_weights')
-    calc_rgb_bin_distr_and_weights('/home/xor/pixiv_testing/', 'rgb_bin_distr_and_weights/')
+    # print('testing calc_rgb_bin_distr_and_weights')
+    # calc_rgb_bin_distr_and_weights('/home/xor/pixiv_testing/', 'rgb_bin_distr_and_weights/')
+
+    print('testing calc_ab_bin_distr_and_weights')
+    calc_ab_bin_distr_and_weights('/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/', 'resources/ab_bin_distr_and_weights/')
