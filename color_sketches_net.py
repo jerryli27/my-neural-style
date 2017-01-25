@@ -112,7 +112,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_concatenated)
             elif generator_network == 'unet_both':
-                bw_output, ab_output = unet_both_util.net(input_concatenated)
+                _, ab_output = unet_both_util.net(input_concatenated)
+                bw_output = tf.get_variable('bw_output_input_var',
+                                                   shape=[batch_size, input_shape[1], input_shape[2], 1],
+                                                   initializer=tf.random_normal_initializer()) + 0 * input_concatenated
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
