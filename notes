@@ -1298,10 +1298,10 @@ Plan:
          It was probably because one of the repo I checked did not have bias. But it should... I didn't see papers
          saying that it doesn't need bias layers. Could this be the reason??? But it didn't cause any problem before...
         Plan: investigate the bias... I will try to run the color sketches net first without bias then with bias.
-        TODO: not a huge deal, but shuffing the training set might be better... But it would require messing with the
+        Plan: not a huge deal, but shuffing the training set might be better... But it would require messing with the
         preprocessed npy files...
 
-        TODO: maybe check the initialization method. the nn or whatever...
+        Plan: maybe check the initialization method. the nn or whatever...
 
 
         The bias did not seem to provide benefits during the first few thousand iterations.
@@ -1350,3 +1350,37 @@ Plan:
         TODO: I need to implement the color rebalancing since it help learning rare colors...
 
 2017/01/25
+    1. Nijigen
+        The task i ran last night was not so successful because my learning rate was too low. I trained for 50000
+        iterations but it still did not learn how to color bright and dark areas, which is consistent with the
+        previous result at 10000 iterations with lr at least 5 times larger (I say at least because I also apply
+        lr decay). I am re-running it with much higher lr (lr = 0.005 batch_size = 4)
+
+        I realized the huge difference between the colorization task from bw and from sketches. bw image have
+        illumination info for each pixel and sketches do not. Therefore the network for bw images only need to learn a
+        very rough coloring for each region and it can then use the illumination to fill in the details.
+        That's why my network seemed so slow when I use bw images as input. I told it to output rgb values instead
+        of lab or whatever other color spaces they're using. I don't have that kind of luxury in the sketches task.
+
+        The rgb_bin method had a hard time learning the contour or the identity function because each bin is
+        independent. So they each have to learn it once. Also, it might not even be a good idea to draw the contour
+        for some bins since those contours may not use the color they're representing and they should output 0 instead.
+
+        ....
+
+        Wait a sec. I can train two parts: one outputs the illumination of the network -- which I know already how to
+        do... it's just the output that the failed l2 loss would give. I can make that task even easier by reducing the
+        number of output layers from 3 to 1. -- and the other outputs the ab values at a smaller resolution which will
+        then be upsampled by nearest neighbor. Now each network can do the job that it specializes in. Hah
+        I was thinking that the two can share the network upto say the last few upsampling layers, but that I can
+        experiment with. Worst case is I just have to use two networks and longer training time. I think this will work
+        in theory... But let me first finish the color rebalancing and maybe the K-means initialization in the paper
+        "Data-dependent Initializations of Convolutional Neural Networks" (https://arxiv.org/abs/1511.06856)
+        K-means initialization is optional so do it only if I have time and waiting for it to train or something.
+        (https://github.com/philkr/magic_init)
+
+        I don't think there is a nice way to modify the gradient calculated in tensorflow, so I probably just have to
+        change the loss and multiply each category by its weight...
+
+
+        I haven't implemented the color rebalancing yet...

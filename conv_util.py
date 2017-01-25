@@ -10,7 +10,7 @@ from typing import Union, Callable, Tuple
 WEIGHTS_INIT_STDEV = .1
 
 
-def conv_layer(net, num_filters, filter_size, strides, with_bias = False, elu=True, mirror_padding=True, one_hot_style_vector=None,
+def conv_layer(net, num_filters, filter_size, strides, with_bias = True, elu=True, mirror_padding=True, one_hot_style_vector=None,
                norm='instance_norm', dilation = 1, name='', reuse=False):
     # type: (tf.Tensor, int, int, int, bool, bool, bool, Union[None,tf.Tensor], str, int, str, bool) -> tf.Tensor
     """
@@ -60,7 +60,7 @@ def conv_layer(net, num_filters, filter_size, strides, with_bias = False, elu=Tr
         return net
 
 
-def conv_tranpose_layer(net, num_filters, filter_size, strides, with_bias = False, elu=True, mirror_padding=True,
+def conv_tranpose_layer(net, num_filters, filter_size, strides, with_bias = True, elu=True, mirror_padding=True,
                         one_hot_style_vector=None, norm='instance_norm', name='', reuse=False):
     # type: (tf.Tensor, int, int, int, bool, bool, bool, Union[None,tf.Tensor], str, str, bool) -> tf.Tensor
     """
@@ -161,7 +161,7 @@ def batch_norm(input_layer, name='', reuse=False):
         return return_val
 
 
-def conv_init_vars(net, out_channels, filter_size, with_bias = False, transpose=False, name='', reuse=False):
+def conv_init_vars(net, out_channels, filter_size, with_bias = True, transpose=False, name='', reuse=False):
     # type: (tf.Tensor, int, int, bool, bool, str, bool) -> Tuple[tf.Tensor,Union[tf.Tensor,None]]
     """
     For meaning of each variable, please refer to the documentation in the "conv_layer" function. They're the same.

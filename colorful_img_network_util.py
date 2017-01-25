@@ -6,8 +6,10 @@ different from the original paper however. It is now used to color sketches inst
 Some code comes directly from https://github.com/richzhang/colorization/blob/master/resources/caffe_traininglayers.py
 """
 
+import os
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+from skimage import color
 
 from conv_util import *
 
@@ -43,12 +45,14 @@ CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
 # DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
 # CONV_TRANSPOSE_LAYERS = {'conv8_1'}
 
+LAB_NUM_BINS = 313
+
 assert len(NAMES) == len(NUM_OUTPUTS) and len(NAMES) == len(KERNEL_SIZES) and len(NAMES) == len(STRIDES) and \
        len(NAMES) == len(NORMS) and len(NAMES) == len(DILATIONS)
 
 
-def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
-    # type: (tf.Tensor, bool, bool) -> tf.Tensor
+def net(image, mirror_padding = False, is_rgb = True, num_bin = 6 , reuse = False):
+    # type: (tf.Tensor, bool, bool, bool) -> tf.Tensor
     """
     The network is a generator network that takes a sketch and tries to apply color to it.
     Note: there is a slight modification in the network with respect to the one in the paper. For the one in the
@@ -96,11 +100,15 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                 prev_layer = current_layer
                 prev_layer_list.append(current_layer)
 
+        if is_rgb:
+            conv8_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
+                                       name ='conv8_rgb_bin', reuse = reuse)
+        else:
+            # Otherwise the output is in lab color space and it only outputs the ab part.
+            conv8_rgb_bin = conv_layer(prev_layer, LAB_NUM_BINS, 1, 1, mirror_padding = mirror_padding,
+                                       name ='conv8_rgb_bin', reuse = reuse)
 
-        # conv10_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
-        #                            name ='conv10_rgb_bin', reuse = reuse)
-        conv8_rgb_bin = conv_layer(prev_layer, num_bin ** 3, 1, 1, mirror_padding = mirror_padding,
-                                   name ='conv8_rgb_bin', reuse = reuse)
+
         image_shape = image.get_shape().as_list()
         conv8_rgb_bin_shape = conv8_rgb_bin.get_shape().as_list()
         if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
@@ -109,7 +117,6 @@ def net(image, mirror_padding = False, num_bin = 6 , reuse = False):
                 raise AssertionError('The layers to be concatenated differ too much in shape. Something is '
                                      'wrong. Their shapes are: %s and %s'
                                      % (str(image_shape), str(conv8_rgb_bin_shape)))
-
             conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
         final = conv8_rgb_bin
         # Do sanity check.
@@ -132,7 +139,52 @@ def get_net_all_variables():
     else:
         return tf.get_collection(tf.GraphKeys.VARIABLES, scope='johnson')
 
+class ImgToABBinEncoder():
+    def __init__(self):
+        self.NN = 10.
+        self.sigma = 5.
+        self.ENC_DIR = './resources/'
 
+        self.nnencode = NNEncode(self.NN, self.sigma, km_filepath=os.path.join(self.ENC_DIR, 'pts_in_hull.npy'))
+    def img_to_bin(self, img, return_sparse = False):
+
+        """
+
+        :param img:  An image represented in numpy array with shape (batch, height, width, 3)
+        :param bin_num: number of bins for each color dimension
+        :return:  An image represented in numpy array with shape (batch, height, width, bin_num ** 3)
+        """
+        if len(img.shape) != 4:
+            raise AssertionError("The image must have shape (batch, height, width, 3), not %s" %str(img.shape))
+        batch, height, width, num_channel = img.shape
+        if num_channel != 2:
+            raise AssertionError("The image must have 2 channels representing rgb. not %d." %num_channel)
+
+        return self.nnencode.encode_points_mtx_nd(img,axis=3, return_sparse=return_sparse)
+
+
+    def bin_to_img(self, ab_bin, t = 0.38):
+        """
+        This function uses annealed-mean technique in the paper.
+        :param ab_bin:
+        :param t: t = 0.38 in the original paper
+        """
+
+        if len(ab_bin.shape) != 4:
+            raise AssertionError("The rgb_bin must have shape (batch, height, width, 2), not %s" % str(ab_bin.shape))
+        batch, height, width, num_channel = ab_bin.shape
+        if num_channel !=  LAB_NUM_BINS:
+            raise AssertionError("The rgb_bin must have 313 channels, not %d." % num_channel)
+
+        ab_bin_exp = np.exp(ab_bin)
+        ab_bin_softmax = ab_bin_exp / np.sum(ab_bin_exp, axis=3,keepdims=True)
+
+        exp_log_z_div_t = np.exp(np.divide(np.log(ab_bin_softmax),t))
+        annealed_mean = exp_log_z_div_t / np.add(np.sum(exp_log_z_div_t, axis=3, keepdims=True),0.000001)
+        return self.nnencode.decode_points_mtx_nd(annealed_mean, axis=3)
+
+    def gaussian_kernel(self,arr,std):
+        return np.exp(-arr**2 / (2 * std**2))
 
 class ImgToRgbBinEncoder():
     def __init__(self,bin_num=6):
@@ -154,7 +206,7 @@ class ImgToRgbBinEncoder():
             r += step_size
         self.index_matrix = np.array(index_matrix, dtype=np.uint8)
         self.nnencode = NNEncode(5,5,cc=self.index_matrix)
-    def img_to_rgb_bin(self,img, return_sparse = False):
+    def img_to_bin(self, img, return_sparse = False):
 
         """
 
@@ -192,7 +244,7 @@ class ImgToRgbBinEncoder():
         return self.nnencode.encode_points_mtx_nd(img,axis=3, return_sparse=return_sparse)
 
 
-    def rgb_bin_to_img(self,rgb_bin,t = 0.01):
+    def bin_to_img(self, rgb_bin, t = 0.01, do_softmax = True):
         """
         This function uses annealed-mean technique in the paper.
         :param rgb_bin:
@@ -208,12 +260,14 @@ class ImgToRgbBinEncoder():
 
         # This is not the correct way to normalize. The correct way is to just apply a softmax...
         # rgb_bin_normalized = rgb_bin/np.sum(rgb_bin,axis=3,keepdims=True)
-
-        rgb_bin_exp = np.exp(rgb_bin)
-        rgb_bin_softmax = rgb_bin_exp / np.sum(rgb_bin_exp, axis=3,keepdims=True)
+        if do_softmax:
+            rgb_bin_exp = np.exp(rgb_bin)
+            rgb_bin_softmax = rgb_bin_exp / np.sum(rgb_bin_exp, axis=3,keepdims=True)
+        else:
+            rgb_bin_softmax = rgb_bin
 
         exp_log_z_div_t = np.exp(np.divide(np.log(rgb_bin_softmax),t))
-        annealed_mean = exp_log_z_div_t / np.sum(exp_log_z_div_t, axis=3, keepdims=True)
+        annealed_mean = exp_log_z_div_t / np.add(np.sum(exp_log_z_div_t, axis=3, keepdims=True),0.000001)
         return self.nnencode.decode_points_mtx_nd(annealed_mean, axis=3)
 
     def gaussian_kernel(self,arr,std):
@@ -338,3 +392,34 @@ def unflatten_2d_array(pts_flt,pts_nd,axis=1,squeeze=False):
         pts_out = pts_out.transpose(axorder_rev)
 
     return pts_out
+
+def rgb_to_lab(image):
+    if len(image.shape) == 3:
+        num_channels = image.shape[-1]
+        if num_channels != 3:
+            raise AssertionError('The image must have 3 channels representing rgb. Currently it is %d' %num_channels)
+        return color.rgb2lab(np.array(image,dtype=np.uint8))
+    elif len(image.shape) == 4:
+        ret = []
+        for img_i in range(image.shape[0]):
+            ret.append(rgb_to_lab(image[img_i,...]))
+        return np.array(ret)
+    else:
+        raise AssertionError('The image must have shape either [height, width, 3] or [batch_size, height, width, 3]. '
+                             'Currently it is %s' % str(image.shape))
+
+def lab_to_rgb(image):
+    if len(image.shape) == 3:
+        num_channels = image.shape[-1]
+        if num_channels != 3:
+            raise AssertionError('The image must have 3 channels representing lab. Currently it is %d' %num_channels)
+        return np.multiply(color.lab2rgb(image),255.0)
+    elif len(image.shape) == 4:
+        ret = []
+        dtype = image.dtype
+        for img_i in range(image.shape[0]):
+            ret.append(lab_to_rgb(image[img_i,...]))
+        return np.array(ret,dtype=dtype)
+    else:
+        raise AssertionError('The image must have shape either [height, width, 3] or [batch_size, height, width, 3]. '
+                             'Currently it is %s' % str(image.shape))

@@ -48,6 +48,10 @@ def build_parser():
                         help='Whether we should use sketches or black-white images as input. Possible values = '
                              'sketch or bw',
                         metavar='INPUT_MODE', default='sketch')
+    parser.add_argument('--output_mode', dest='output_mode', type=str,
+                        help='Whether the output bins are rgb or ab (in lab space). Possible values = '
+                             'rgb or lab',
+                        metavar='OUTPUT_MODE', default='rgb')
 
     parser.add_argument('--use_adversarial_net', dest='use_adversarial_net',
                         help='If set, we train an adversarial network to distinguish between the image generated and '
@@ -139,6 +143,7 @@ def main():
             learning_rate=options.learning_rate,
             generator_network=options.generator_network,
             input_mode=options.input_mode,
+            output_mode=options.output_mode,
             use_adversarial_net=options.use_adversarial_net,
             use_hint=options.use_hint,
             print_iterations=options.print_iterations,

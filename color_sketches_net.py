@@ -18,6 +18,7 @@ import colorful_img_network_bias_util
 import colorful_img_network_util
 import johnson_feedforward_net_util
 import sketches_util
+import unet_both_util
 import unet_mod_util
 import unet_util
 from general_util import *
@@ -49,7 +50,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
                        content_preprocessed_folder = None, color_rebalancing_folder = None,
                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None,
-                       input_mode = 'sketch'):
+                       input_mode = 'sketch', output_mode = 'rgb'):
     """
     Stylize images.
     TODO: modify the description.
@@ -78,14 +79,20 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
           input_mode, generator_network))
 
     if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod' \
-            or generator_network == 'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
-        img_to_rgb_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
+            or generator_network == 'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias' \
+            or generator_network == 'unet_both':
+        if output_mode == 'rgb':
+            img_to_bin_encoder=colorful_img_network_util.ImgToRgbBinEncoder(COLORFUL_IMG_NUM_BIN)
+        elif output_mode == 'lab':
+            img_to_bin_encoder=colorful_img_network_util.ImgToABBinEncoder()
+        else:
+            raise AssertionError('The output mode has to be either rgb or lab. Currently it is %s' %output_mode)
 
         if color_rebalancing_folder is not None:
             assert color_rebalancing_folder[-1] == '/'
-            rgb_bin_weights = np.load(color_rebalancing_folder + 'weights.npy')
+            bin_weights = np.load(color_rebalancing_folder + 'weights.npy')
         else:
-            rgb_bin_weights = None
+            bin_weights = None
 
     content_img_preprocessed = None
     sketches_preprocessed = None
@@ -104,6 +111,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = unet_util.net(input_concatenated)
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_concatenated)
+            elif generator_network == 'unet_both':
+                bw_output, ab_output = unet_both_util.net(input_concatenated)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
@@ -118,7 +127,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = colorful_img_network_bias_util.net(input_concatenated)
             elif generator_network =='backprop':
                 generator_output = tf.get_variable('backprop_input_var',
-                                                   shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
+                                                   shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3 if output_mode == 'rgb' else colorful_img_network_util.LAB_NUM_BINS],
                                                    initializer=tf.random_normal_initializer()) + 0 * input_concatenated
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson. Got: %s"
@@ -129,6 +138,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = unet_util.net(input_sketches)
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_sketches)
+            elif generator_network == 'unet_both':
+                bw_output, ab_output = unet_both_util.net(input_sketches)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
             elif generator_network == 'colorful_img':
@@ -143,7 +154,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 generator_output = colorful_img_network_bias_util.net(input_sketches)
             elif generator_network =='backprop':
                 generator_output = tf.get_variable('backprop_input_var',
-                                                   shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
+                                                   shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3 if output_mode == 'rgb' else colorful_img_network_util.LAB_NUM_BINS],
                                                    initializer=tf.random_normal_initializer()) + 0 * input_sketches
             else:
                 raise AssertionError("Please input a valid generator network name. Either unet or johnson")
@@ -157,20 +168,33 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             if generator_network == 'colorful_img' or generator_network =='backprop' or generator_network == 'unet_mod'\
                     or generator_network == 'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
                 expected_output = tf.placeholder(tf.float32,
-                                                 shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3],
+                                                 shape=[batch_size, input_shape[1], input_shape[2], COLORFUL_IMG_NUM_BIN**3 if output_mode == 'rgb' else colorful_img_network_util.LAB_NUM_BINS],
                                                  name='expected_output')
 
                 if color_rebalancing_folder is not None:
                     # TODO: THIS IS WRONG... I SHOULD MODIFY THE GRADIENT...SOME HOW.OR COMPUTE LOSS MANUALLY
-                    generator_output = tf.mul(generator_output,rgb_bin_weights,'generator_output_rebalanced')
-                    expected_output = tf.mul(expected_output,rgb_bin_weights,'expected_output_rebalanced')
+                    generator_output = tf.mul(generator_output,bin_weights,'generator_output_rebalanced')
+                    expected_output = tf.mul(expected_output,bin_weights,'expected_output_rebalanced')
                 else:
                     generator_loss_non_adv = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(generator_output, expected_output))
+
+            elif generator_network == 'unet_both':
+                assert output_mode == 'lab'
+                ab_expected_output = tf.placeholder(tf.float32,
+                                                 shape=[batch_size, input_shape[1], input_shape[2], colorful_img_network_util.LAB_NUM_BINS],
+                                                 name='ab_expected_output')
+                bw_expected_output = tf.placeholder(tf.float32,
+                                                 shape=[batch_size, input_shape[1], input_shape[2], 1],
+                                                 name='bw_expected_output')
+                ab_loss_non_adv = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(ab_output, ab_expected_output))
+                bw_loss_non_adv = tf.nn.l2_loss(bw_output - bw_expected_output) / batch_size
+                generator_loss_non_adv = ab_loss_non_adv + bw_loss_non_adv
             else:
                 expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], 3],
                                                  name='expected_output')
                 generator_loss_non_adv = tf.nn.l2_loss(generator_output - expected_output) / batch_size
+
             # tv_loss = tv_weight * total_variation(image)
 
             if use_adversarial_net:
@@ -227,7 +251,12 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 # Training using adam optimizer. Setting comes from https://arxiv.org/abs/1610.07629.
                 generator_train_step = tf.train.AdamOptimizer(learning_rate_decayed, beta1=0.9,
                                        beta2=0.999).minimize(generator_loss_non_adv)
-                g_loss_sum = scalar_summary("generator_loss_non_adv", generator_loss_non_adv)
+                if generator_network == 'unet_both':
+                    ab_loss_sum = scalar_summary("ab_loss_non_adv", ab_loss_non_adv)
+                    bw_loss_sum = scalar_summary("bw_loss_non_adv", bw_loss_non_adv)
+                    g_loss_sum = merge_summary([ab_loss_sum, bw_loss_sum])
+                else:
+                    g_loss_sum = scalar_summary("generator_loss_non_adv", generator_loss_non_adv)
 
 
             def print_progress(i, feed_dict, adv_feed_dict, last=False):
@@ -307,14 +336,30 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         image_hint = imread(test_img_hint, (input_shape[1], input_shape[2]), rgba=True)
                         feed_dict[input_hint] = np.array([image_hint])
 
-                    generated_image = generator_output.eval(feed_dict=feed_dict)
+                    if generator_network == 'unet_both':
+                        generated_bw, generated_ab = sess.run([bw_output,ab_output],feed_dict=feed_dict)
+                    else:
+                        generated_image = generator_output.eval(feed_dict=feed_dict)
                     iterator += 1
 
                     if generator_network == 'colorful_img' or generator_network == 'backprop' \
                             or generator_network == 'unet_mod' or generator_network == \
                             'colorful_img_connected_rgbbin' or generator_network == 'colorful_img_bias':
-                        generated_image = img_to_rgb_bin_encoder.rgb_bin_to_img(generated_image)
+                        generated_image = img_to_bin_encoder.bin_to_img(generated_image)
 
+                        if output_mode == 'rgb':
+                            pass
+                        elif output_mode == 'lab':
+                            content_image_lab = colorful_img_network_util.rgb_to_lab(content_image)
+                            generated_lab_image = np.concatenate((content_image_lab[...,0:1],generated_image),axis=3)
+                            generated_image = colorful_img_network_util.lab_to_rgb(generated_lab_image)
+                        else:
+                            raise AssertionError(
+                                'The output mode has to be either rgb or lab. Currently it is %s' % output_mode)
+                    elif generator_network == 'unet_both':
+                        generated_ab_image = img_to_bin_encoder.bin_to_img(generated_ab)
+                        generated_lab_image = np.concatenate((generated_bw,generated_ab_image),axis=3)
+                        generated_image = colorful_img_network_util.lab_to_rgb(generated_lab_image)
                     yield (iterator, generated_image)
 
             else:
@@ -433,8 +478,18 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         # images with shape 256x256 into rgb bins. It is not really possible to preprocess this step
                         # though since it will take up too much space. (Maybe not so much space if I do it smartly.)
                         # It's not a huge issue for now...
-                        current_rgb_bin = img_to_rgb_bin_encoder.img_to_rgb_bin(content_pre_list)
-                        feed_dict = {expected_output: current_rgb_bin, input_sketches: image_sketches}
+                        if output_mode == 'lab':
+                            content_pre_list = colorful_img_network_util.rgb_to_lab(content_pre_list)
+                            # The img_to_bin in lab mode only takes the ab dimensions.
+                            current_bin = img_to_bin_encoder.img_to_bin(content_pre_list[..., 1:])
+                        else:
+                            current_bin = img_to_bin_encoder.img_to_bin(content_pre_list)
+                        feed_dict = {expected_output: current_bin, input_sketches: image_sketches}
+                    elif generator_network == 'unet_both':
+                        content_pre_list = colorful_img_network_util.rgb_to_lab(content_pre_list)
+                        # The img_to_bin in lab mode only takes the ab dimensions.
+                        current_bin = img_to_bin_encoder.img_to_bin(content_pre_list[..., 1:])
+                        feed_dict = {bw_expected_output:content_pre_list[..., :1],ab_expected_output:current_bin,input_sketches:image_sketches}
                     else:
                         feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches}
 
@@ -460,7 +515,6 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
                         # generator_train_step_through_adv.run(feed_dict=adv_feed_dict)
                         # adv_train_step.run(feed_dict=adv_feed_dict)
-
 
                         # Update D network
                         _, summary_str = sess.run([adv_train_step, adv_sum],
@@ -525,7 +579,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       from_webcam=False,
                                                                       test_img_dir=test_img_dir,
                                                                       test_img_hint=test_img_hint,
-                                                                      input_mode=input_mode):
+                                                                      input_mode=input_mode,
+                                                                      output_mode=output_mode):
                             pass
                         best_image = generated_image
 
