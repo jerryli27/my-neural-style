@@ -78,7 +78,11 @@ def net(image, mirror_padding=False,reuse=False):
             raise AssertionError
 
         # Generate the ab bins.
-        ab = conv_layer(conv_up_list[2], num_filters=313, filter_size=3, strides=1, with_bias=True,
+        ab_conv_1 = conv_layer(conv_up_list[2], num_filters=256, filter_size=3, strides=1, with_bias=True,
+                        mirror_padding=mirror_padding, norm='', name='ab_conv_1', reuse=reuse)
+        ab_conv_2 = conv_layer(ab_conv_1, num_filters=256, filter_size=3, strides=1, with_bias=True,
+                        mirror_padding=mirror_padding, norm='', name='ab_conv_2', reuse=reuse)
+        ab = conv_layer(ab_conv_2, num_filters=313, filter_size=3, strides=1, with_bias=True,
                         mirror_padding=mirror_padding, norm='', name='ab_bin', reuse=reuse)
         # Do sanity check.
         ab_shape = ab.get_shape().as_list()
