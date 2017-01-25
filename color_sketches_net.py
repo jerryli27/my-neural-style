@@ -90,6 +90,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
         if color_rebalancing_folder is not None:
             assert color_rebalancing_folder[-1] == '/'
+            print('Color Rebalancing On.')
             bin_weights = np.load(color_rebalancing_folder + 'weights.npy')
         else:
             bin_weights = None
@@ -103,6 +104,10 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
 
         input_sketches = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 1], name='input_sketches')
+        if generator_network == 'unet_both':
+            input_bw = tf.placeholder(tf.float32,
+                                            shape=[batch_size, input_shape[1], input_shape[2], 1],
+                                            name='input_bw')
         if use_hint:
             input_hint = tf.placeholder(tf.float32,
                                 shape=[batch_size, input_shape[1], input_shape[2], 4], name='input_hint')
@@ -112,10 +117,13 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_concatenated)
             elif generator_network == 'unet_both':
-                _, ab_output = unet_both_util.net(input_concatenated)
-                bw_output = tf.get_variable('bw_output_input_var',
-                                                   shape=[batch_size, input_shape[1], input_shape[2], 1],
+                bw_output, _ = unet_both_util.net(input_concatenated)
+                ab_output = tf.get_variable('ab_output_input_var',
+                                                   shape=[batch_size, input_shape[1], input_shape[2], 313],
                                                    initializer=tf.random_normal_initializer()) + 0 * input_concatenated
+                # bw_output = tf.get_variable('bw_output_input_var',
+                #                                    shape=[batch_size, input_shape[1], input_shape[2], 1],
+                #                                    initializer=tf.random_normal_initializer()) + 0 * input_concatenated
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
@@ -142,7 +150,18 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_sketches)
             elif generator_network == 'unet_both':
-                bw_output, ab_output = unet_both_util.net(input_sketches)
+                # bw_output, ab_output = unet_both_util.net(input_sketches)
+                # _, ab_output = unet_both_util.net(input_sketches)
+                # # ab_output = tf.get_variable('ab_output_input_var',
+                # #                                    shape=[batch_size, input_shape[1], input_shape[2], 313],
+                # #                                    initializer=tf.random_normal_initializer()) + 0 * input_sketches
+                # bw_output = tf.get_variable('bw_output_input_var',
+                #                                    shape=[batch_size, input_shape[1], input_shape[2], 1],
+                #                                    initializer=tf.random_normal_initializer()) + 0 * input_sketches
+
+                bw_output = unet_util.net(input_bw)
+                ab_output = colorful_img_network_util.net(input_sketches)
+
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
             elif generator_network == 'colorful_img':
@@ -268,6 +287,9 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                 if last or (print_iterations and i % print_iterations == 0):
                     stderr.write('Learning rate %f\n' % (learning_rate_decayed.eval()))
                     stderr.write(' generator l2 loss: %g\n' % generator_loss_non_adv.eval(feed_dict=feed_dict))
+                    if generator_network == 'unet_both':
+                        stderr.write('           bw loss: %g\n' % bw_loss_non_adv.eval(feed_dict=feed_dict))
+                        stderr.write('           ab loss: %g\n' % ab_loss_non_adv.eval(feed_dict=feed_dict))
                     if use_adversarial_net:
                         stderr.write('   adv_from_i loss: %g\n' % adv_loss_from_i.eval(feed_dict=adv_feed_dict))
                         stderr.write('   adv_from_g loss: %g\n' % adv_loss_from_g.eval(feed_dict=adv_feed_dict))
@@ -340,6 +362,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         feed_dict[input_hint] = np.array([image_hint])
 
                     if generator_network == 'unet_both':
+                        content_image_lab = colorful_img_network_util.rgb_to_lab(content_image)
+                        feed_dict[input_bw] = content_image_lab[...,0:1]
                         generated_bw, generated_ab = sess.run([bw_output,ab_output],feed_dict=feed_dict)
                     else:
                         generated_image = generator_output.eval(feed_dict=feed_dict)
@@ -492,7 +516,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                         content_pre_list = colorful_img_network_util.rgb_to_lab(content_pre_list)
                         # The img_to_bin in lab mode only takes the ab dimensions.
                         current_bin = img_to_bin_encoder.img_to_bin(content_pre_list[..., 1:])
-                        feed_dict = {bw_expected_output:content_pre_list[..., :1],ab_expected_output:current_bin,input_sketches:image_sketches}
+                        feed_bw = content_pre_list[..., :1]
+                        feed_dict = {bw_expected_output:content_pre_list[..., :1],ab_expected_output:current_bin,input_sketches:image_sketches, input_bw:feed_bw}
                     else:
                         feed_dict = {expected_output:content_pre_list, input_sketches:image_sketches}
 

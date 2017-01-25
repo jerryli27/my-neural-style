@@ -21,29 +21,29 @@ from conv_util import *
 #  2. The network no longer does deconvolution but instead uses nearest neighbor resizing followed by a convolution
 # layer to achieve the same effect without checkerboard artifacts. Please read the excellent blog post at
 # http://distill.pub/2016/deconv-checkerboard/ for more information.
-NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
-         'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
-         'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv10_1','conv10_2']
-# the last few layers has to be large enough, or it won:t contain enough info to encode 216 channels
-NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,128,128,64,
-               64]
-KERNEL_SIZES = [3] * 19 + [3,3,3,3,3,3,3]
-STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [1,1,1,1,1,1,1]
-NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
-         '', '', 'batch_norm','', '', 'batch_norm','', 'batch_norm','', 'batch_norm']
-DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1]
-CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
-# The following is the original setting in the author's git repo.
 # NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
 #          'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
-#          'conv8_1','conv8_2','conv8_3']
-# NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256]
-# KERNEL_SIZES = [3] * 19 + [4,3,3]
-# STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1]
+#          'conv8_1','conv8_2','conv8_3','conv9_1','conv9_2','conv10_1','conv10_2']
+# # the last few layers has to be large enough, or it won:t contain enough info to encode 216 channels
+# NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256,128,128,64,
+#                64]
+# KERNEL_SIZES = [3] * 19 + [3,3,3,3,3,3,3]
+# STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [1,1,1,1,1,1,1]
 # NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
-#          '', '', 'batch_norm','', '', 'batch_norm']
-# DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
-# CONV_TRANSPOSE_LAYERS = {'conv8_1'}
+#          '', '', 'batch_norm','', '', 'batch_norm','', 'batch_norm','', 'batch_norm']
+# DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1]
+# CONV_TRANSPOSE_LAYERS = {'conv8_1','conv9_1','conv10_1'}
+# The following is the original setting in the author's git repo.
+NAMES = ['conv1_1','conv1_2','conv2_1','conv2_2','conv3_1','conv3_2','conv3_3','conv4_1','conv4_2','conv4_3',
+         'conv5_1','conv5_2','conv5_3','conv6_1','conv6_2','conv6_3','conv7_1','conv7_2','conv7_3',
+         'conv8_1','conv8_2','conv8_3']
+NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512,512,512,256,256,256]
+KERNEL_SIZES = [3] * 19 + [4,3,3]
+STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1]
+NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
+         '', '', 'batch_norm','', '', 'batch_norm']
+DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
+CONV_TRANSPOSE_LAYERS = {'conv8_1'}
 
 LAB_NUM_BINS = 313
 
