@@ -77,25 +77,26 @@ def net(image, mirror_padding=False,reuse=False):
             print('image_shape and bw_shape are different. image_shape = %s and bw_shape = %s' %(str(image_shape), str(bw_shape)))
             raise AssertionError
 
-        # Generate the ab bins.
-        ab_conv_1 = conv_layer(conv_up_list[2], num_filters=256, filter_size=3, strides=1, with_bias=True,
-                        mirror_padding=mirror_padding, norm='', name='ab_conv_1', reuse=reuse)
-        ab_conv_2 = conv_layer(ab_conv_1, num_filters=256, filter_size=3, strides=1, with_bias=True,
-                        mirror_padding=mirror_padding, norm='batch_norm', name='ab_conv_2', reuse=reuse)
-        ab = conv_layer(ab_conv_2, num_filters=313, filter_size=3, strides=1, with_bias=True,
-                        mirror_padding=mirror_padding, norm='', name='ab_bin', reuse=reuse)
-        # Do sanity check.
-        ab_shape = ab.get_shape().as_list()
-        if not (image_shape[0] == ab_shape[0] and image_shape[1] / 4 == ab_shape[1] and image_shape[2] / 4 == ab_shape[2]):
-            print('image_shape and ab_shape are not as expected. image_shape = %s and ab_shape = %s' %(str(image_shape), str(ab_shape)))
-            raise AssertionError
-        ab = tf.image.resize_nearest_neighbor(ab, [image_shape[1], image_shape[2]])
-        ab_shape = ab.get_shape().as_list()
-        if not (image_shape[0] == ab_shape[0] and image_shape[1] == ab_shape[1] and image_shape[2] == ab_shape[2]):
-            print('image_shape and ab_shape are different. image_shape = %s and ab_shape = %s' %(str(image_shape), str(ab_shape)))
-            raise AssertionError
+        # # Generate the ab bins.
+        # ab_conv_1 = conv_layer(conv_up_list[2], num_filters=256, filter_size=3, strides=1, with_bias=True,
+        #                 mirror_padding=mirror_padding, norm='', name='ab_conv_1', reuse=reuse)
+        # ab_conv_2 = conv_layer(ab_conv_1, num_filters=256, filter_size=3, strides=1, with_bias=True,
+        #                 mirror_padding=mirror_padding, norm='batch_norm', name='ab_conv_2', reuse=reuse)
+        # ab = conv_layer(ab_conv_2, num_filters=313, filter_size=3, strides=1, with_bias=True,
+        #                 mirror_padding=mirror_padding, norm='', name='ab_bin', reuse=reuse)
+        # # Do sanity check.
+        # ab_shape = ab.get_shape().as_list()
+        # if not (image_shape[0] == ab_shape[0] and image_shape[1] / 4 == ab_shape[1] and image_shape[2] / 4 == ab_shape[2]):
+        #     print('image_shape and ab_shape are not as expected. image_shape = %s and ab_shape = %s' %(str(image_shape), str(ab_shape)))
+        #     raise AssertionError
+        # ab = tf.image.resize_nearest_neighbor(ab, [image_shape[1], image_shape[2]])
+        # ab_shape = ab.get_shape().as_list()
+        # if not (image_shape[0] == ab_shape[0] and image_shape[1] == ab_shape[1] and image_shape[2] == ab_shape[2]):
+        #     print('image_shape and ab_shape are different. image_shape = %s and ab_shape = %s' %(str(image_shape), str(ab_shape)))
+        #     raise AssertionError
 
-        return bw, ab
+        # return bw, ab
+        return bw
 
 
 def get_net_all_variables():

@@ -93,8 +93,9 @@ def net(image, mirror_padding = False, is_rgb = True, num_bin = 6 , reuse = Fals
                     prev_layer_shape = prev_layer.get_shape().as_list()
                     current_layer = tf.image.resize_nearest_neighbor(prev_layer, (prev_layer_shape[1] * 2,
                                                                                   prev_layer_shape[2] * 2))
+                    assert STRIDES[i]==2
                     current_layer =  conv_layer(current_layer, num_filters=NUM_OUTPUTS[i],
-                                               filter_size=KERNEL_SIZES[i], strides=STRIDES[i],
+                                               filter_size=KERNEL_SIZES[i], strides=1,
                                                mirror_padding=mirror_padding, norm=NORMS[i], name=NAMES[i],
                                                reuse=reuse)
                 prev_layer = current_layer
@@ -111,13 +112,19 @@ def net(image, mirror_padding = False, is_rgb = True, num_bin = 6 , reuse = Fals
 
         image_shape = image.get_shape().as_list()
         conv8_rgb_bin_shape = conv8_rgb_bin.get_shape().as_list()
-        if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
-            if not (abs(image_shape[1] - conv8_rgb_bin_shape[1]) <= 3 and abs(
-                        image_shape[2] - conv8_rgb_bin_shape[2]) <= 3):
-                raise AssertionError('The layers to be concatenated differ too much in shape. Something is '
+        # if not (image_shape[1] == conv8_rgb_bin_shape[1] and image_shape[2] == conv8_rgb_bin_shape[2]):
+        #     if not (abs(image_shape[1] - conv8_rgb_bin_shape[1]) <= 3 and abs(
+        #                 image_shape[2] - conv8_rgb_bin_shape[2]) <= 3):
+        #         raise AssertionError('The layers to be concatenated differ too much in shape. Something is '
+        #                              'wrong. Their shapes are: %s and %s'
+        #                              % (str(image_shape), str(conv8_rgb_bin_shape)))
+        #     conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
+
+        if not (image_shape[1] / 4 == conv8_rgb_bin_shape[1] and image_shape[2] / 4== conv8_rgb_bin_shape[2]):
+            raise AssertionError('The layers to be concatenated differ too much in shape. Something is '
                                      'wrong. Their shapes are: %s and %s'
                                      % (str(image_shape), str(conv8_rgb_bin_shape)))
-            conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
+        conv8_rgb_bin = tf.image.resize_nearest_neighbor(conv8_rgb_bin, [image_shape[1], image_shape[2]])
         final = conv8_rgb_bin
         # Do sanity check.
         final_shape = final.get_shape().as_list()

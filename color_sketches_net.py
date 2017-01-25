@@ -117,13 +117,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_concatenated)
             elif generator_network == 'unet_both':
-                bw_output, _ = unet_both_util.net(input_concatenated)
-                ab_output = tf.get_variable('ab_output_input_var',
-                                                   shape=[batch_size, input_shape[1], input_shape[2], 313],
-                                                   initializer=tf.random_normal_initializer()) + 0 * input_concatenated
-                # bw_output = tf.get_variable('bw_output_input_var',
-                #                                    shape=[batch_size, input_shape[1], input_shape[2], 1],
-                #                                    initializer=tf.random_normal_initializer()) + 0 * input_concatenated
+                bw_output = unet_both_util.net(input_concatenated)
+                ab_output = colorful_img_network_util.net(input_bw, is_rgb=False)
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_concatenated)
             elif generator_network == 'colorful_img':
@@ -150,17 +145,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             elif generator_network == 'unet_mod':
                 generator_output = unet_mod_util.net(input_sketches)
             elif generator_network == 'unet_both':
-                # bw_output, ab_output = unet_both_util.net(input_sketches)
-                # _, ab_output = unet_both_util.net(input_sketches)
-                # # ab_output = tf.get_variable('ab_output_input_var',
-                # #                                    shape=[batch_size, input_shape[1], input_shape[2], 313],
-                # #                                    initializer=tf.random_normal_initializer()) + 0 * input_sketches
-                # bw_output = tf.get_variable('bw_output_input_var',
-                #                                    shape=[batch_size, input_shape[1], input_shape[2], 1],
-                #                                    initializer=tf.random_normal_initializer()) + 0 * input_sketches
-
-                bw_output = unet_util.net(input_bw)
-                ab_output = colorful_img_network_util.net(input_sketches)
+                bw_output = unet_both_util.net(input_sketches)
+                ab_output = colorful_img_network_util.net(input_bw, is_rgb=False)
 
             elif generator_network == 'johnson':
                 generator_output = johnson_feedforward_net_util.net(input_sketches)
@@ -201,7 +187,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     generator_loss_non_adv = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(generator_output, expected_output))
 
             elif generator_network == 'unet_both':
-                assert output_mode == 'lab'
+                assert output_mode == 'lab' and input_mode == 'sketches'
                 ab_expected_output = tf.placeholder(tf.float32,
                                                  shape=[batch_size, input_shape[1], input_shape[2], colorful_img_network_util.LAB_NUM_BINS],
                                                  name='ab_expected_output')
