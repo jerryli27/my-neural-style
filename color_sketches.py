@@ -68,9 +68,6 @@ def build_parser():
     parser.add_argument('--num_epochs', type=int, dest='num_epochs',
                         help='num_epochs (default %(default)s).',
                         metavar='num_epochs', default=num_epochs)
-    # parser.add_argument('--iterations', type=int, dest='iterations',
-    #                     help='Iterations (default %(default)s).',
-    #                     metavar='ITERATIONS', default=ITERATIONS)
     parser.add_argument('--batch_size', type=int, dest='batch_size',
                         help='Batch size (default %(default)s).',
                         metavar='BATCH_SIZE', default=BATCH_SIZE)
@@ -97,6 +94,9 @@ def build_parser():
     parser.add_argument('--checkpoint_iterations', type=int, dest='checkpoint_iterations',
                         help='Checkpoint frequency.',
                         metavar='CHECKPOINT_ITERATIONS')
+    parser.add_argument('--color_rebalancing_folder', dest='color_rebalancing_folder', type=str,
+                        help='The location of the presampled and computed color rebalancing data.',
+                        metavar='COLOR_REBALANCING_FOLDER')
     parser.add_argument('--test_img', type=str,
                         dest='test_img', help='test image path',
                         metavar='TEST_IMAGE')
@@ -154,6 +154,7 @@ def main():
             restore_from_noadv_to_adv=options.restore_from_noadv_to_adv,
             content_folder=options.content_folder,
             content_preprocessed_folder=options.content_preprocessed_folder,
+            color_rebalancing_folder=options.color_rebalancing_folder,
             test_img_dir=options.test_img,
             test_img_hint=options.test_img_hint
     ):

@@ -1,5 +1,7 @@
 """
 This file implements the unet generator network according to https://arxiv.org/pdf/1505.04597.pdf
+Modification made: it gives two outputs: one predicts the black-and-white image. The other predicts the AB in lab color
+space.
 """
 
 from conv_util import *
@@ -9,18 +11,19 @@ CONV_DOWN_NUM_FILTERS=[32, 64, 64, 128, 128, 256, 256, 512, 512]
 CONV_DOWN_KERNEL_SIZES=[3, 4, 3, 4, 3, 4, 3, 4, 3]
 CONV_DOWN_STRIDES=[1, 2, 1, 2, 1, 2, 1, 2, 1]
 
-CONV_UP_NUM_FILTERS=[512, 256, 256, 128, 128, 64, 64, 32, None]
+CONV_UP_NUM_FILTERS=[512, 256, 256, 128, 128, 64, 64, 32, 1]
 CONV_UP_KERNEL_SIZES=[4, 3, 4, 3, 4, 3, 4, 3, 3]
 CONV_UP_STRIDES=[2, 1, 2, 1, 2, 1, 2, 1, 1]
 
 
 # NOTE: There might be a small change in the dimension of the input vs. output if the size cannot be divided evenly by 4.
-def net(image, mirror_padding=False,num_bin = 6 , reuse=False):
+def net(image, mirror_padding=False,reuse=False):
     # TODO: maybe delete mirror padding because it's causing back prop to complain.
     image_shape = image.get_shape().as_list()
     assert len(image_shape) == 4 and image_shape[1] >= 32 and image_shape[2] >= 32  # Otherwise the conv fails.
     prev_layer = image
     prev_layer_list = [image]
+    conv_up_list = []
 
     with tf.variable_scope('unet', reuse=reuse):
         for i in range(len(CONV_DOWN_NUM_FILTERS)):
@@ -58,28 +61,22 @@ def net(image, mirror_padding=False,num_bin = 6 , reuse=False):
                                            with_bias=True,
                                            mirror_padding=mirror_padding, norm='batch_norm', name='conv_up_%d' %i, reuse=reuse)
                 prev_layer = current_layer
+            conv_up_list.append(current_layer)
 
         # Do a final convolution with output dimension = 3 and stride 1.
-        weights_init,bias_init = conv_init_vars(prev_layer, num_bin ** 3, CONV_UP_KERNEL_SIZES[-1],
-                                       with_bias=True, name='final_conv',
-                                      reuse=reuse)
-        strides_shape = [1, CONV_UP_STRIDES[-1], CONV_UP_STRIDES[-1], 1]
-        rgb_bin = tf.nn.conv2d(prev_layer, weights_init, strides_shape, padding='SAME',name='rgb_bin')
-        rgb_bin = tf.nn.bias_add(rgb_bin,bias_init,name='rgb_bin_bias_added')
-        # final = tf.nn.softmax(rgb_bin, name='softmax_layer')
-        final = rgb_bin
-
-
+        bw = conv_layer(prev_layer, num_filters=CONV_UP_NUM_FILTERS[-1],
+                   filter_size=CONV_UP_KERNEL_SIZES[-1], strides=CONV_UP_STRIDES[-1],
+                   with_bias=True,
+                   mirror_padding=mirror_padding, norm='', name='bw', reuse=reuse)
         # Do sanity check.
-        final_shape = final.get_shape().as_list()
-        if not (image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
-            final = tf.image.resize_nearest_neighbor(final, [image_shape[1], image_shape[2]])
-            final_shape = final.get_shape().as_list()
-        if not (image_shape[0] == final_shape[0] and image_shape[1] == final_shape[1] and image_shape[2] == final_shape[2]):
-            print('image_shape and final_shape are different. image_shape = %s and final_shape = %s' %(str(image_shape), str(final_shape)))
+        bw_shape = bw.get_shape().as_list()
+        if not (image_shape[1] == bw_shape[1] and image_shape[2] == bw_shape[2]):
+            bw = tf.image.resize_nearest_neighbor(bw, [image_shape[1], image_shape[2]])
+            bw_shape = bw.get_shape().as_list()
+        if not (image_shape[0] == bw_shape[0] and image_shape[1] == bw_shape[1] and image_shape[2] == bw_shape[2]):
+            print('image_shape and bw_shape are different. image_shape = %s and bw_shape = %s' %(str(image_shape), str(bw_shape)))
             raise AssertionError
-
-        return final
+        return bw
 
 
 def get_net_all_variables():

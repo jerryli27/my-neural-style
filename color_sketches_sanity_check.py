@@ -14,8 +14,8 @@ content_weight=5
 checkpoint_iterations=20
 height = 256
 width = 256
-generator_network='unet_both'
-input_mode = 'sketch'
+generator_network='colorful_img'
+input_mode = 'bw'
 output_mode = 'lab'
 print_iteration = 1
 do_restore_and_train = False  # True
@@ -35,6 +35,7 @@ use_hint_string = '--use_hint' if use_hint else ''
 # restore_from_noadv_to_adv_string = '--restore_from_noadv_to_adv' if use_adversarial_net_real != use_adversarial_net else ''
 
 content_folder = "'sanity_check_folder/'"
+color_rebalancing_folder = 'resources/ab_bin_distr_and_weights/'
 
 checkpoint_output='output_checkpoint/colorsketches-sanity_check-content_%s.jpg'
 output='output/colorsketches-sanity_check-content.jpg'
@@ -47,11 +48,14 @@ if not os.path.exists(model_save_dir):
 #           % (learning_rate, iterations, batch_size, content_weight, checkpoint_iterations, width, height, checkpoint_output, test_img.encode('utf-8'), test_img_hint, output, model_save_dir, print_iteration, do_restore_and_train_string, do_restore_and_generate_string, use_adversarial_net_string, use_hint_string))
 
 # NOTE: learning rate is a float !!! not an int. so use %f, not %d... That was the bug that causes the model not to train at all when I have lr < 1
-os.system('python ~/PycharmProjects/my-neural-style/color_sketches.py --learning_rate=%f --num_epochs=%d '
+# python_path = '/home/xor/anaconda2/bin/python'
+
+os.system('/home/xor/anaconda2/bin/python ~/PycharmProjects/my-neural-style/color_sketches.py --learning_rate=%f --num_epochs=%d '
           '--batch_size=%d --generator_network=%s --output_mode=%s --input_mode=%s --content_folder=%s '
+          '--color_rebalancing_folder=%s '
           '--content_weight=%d --checkpoint_iterations=%d --width=%d --height=%d --checkpoint_output=%s --test_img=%s --test_img_hint=%s --output=%s --model_save_dir=%s --print_iterations=%d %s %s %s %s'
-          % (learning_rate, epochs, batch_size, generator_network, output_mode, input_mode, content_folder, content_weight,
-             checkpoint_iterations, width, height,
+          % (learning_rate, epochs, batch_size, generator_network, output_mode, input_mode, content_folder,
+             color_rebalancing_folder, content_weight, checkpoint_iterations, width, height,
              checkpoint_output, test_img, test_img_hint, output, model_save_dir, print_iteration, do_restore_and_train_string, do_restore_and_generate_string, use_adversarial_net_string, use_hint_string))
 
 """

@@ -1381,6 +1381,13 @@ Plan:
 
         I don't think there is a nice way to modify the gradient calculated in tensorflow, so I probably just have to
         change the loss and multiply each category by its weight...
+        I finished implementing the color rebalancing. It's a little easier than I thought.
 
 
-        I haven't implemented the color rebalancing yet...
+        The training of unet_both went better than I thought. Althought it was slow (since I'm using two neural nets
+        instead of one), the result of the first 1500 iterations was better than I thought it would be, largely due to
+        the bw network. The unet predicting the bw image from sketch input was doing a great job (as always... but it
+        fails to generate color and that's why I'm using the colorful_img network in the first place.). I guess I am
+        over-optimistic but I'm just happy to see colors other than bw and sepia... lol.
+
+        TODO: after this project, I want to summarize the signs of all kinds of bugs/errors in cnn, like what are the signs of a network unable to digest the training data, what are the signs of learning rate being too large etc.
