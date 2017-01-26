@@ -49,7 +49,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                        do_restore_and_train=False, restore_from_noadv_to_adv = False, content_folder=None,
                        content_preprocessed_folder = None, color_rebalancing_folder = None,
                        from_screenshot=False, from_webcam=False, test_img_dir=None, test_img_hint=None,
-                       input_mode = 'sketch', output_mode = 'rgb'):
+                       input_mode = 'sketch', output_mode = 'rgb', use_cpu = False):
     """
     Stylize images.
     TODO: modify the description.
@@ -289,7 +289,14 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
             saver = tf.train.Saver(generator_all_var + [learning_rate_decayed])
         else:
             saver = tf.train.Saver()
-        with tf.Session() as sess:
+
+        if use_cpu:
+            config = tf.ConfigProto(
+                device_count = {'GPU': 0}
+            )
+        else:
+            config = None
+        with tf.Session(config=config) as sess:
             if do_restore_and_generate:
                 assert batch_size == 1
                 ckpt = tf.train.get_checkpoint_state(save_dir)
@@ -580,6 +587,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                             test_image_shape = test_image.shape
 
                         # The for loop will run once and terminate. Can't use return and yield in the same function so this is a hacky way to do it.
+                        # Set use_cpu = true to save graphical memory
                         for _, generated_image in color_sketches_net(test_image_shape[0],
                                                                       test_image_shape[1],
                                                                       iterations,
@@ -597,7 +605,8 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       test_img_dir=test_img_dir,
                                                                       test_img_hint=test_img_hint,
                                                                       input_mode=input_mode,
-                                                                      output_mode=output_mode):
+                                                                      output_mode=output_mode,
+                                                                      use_cpu=True):
                             pass
                         best_image = generated_image
 
