@@ -606,7 +606,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                                                                       test_img_hint=test_img_hint,
                                                                       input_mode=input_mode,
                                                                       output_mode=output_mode,
-                                                                      use_cpu=True):
+                                                                      use_cpu=use_cpu):
                             pass
                         best_image = generated_image
 
