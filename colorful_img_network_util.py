@@ -41,7 +41,7 @@ NUM_OUTPUTS = [64,64,128,128,256,256,256,512,512,512,512,512,512,512,512,512,512
 KERNEL_SIZES = [3] * 19 + [4,3,3]
 STRIDES = [1,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1] + [2,1,1]
 NORMS = ['','batch_norm','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm','','','batch_norm',
-         '', '', 'batch_norm','', '', 'batch_norm']
+         '', '', 'batch_norm','', '', '']
 DILATIONS = [1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1]
 CONV_TRANSPOSE_LAYERS = {'conv8_1'}
 

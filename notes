@@ -1347,7 +1347,7 @@ Plan:
             just apply the softmax there instead of messing around with the output...
 
 
-        TODO: I need to implement the color rebalancing since it help learning rare colors...
+        Plan: I need to implement the color rebalancing since it help learning rare colors...
 
 2017/01/25
     1. Nijigen
@@ -1390,4 +1390,28 @@ Plan:
         fails to generate color and that's why I'm using the colorful_img network in the first place.). I guess I am
         over-optimistic but I'm just happy to see colors other than bw and sepia... lol.
 
-        TODO: after this project, I want to summarize the signs of all kinds of bugs/errors in cnn, like what are the signs of a network unable to digest the training data, what are the signs of learning rate being too large etc.
+        TODO: after this project, I want to summarize the signs of all kinds of bugs/errors in cnn, like what are the
+        signs of a network unable to digest the training data, what are the signs of learning rate being too large etc.
+
+2017/01/26
+    1. Nijigen
+        The unet_both ran for 12 hours and it only got through 4500 iterations with batch size = 4. The result was... Uh
+        Ok. The l2 loss usually takes around 30000 iterations at that learning rate (0.0002) to learn the bw colors.
+        I don't know how long it takes to learn colors for the colorful_img network, but I did a sanity check and found
+        that it can never learn how to color the image perfectly (due to producing a tiny image and resizing that to
+        a larger size).
+
+        Because the training was so slow with unet_both, I decided to separate the two networks and train each of them
+        individually. I can probably combine the two together later into one single pipeline. Now I guess it just takes
+        time... and money.
+
+        ...I let the network trained for half a day and it can't learn shit.. The loss was just flat. I think it's the
+        learning rate I'm using and the batch size so I'll increase the batch size and decrease the learning rate to
+        that suggested by the colorful image colorization paper. I will also modify the preprocessing to include
+        lab info as well, although it might take up too much space. The wikipedia said to use 16 bit and floating point.
+        The preprocessing should also shuffle the images.
+
+        Some small differences I noticed after reading the paper again:
+            1. THe network they've drawn was correct but their table was a little bit off from their git code
+            2. they did not have batch norm after relu8_3, which I did. I took it off
+            3.

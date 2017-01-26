@@ -5,13 +5,13 @@
 
 from general_util import *
 
-learning_rate=0.0002 # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
+learning_rate=0.00003 # if colorful_img model, the learning rate the paper was using was 3 * 10^-5. They did not
 # saytheir batch size.
 # iterations=800000# 800000
 epochs = 10
-batch_size=4  # The larger the better... Generally.
+batch_size=40  # The larger the better... Generally.
 content_weight=5
-checkpoint_iterations=500
+checkpoint_iterations=100
 height = 256
 width = 256
 generator_network= 'colorful_img' # 'colorful_img'
