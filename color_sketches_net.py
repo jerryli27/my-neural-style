@@ -389,11 +389,9 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                             'other file to call read_resize_and_save_all_imgs_in_dir.'
                             % (content_preprocessed_folder))
                     content_preprocessed_record = sketches_util.read_preprocessed_sketches_npy_record(content_preprocessed_folder)
-                    if content_preprocessed_record[0][2] % batch_size != 0 \
-                            or content_preprocessed_record[0][3] != height\
-                            or content_preprocessed_record[0][4] != width:
+                    if content_preprocessed_record[0][3] != height or content_preprocessed_record[0][4] != width:
                         raise AssertionError(
-                            'The height, width, and batch size of the preprocessed numpy files does not '
+                            'The height and/or width of the preprocessed numpy files does not '
                             'match those of the current setting.')
                     # Read the first file
                     print('Reading preprocessed content images.')
@@ -452,7 +450,7 @@ def color_sketches_net(height, width, iterations, batch_size, content_weight, tv
                     if content_preprocessed_folder is not None:
                         current_content_preprocessed_file_i, index_within_preprocessed =  \
                             sketches_util.find_corresponding_sketches_npy_from_record(
-                            content_preprocessed_record, i * batch_size)
+                            content_preprocessed_record, i * batch_size, batch_size)
                         if prev_content_preprocessed_file_i != current_content_preprocessed_file_i:
                             prev_content_preprocessed_file_i = current_content_preprocessed_file_i
                             content_img_preprocessed = np.load(content_preprocessed_record[

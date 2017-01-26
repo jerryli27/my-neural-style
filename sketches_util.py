@@ -249,12 +249,15 @@ def read_preprocessed_sketches_npy_record(save_dir):
                 raise AssertionError('Error in read_preprocessed_npy_record. Format of record.txt is wrong.')
     return ret
 
-def find_corresponding_sketches_npy_from_record(record_list, start_index):
+def find_corresponding_sketches_npy_from_record(record_list, start_index, batch_size):
     num_images = record_list[-1][-1]
     start_index = start_index % num_images
     for record_i, record in enumerate(record_list):
-        if start_index >= record[5] and start_index < record[6]:
-            return record_i, start_index - record[5]
+        if start_index + batch_size < record[6]:
+            return record_i, max(0,start_index - record[5])
+
+    # If the end index had exceeded the end of the record, start from the beginning instead of raising an error.
+    return 0, 0
     raise AssertionError('Error in find_corresponding_npy_from_record.')
 
 def calc_rgb_bin_distr_and_weights(directory, save_dir, bin_num = 6, lambd = 0.5):
