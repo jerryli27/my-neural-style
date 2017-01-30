@@ -1454,6 +1454,9 @@ Plan:
         2. He converts images to YUV color space
         3. He has one extra network: lnet, which takes an image with three channel and output an image with one channel.
         I don't know what that network does. It's not trained, but rather loaded from a file.
+        4. The lnet outputs the sketch of the image. He had a loss where he compares the sketch of the generated image
+        versus that of the original one.
+        5.
 
     Things I need to do to run his training program:
         1. install chainer (Done)
@@ -1461,6 +1464,10 @@ Plan:
         3. Produce sketches for the training set. (On-going)
         4. Write all file names to one single file. (Done)
         5. figure out what is lnet. (Done)
+        6. Maybe I should use his network to generate the sketches instead of my method... Mine is pretty slow and his
+        uses gpu.
+        7. Figure out what's the difference between train_128 and train_x2. The loss and the goal all seems to be
+        different.
 
 
      *While I'm trying to convert images to sketches, I found one problem: image_to_sketch only works when dtype is not
@@ -1472,4 +1479,5 @@ Plan:
      Regarding unicode encode/decode, here's a nice summary: http://qiita.com/yubessy/items/9e13af05a295bbb59c25
 
      It seems like the lnet is a cnn that extracts the sketch out of the grayscale image. But I thought the sketch was
-     generated from opencv code.
+     generated from opencv code. I guess he thought using opencv might be slow for training so he decided to use a
+     cnn? That's the only explainataion.

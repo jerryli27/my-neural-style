@@ -60,8 +60,11 @@ def generate(i):
         print('Moving on... Probably multithread conflicts.')
 
     current_sketch_save_dir = sketchs_save_dir + img_subdir_name
-    if not os.path.exists(current_sketch_save_dir):
-        os.makedirs(current_sketch_save_dir)
+    try:
+        if not os.path.exists(current_sketch_save_dir):
+            os.makedirs(current_sketch_save_dir)
+    except OSError:
+        print('Moving on... Probably multithread conflicts.')
 
     general_util.imsave(colored_save_dir + img_subdir_path, img_reshaped)
     general_util.imsave(sketchs_save_dir + img_subdir_path, sketch_reshaped)
