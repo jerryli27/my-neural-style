@@ -1456,17 +1456,20 @@ Plan:
         I don't know what that network does. It's not trained, but rather loaded from a file.
 
     Things I need to do to run his training program:
-        1. install chainer
-        2. Convert the file to python 2 compatible ones.
-        3. Produce sketches for the training set.
-        4. Write all file names to one single file. (Which I know how to do already through command line.)
-        5. figure out what is lnet.
+        1. install chainer (Done)
+        2. Convert the file to python 2 compatible ones. (Done)
+        3. Produce sketches for the training set. (On-going)
+        4. Write all file names to one single file. (Done)
+        5. figure out what is lnet. (Done)
 
 
-     While I'm trying to convert images to sketches, I found one problem: image_to_sketch only works when dtype is not
+     *While I'm trying to convert images to sketches, I found one problem: image_to_sketch only works when dtype is not
      uint8. It has to be like np.float32. So the preprocessed images looks different. They're not really sketches...
      That's one of the reason why my algorithm never works! ...
 
      How can I prevent bugs like this in the future?
 
      Regarding unicode encode/decode, here's a nice summary: http://qiita.com/yubessy/items/9e13af05a295bbb59c25
+
+     It seems like the lnet is a cnn that extracts the sketch out of the grayscale image. But I thought the sketch was
+     generated from opencv code.

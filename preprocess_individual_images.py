@@ -43,7 +43,7 @@ print('Number of images to convert is : %d.' %(num_images))
 
 def generate(i):
     img = general_util.imread(all_img_dirs[i])
-    sketch = image_to_sketch(img)
+    sketch = image_to_sketch(img)  # Generate the sketch based on full sized image and resize later.
 
     img_reshaped = cv2.resize(img,img_shape,interpolation = cv2.INTER_AREA)
     sketch_reshaped = cv2.resize(sketch,img_shape,interpolation = cv2.INTER_AREA)
@@ -53,8 +53,11 @@ def generate(i):
     img_subdir_path = img_subdir_name + '/' + img_file_name + '.png'
 
     img_save_dir = colored_save_dir + img_subdir_name
-    if not os.path.exists(img_save_dir):
-        os.makedirs(img_save_dir)
+    try:
+        if not os.path.exists(img_save_dir):
+            os.makedirs(img_save_dir)
+    except OSError:
+        print('Moving on... Probably multithread conflicts.')
 
     current_sketch_save_dir = sketchs_save_dir + img_subdir_name
     if not os.path.exists(current_sketch_save_dir):
