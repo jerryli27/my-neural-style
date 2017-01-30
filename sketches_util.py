@@ -31,6 +31,7 @@ def image_to_sketch(img):
         img_diff_dilation_gray =  np.array([image_to_sketch(img[i,...]) for i in range(img.shape[0])])
         return img_diff_dilation_gray
     elif len(img.shape) == 3:
+        assert img.dtype == np.float32  # Otherwise the conversion does not work properly.
 
         kernel = np.ones((5, 5), np.uint8)
         img_dilation = cv2.dilate(img, kernel, iterations=1)
@@ -178,6 +179,8 @@ def read_resize_and_save_batch_images_with_sketches(dirs, height, width, save_pa
     :return: an numpy array representing the resized images. The shape is (num_image, height, width, 3). The numpy
     array is also saved at "save_dir".
     """
+    # TODO: fix the uint8 issue...
+    raise NotImplementedError('I did not fix the uint8 issue yet.')
     if height is None or width is None:
         raise AssertionError('The height and width has to be both non None or both None.')
     shape = (height, width)

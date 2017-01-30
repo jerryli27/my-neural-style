@@ -1415,3 +1415,56 @@ Plan:
             1. THe network they've drawn was correct but their table was a little bit off from their git code
             2. they did not have batch norm after relu8_3, which I did. I took it off
             3.
+
+
+        The training now has speed of 500 iterations with batch size 12. After adjusting the learning speed, it still
+        appears that the network saturates at a super fast speed and stayed at a loss of around 3-5. Maybe it's the
+        color rebalancing that's causing such an unstable learning? Let me try without color rebalancing
+
+        Could it really be the problem of the training data??? I don't know why things are not working. Maybe I should
+        use the github repo and test that.
+
+2017/01/27
+    Spent the whole morning trying to install caffe... Finally done, and it does seem that at least the memory use is
+    less than tensorflow. It can easily support batch size = 40 and a reasonable training speed of 4s per batch. In
+    comparison tensorflow quickly went out of memory after batch size = 20 and I was forced to use 12.
+
+    The colorful_img was training fine. The loss was still steadily decreasing after 17 hours of training (8500
+    iterations) The loss got from 6 to around 5. If I just keep training for 200k iterations I can probably get to loss
+    around 2.5, which will give me a good enough output. It will take more than 10 days of training though...
+
+2017/01/28
+    After 11000 iterations and a day of training, the result wasn't so impressive yet. I guess that was why it would
+    take them 200k~300k iterations to get some publishable result... I don't know what I should do now. It's simply
+    a little bit too costly to keep machines running for 10 days costing around 200 dollars to get some result in caffe
+    that I'm not even sure if I can use or not.
+
+    ... Maybe taizan's method works afterall. I don't know how long he trained. I only know he said several epochs.
+    Training cnn is a huge problem especially when it takes several epochs over dataset with size on the order of
+    million. It's amazing that people find working cnns at all.
+
+    How long did it take them to train vgg? Yep some reported to take 10 days to train
+    (# http://libccv.org/doc/doc-convnet/)... gg.
+    what can I do... work on the master project???
+2017/01/30
+    I found that taizan the author released his source code.
+    The chainer setup seems to be pretty hard to understand for a beginner, but as of now, here are some differences I
+    found between my setup and his:
+        1. He adds noises to training images and sometimes flip images.
+        2. He converts images to YUV color space
+        3. He has one extra network: lnet, which takes an image with three channel and output an image with one channel.
+        I don't know what that network does. It's not trained, but rather loaded from a file.
+
+    Things I need to do to run his training program:
+        1. install chainer
+        2. Convert the file to python 2 compatible ones.
+        3. Produce sketches for the training set.
+        4. Write all file names to one single file. (Which I know how to do already through command line.)
+        5. figure out what is lnet.
+
+
+     While I'm trying to convert images to sketches, I found one problem: image_to_sketch only works when dtype is not
+     uint8. It has to be like np.float32. So the preprocessed images looks different. They're not really sketches...
+     That's one of the reason why my algorithm never works! ...
+
+     How can I prevent bugs like this in the future?
