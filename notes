@@ -1468,3 +1468,5 @@ Plan:
      That's one of the reason why my algorithm never works! ...
 
      How can I prevent bugs like this in the future?
+
+     Regarding unicode encode/decode, here's a nice summary: http://qiita.com/yubessy/items/9e13af05a295bbb59c25
