@@ -86,8 +86,15 @@ if not os.path.exists(sketchs_save_dir):
     os.makedirs(sketchs_save_dir)
 start_time = time.time()
 
-img_subdir_paths = Parallel(n_jobs=args.n_jobs)(delayed(generate)(i)
-                                         for i in range(num_images))
+assert args.n_jobs >= 1
+if args.n_jobs == 1:
+    img_subdir_paths = []
+    for i in range(num_images):
+        img_subdir_paths.append(generate(i))
+else:
+
+    img_subdir_paths = Parallel(n_jobs=args.n_jobs)(delayed(generate)(i)
+                                             for i in range(num_images))
 
 with open(save_dir + 'image_files_relative_paths.txt', 'w') as image_files:
     image_files.writelines(img_subdir_paths)
