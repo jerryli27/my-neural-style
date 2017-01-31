@@ -39,11 +39,12 @@ def image_to_sketch(img):
         img_diff_dilation = np.abs(np.subtract(img, img_dilation))
         img_diff_dilation_gray = cv2.cvtColor(img_diff_dilation, cv2.COLOR_RGB2GRAY)
 
+        img_diff_dilation_gray_thresholded = threshold(img_diff_dilation_gray,threshmin=SKETCH_LOWEST_BRIGHTNESS)
+        # Usually Sketches are represented by dark lines on white background, so I need to invert.
+        img_diff_dilation_gray_inverted = 255-img_diff_dilation_gray_thresholded
 
 
-        img_diff_dilation_gray_thresholded = threshold(img_diff_dilation_gray, SKETCH_LOWEST_BRIGHTNESS)
-
-        return img_diff_dilation_gray_thresholded
+        return img_diff_dilation_gray_inverted
     else:
         print('Image has to be either of shape (height, width, num_features) or (batch_size, height, width, num_features)')
         raise AssertionError
