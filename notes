@@ -734,7 +734,7 @@ Plan: Try generating styles with content image with skip noise 4 without style w
 
     I found a blog that had amazing result for coloring sketches. I'll probably spend lots of time on that...
 
-    TODO: what is deconv layer (or conv_transpose) ?http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf
+    Plan: what is deconv layer (or conv_transpose) ?http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf
 
     Ok the majority of the implementations are done. The only thing left is training data. I tried it on real life
     images. it turns out it is too hard for it to learn (understandably. There are way too many edges...)
@@ -1144,7 +1144,7 @@ Plan:
         Implemented annealed-mean. Finally saw some color. I think the method is working. So I'm switching to more
         careful training with smaller lr. I also modified the network a little to fit this use case.
         I'm planning to let it train for a whole day while I do other stuff.
-        TODO: I need to implement the per-pixel rare color balancing.
+        Plan: I need to implement the per-pixel rare color balancing.
 
 2017/01/19
     1. Nijigen
@@ -1688,7 +1688,7 @@ Plan:
     The pix2pix code was way more well written than my code. It even has an efficient way to manipulate images using
     gpu instead of cpu. It works great. I should really learn from this repo.
 
-    TODO: explore new projects. Think of one interesting thing each day.
+    Plan: explore new projects. Think of one interesting thing each day.
     I thought of auto-color suggestion for web pages or for anyone without UI design background. Input is the sketch
     and the output is colored webpage. I always have difficulty designing a good-looking webpage so I can
     use this tool to help other programmers like me.
@@ -1851,7 +1851,7 @@ Plan:
     the GAN dominated and it produced good results... I am trying to take away gan training and see if l1 loss can be
     reduced... Turns out it did fine without gan. So it was gan that made l1 training hard?? Let me try not feeding in
     hint to gan, ONLY after the previous l1 experiment succeeded. Hum not feeding hint also failed. There is some
-    serious problem here. # TODO: investigate sanity check using original pix2pix without gan (weight = 0)
+    serious problem here. # Plan: investigate sanity check using original pix2pix without gan (weight = 0)
 
 
     food classifier: working. I'll test the style transfer. Style transfer not going well. The retrained vgg just
@@ -1859,25 +1859,25 @@ Plan:
     isolated other problems by not using the saver to load retrained model. The previous output might be caused by not
     loading the vgg? But it shouldn't because all weights should be recorded in the saver. Yep I confirmed that it is
     because I did not load the vgg. but why? Dunno...
-    TODO: double check that there isn't any bug like I actually did not load the saved model or something, before I run the style transfer after training is done.
+    Plan: double check that there isn't any bug like I actually did not load the saved model or something, before I run the style transfer after training is done.
     Playing with that now. The outcome is sooo dark... It must be a bug somewhere. I thought it was * 2 - 1 but there's
     no such code in training. Still can't figure out why it's dark. It's not the way I save it, and it's not the tv
-    loss. #TODO: change vgg19 so that it accepts different height and width instead of forcing them to be the same.
+    loss. #Plan: change vgg19 so that it accepts different height and width instead of forcing them to be the same.
 
     Multistyle looked a lot lot better when the output shape is increased to 512x512. It is slow but it is definitely
     worth the time spent on training. #Plan: multistyle, check once per day. Maybe even try 1024x1024 if memory permits
 
-    TODO: read more papers. reddit machine learning also seems to be a good source.
+    Plan: read more papers. reddit machine learning also seems to be a good source.
     I read a translated post on reddit about the advantages of chainer. The thing that shocked me the most was
     multi-gpu support. More GPU almost results in a linear increase in speed for chainer. The downside I guess is I
     don't need that many gpus yet now and it is not yet well developed as tensorflow.
 
-    TODO: investigate "unsupervised cross-domain image generation "
+    Plan: investigate "unsupervised cross-domain image generation "
     I did. It uses a module called Slim.
 
 2017/02/16
     Multi style
-    TODO: multistyle build a webpage...
+    Plan: multistyle build a webpage...
     1024 x 1024 works, unbelievably... From the result I've seen on 512x512,
     2000 iteration is enough to produce good-looking enough images, so I'm training 1024x1024 CNN for 2000 iterations.
     It will probably take 2 days.
@@ -1914,20 +1914,1744 @@ Plan:
 
 2017/02/17
     Multi style
+    Plan: multistyle build a webpage...
+    Retraining things... Haven't started programming the webpage. I should work on that.
+    Done working on the webpage.
 
     Food classifier
+    I isolated the problem to preprocess and unprocess (the step to subtract mean pixel from vgg input). If this step
+    is done inside vgg, then the output will be dark. If it is done outside vgg, then the output is normal. Don't know
+    why. I tried to fix it and now the color is wierd....
+    I'll try again tomorrow. It's not worth too much time looking into this. Low priority
 
     pix2pix
     Made a mistake yesterday that resulted in hints not being updated... Fixed it and rerunning with hint version now.
     I was also running the larger version of unet and the result was just as I've seen before: purely black and white
     images. The loss from GAN indicates that the discriminator is too good at its job. So my solution is to switch to
     WGAN, which should solve the problem of hard GAN training. GAN is what made the images look colorful. We'll see how
-    each goes.
+    each goes. check the two url below:
+    http://ec2-52-38-177-3.us-west-2.compute.amazonaws.com:8000/pixiv_full_128_w_hint_train/images/
+    http://ec2-52-38-177-3.us-west-2.compute.amazonaws.com:8000/pixiv_full_128_large_wgan_train/
+    PLAN: check result and make improvements
 
     More papers:
     Downloaded a paper comparing CNN and RNN in nlp but haven't read it.
+    I read it briefly, it says rnn is better than cnn in almost all tasks, which make some sense I guess.
 
     unsupervised cross-domain image generation
+    The repo by "yunjey" is awesome. Concise and to the point. The only downside is it only supports svhn to mnist
+    dataset so the first step for me is to make it support other datasets.
+    I found that in order to use other datasets, a different network structure and a different "content_extractor" is
+    required. The content extractor should be specialized to extract features from the source and then can be trained
+    to extract features from both source and target, so it is required that both source and target have the same output
+    from the feature extractor and from the discriminator.
+    So I need a feature extractor. I have vgg19... I can build a new one. Building something like a classifier for
+    different fonts can be done but seems boring. (Fundamentally the feature extractor for digits or letters is just a
+    classifier that works on both source and target and map them to the limited set of possible answers. It is shown
+    in the original paper that that structure cannot do zero-shot learning. It cannot transform a 3 if it has never
+    seen that category in the feature extractor. I want a feature extractor that works more like vgg19 and I don't
+    want the output to just be the possible classes. Actually double checking the source code seemed to prove me wrong.
+    The output of the feature extractor is indeed one layer before the fully connected layer.)
+    I am thinking if i can use this on nlp, like translation between two similar languages. What should be the
+    feature extractor? It should read the sentence(or word to make it simpler) and generate a representation of that.
+    That representation can then be used to classify some properties of the sentence/word. I can't think of too many
+    CNN NLP classifier like things, but there are feature extractors that turns words into word vectors. (it is a
+    little different from the original task because the representation is actually a more semantic representation of
+    the word, which just consists of letters.)
+    Another direction can be turning human faces into animals.
+    Downloading dataset... Hopefully it does not take over all available space
+
+    I can also think of other project directions, like improving image to speech or something like that... The topic
+    is probably too large for now, but the overarching idea is still: choose a good loss function using some general
+    principles.
+    # PLAN: work on human face to cat face
+
+2017/02/17
+    Food classifier
+    I finally found why the color looks wierd. It was because I did processing on uint8. I subtracted the mean pixel,
+    therefore making it overflow and going to 256-value... I shouldn't have messed with changing the dtype at all.
+    Running a full test on how different vgg affect the output style. My guess is that it does not affect the output in
+    a very fundamental way. There will be subtle changes but the overall look won't be too much different. Because as I
+    think of it, just because I trained the vgg on food data doesn't mean that the style transfer output of a human
+    face will look like a hamburger...
+
+    pix2pix
+    The large wgan model still only outputs bw images.
+    The hint model is sort of working but still I can't see that it's using the hints.
+    Trying pix2pix on lab color space.. Works. Trying to train on full dataset
+    WGAN only on full dataset failed when I don't train the discriminator 5 times as much as the generator. That is
+    probably because the discriminator failed to get good at its job. I'll try again with training discriminator 5 times more.
+
+    I was trying to visualize the hint and I found that the hint was not updated consistently. Sometimes it is updated
+    and other times it is just blank. Further digging into this shows that no matter what the updated hint is, the
+    concatenated version of input will always be all -1s.
+
+    More papers:
+
+    unsupervised cross-domain image generation
+    Downloading face data. That will probably take a whole day again...
+
+2017/02/19
+    Multi style
+    Fixed ui, Plan: need to write a function to automatically batch style transfer an image.
+
+    Food classifier
+    The result of stylization using the food classifier vgg19 was just as I expected. The style didn't look any better.
+    I haven't compared it with the original vgg19 but it might even be worse. Abandoning this project if I'm not
+    planning to stylize using original vgg19
+
+    pix2pix
+    LAB result didn't look too much different from the normal one.
+    with hint training looks a lot better (because it's an easier task) but the result looked aweful without hint.
+    I will try to change the program so that 50% of the time the training is done without hint. Did that and resumed
+    training.
+
+    I am planning to do wgan again because I think I need the larger network to make things work better, but so far all
+    my attempts to modify the network structure failed. I am suspecting that the discriminator is causing the
+    colors to appear or disappear, so I left the discriminator as it is and changed the generator. I also made a change
+    so that the WGAN only trains after 6 epochs. ( but I made a mistake and it is actually training the discriminator
+    only once instead of 5 times for the first 6 epochs. The result is still black and white images.) I will definitely
+    figure out what is causing it to turn to BW. TODO: figure out exactly what part is causing it to turn to bw by making small modifications to pix2pix.
+
+    More papers:
+    Saw a paper on a prelimary idea to apply style transfer to natural language.
+
+    unsupervised cross-domain image generation
+    Took a while to generate the training set pickle, but it works now. I'm just waiting to see the final result. The
+    classifier is not doing so well on classifying celebrities. It can overfit the training data easily but it is
+    getting a 60% accuracy on test set.
+    The final result wasn't looking promising. The output had a lot of artifacts and the cats generated all looked the
+    same. Trying with a larger network and see what happens. If it still looked the same, I will first deal with the
+    artifact issue, then try to make the generated cats look more diversed. Plan: do the things above
+
+2017/02/20
+
+    Multi style
+    Plan: need to write a function to automatically batch style transfer an image.
+
+    pix2pix
+    wgan result is ok. The network still output mostly black and white images but it is getting the skin color.
+    Hopefully it can be better with just more training.
+
+    hint is also working well. It paints pretty good with hint and not bad without them. It actuall is working along
+    with GAN, unlike what taizan described. (I was at epoch 17) I will try to train a 512x512 network, but first I
+    need to create the 512x512 training data.
+    Running the following command while I also continued training the wgan (loading from a checkpoint may cause the
+    WGAN discriminator train 5 times start point to be wrong...)
+    python cgi-bin/paint_x2_unet/preprocess.py --colored_image_dir=/mnt/tf_drive/home/ubuntu/pixiv_full/pixiv/ --save_dir=/mnt/data_drive/home/ubuntu/pixiv_full_lnet_512/ --hw=512
+    Plan: train on 512 data for hint
+    Plan: check wgan again.
+
+    More papers:
+    Plan: actually read more, especially think about the style transfer on natural language idea. I need nlp feature
+    extractor... but the idea itself isn't the same as image, because word is a different encoding from rgb image.
+
+    Unsupervised cross-domain image generation.
+    Still failed. The cat's face did not change too much except from its color. I am suspecting that the dataset might
+    bear the blame, because the human faces had different orientations and even takes up different portions of the
+    screen whereas the cats (at least the ones generated) all had their eyes and face fixed at the center. I took a
+    look at the training dataset and found that the cats had varied orientations but their face is always at the center
+    unlike the human dataset. But that shouldn't be the problem I feel like. Most of the human faces are still facing
+    forward and cropped to the center...
+    By making the content_extractor's last 2 layers from 128 to 512 greatly improved accuracy.
+    Plan: I'll see how the training goes now.
 
 
+2017/02/21
+    Multi style
+    batch style transfer done. PS. The result of stylizing sketches is very interesting. Some of the results look
+    like modern arts.
+
+
+    pix2pix
+    512 data done in 10 hours.. Done. Combining images. # Plan: run 512 with hint.
+
+    More papers
+
+    Unsupervised cross-domain image generation
+    It's getting way better with the change in the last 2 layers of content extractor. Not too many artifacts and the
+    generated cat faces looked a lot better and more natural. It can definitely correspond skin color with cat skin
+    color. It is probably hard to correlate expression on the current dataset of cat faces.
+
+    I downloaded another dataset. I'm curerntly running this command and downloading the face dataset again on a new
+    hard drive and crop it to 128.
+    python main_cat.py --mode=pretrain --model_save_path=model_cnd_32 --sample_save_path=sample_cnd_32 --target_dir=cnd_32
+
+    I can also train on cat and dog dataset although it is a lot smaller compared to the human face dataset.
+    check result after I come back... It looks like a mess. No trace of anything that looks like animal face. Maybe
+    I shouldn't reuse the pretrained model or maybe the target dataset is too small. I can try with anime face dataset,
+    Plan: check cat and dog dataset result again. The first one failed. The only change I made is to retrain from scratch.
+
+    Also running training on anime images. Plan: check anime images result
+    python main_cat.py --mode=pretrain --model_save_path=model_anime_32 --sample_save_path=sample_anime_32 --target_dir=/mnt/data_drive/home/ubuntu/datasets/anime_face_32
+
+2017/02/22
+    Multi style
+    There is something in stylizing the sketches that touches me. I don't know what it is but some of the effects I see
+    make me think that this thing is more useful than just turning one style into another... It works on sketches...
+    I'll also program a slow version I guess. I want to see the slow version's effect on sketches. I can work on that
+    on the plane. Done... It's not perfect. I did not program showing the progress or emailing the result to the user.
+    I did not give user any kind of control over stylization, but it is usable.
+    TODO: allow asynchronous processing. maybe... if I have extra time. low priority.
+
+
+    Wait a second. I thought of one thing. I was thinking that the content loss was too restrictive. It does not allow
+    recreating the scene and/or resizing objects. Well I can use a generative model to solve this right? As long as I
+    can think of a loss that compares the "content" of two images without encoding too much location information, then
+    it can generate the image however it want! It can make the eyes larger if that fits the style image. It doesn't
+    have to be constrained to the structure of content image anymore. Think about this...
+    The problem with this hypothesis is I don't know exactly how the nn encode "features" and it may not work the way I
+    want it to. For example it may encode an eye as four separate feature instead of one, and they have to be
+    dependent on each other, so it may be better not to disentangle the four features if you still want an eye to look
+    like an eye. CNN cannot encode an "eye" as an individual feature because the eye can be arbitrarily large or small.
+    It has something to do with the architecture. I thought of doing font change. Think about that more. That is pretty
+    fundamental to style change.
+
+    pix2pix
+    512 generation done. Running the following command
+    python pix2pix_w_hint.py --mode train --output_dir pixiv_full_512_w_hint_train --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/pixiv_full_512_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --use_hint --batch_size 12 --lr 0.0008 --gpu_percentage 0.45 --checkpoint=pixiv_full_512_w_hint_train
+    Plan: check result
+    made a mistake not to scale the input. So I was essentially training more on hint.  Switched to the following command
+    pix2pix_w_hint.py --mode train --output_dir pixiv_full_512_w_hint_train --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/pixiv_full_512_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --use_hint --batch_size 12 --lr 0.0008 --gpu_percentage 0.45 --checkpoint=pixiv_full_512_w_hint_train --scale_size=572 --crop_size=512
+    WGAN on the other hand still did not work after 300000 iterations. The output is still black and white.
+    Trying to run wgan only after that because the generator's loss never decreases. but I don't expect it to change anything.
+    python pix2pix_large_gen_wgan.py --mode train --output_dir pixiv_full_128_large_gen_wgan_train_then_wgan_only --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 12 --lr 0.0008 --gpu_percentage 0.45 --gan_start_epoch=0 --checkpoint=pixiv_full_128_large_gen_wgan_train_then_wgan_only
+    Plan: check result
+
+    Unsupervised cross-domain image generation
+    cat and dog still failed after fresh training. The generated image does not look like animal and it is almost all
+    the same for all faces.
+    anime images suffers from the same problem. It looked a little bit more like anime images but it is too homogenous.
+    One thing I noticed was that all the generated anime faces are at the same location, regardless of the input image
+    and the output. I know that WGAN will solve GAN's collapsing problem (that is all output look similar), but I don't
+    know if I can make it work. I haven't succeeded with WGAN once yet. I was reading the author's WGAN code in torch
+    and I noticed that for the first 25 iterations and every 500 iterations, it trains the Discriminator 100 times for
+    each time it trains the generator.
+
+    Added wgan, but didn't change training setting because the original training setting looks pretty wierd. Plan: check result
+
+2017/02/23
+    Multi style
+    I want to control the degree of stylization... I capped the normalized weight to 1 but I think I need a setting for
+    the magnitude after normalization, like a main volume control. I did that, but the result was not what I expected.
+    It did not make the images "more stylized" by tuning up the master weight, or less stylized by tuning it down.
+    Plan: Now what happens if I use a random variable instead of a fixed value for the place holder during the training?
+    That will force the network to behave like I want it to: if the place holder's value is down, then the output is
+    less stylized, and if it's up, then it's more stylized. If it's zero, then the output should be the content image,
+    not some distorted version of that.
+    I can explore pinterest for more ideas on what to paint...devian art is also good.
+
+
+
+    pix2pix
+    WGAN result was still mainly black and white. It appeared to have a little bit more color but it was almost
+    unnoticeable. I checked the log and the generator loss never decreases (although the l1 loss decreased a little.
+    Wait that was not wgan only because the weight for l1 loss was still on.
+    Changed the setting to python pix2pix_large_gen_wgan.py --mode train --output_dir pixiv_full_128_large_gen_wgan_train_then_wgan_only --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0002 --gpu_percentage 0.45 --gan_start_epoch=0 --l1_weight=0 --checkpoint=pixiv_full_128_large_gen_wgan_train_then_wgan_only
+
+    The 512x512 was not working as well, because I trained it from scratch probably. Also I can't see the hint. I don't
+    think the hint was on for some reason... Plan: write code to read from 512x512 data and check the hint...
+    I modified the code but I haven;t check the hint is generated correctly or not yet.
+    I checked the hint. It seems fine locally and I don't see any reason why it won't work on ec2. It maybe just that
+    the number of pixel (40) is considerably smaller than the 512x512 image.
+    Plan: check result.
+    This project is taking way way way too long....
+
+    Unsupervised cross-domain image generation
+    Had a bug where I did not take the reduce_mean for all the logits when I calculate the loss. The model did not
+    train. I fixed it and it is retraining now.
+    Hum I think after 2000 rounds of training, it's getting somewhere. The generated images certainly are diverse
+    enough, although it was kind of blurry and hard to find the relation between the human face and the anime face.
+    One wierd thing is that the target d_loss is always 0 no matter what. I think something is wrong.
+    It turns out that it is training just as normal, except that the loss from positive and negative just happen to
+    cancel each other out almost perfectly with accuracy within 10^-5... Wait this is still too suspicious.
+    I uploaded the current code and tried to add extra training for discriminator... I still can't find anything
+    I have changed from the non-wgan version.I double checked and still can't find anything. Maybe that's just the
+    way it works by coincidence...
+    Plan: check the result.
+
+
+2017/02/24
+    Multi style
+    Finally made the random one hot vector working. Hopefully it will just work and if not I'll think of something.
+    Yay it seems to work! I don't know whether the quality will go down but so far I didn't see a huge difference.
+
+    pix2pix
+    wgan only failed miserably. The generator loss did not go down and the l1 loss kept going up from 0.3 to 0.6 and it
+    plateaued.
+    The 512 with hint result was ok. Some of them got the majority of the color right but there are still some simple
+    places where it messes up. I think that's because I don't have the sketch regen loss and the color just overflows
+    easily. plan: add that network after I come back from the zoo.
+    Uploading before making changes. Adding hints works but wgan failed. I don't know why yet. Planning to add a sketch
+    generation network so that the pix2pix can have a sketch generation loss.
+    My conclusion on the experiments: 1. anything that messes up with the network itself fails, no matter if it's the
+    generator or the discriminator. The network seems to be more delicate than I thought. Maybe I should do stepwise
+    improvement. (Like add 2 layers at a time instead of 10).
+    2. The network does not seem to be good enough since the loss plateaus at 0.25 ish.
+    3. I can't see the obvious advantage of lab, although in theory it should be better.
+    4. WGAN does not seem to help in this case.
+    My step next:
+    1. Move unnecessary files to other places. (DONE)
+    2. Combine training 128x128 and 512x512 into one file. (DONE, need testing)
+    3. Test with gradually adding layers to both generator and discriminator.
+    4. Move the sketch generation network over here or (even better) find out a way to train such a network.
+        The way to train it is pretty easy, since i already have the data. I just run the network the other way around
+        and there you go. Plan: check training result. Used command:
+        python pix2pix_w_hint_512.py --mode train --output_dir pixiv_full_128_to_sketch_train --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/train --which_direction BtoA --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.002 --gpu_percentage 0.45 --scale_size=143 --crop_size=128
+        Plan: add such sketch generator to the loss.
+        Sketch training done. It's good enough to be used for losses.
+        python pix2pix_w_hint_512.py --mode test --output_dir pixiv_full_128_to_sketch_test --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/test --which_direction BtoA --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.002 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --checkpoint=pixiv_full_128_to_sketch_train
+        python pix2pix_w_hint_512.py --mode test --output_dir pixiv_full_128_to_sketch_test_out_512 --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/pixiv_full_512_combined/test --which_direction BtoA --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.002 --gpu_percentage 0.45 --scale_size=572 --crop_size=512 --checkpoint=pixiv_full_128_to_sketch_train
+
+
+    Unsupervised cross-domain image generation
+    It's going back to the old problem again. The image looks pretty homogenous although it is definitely better than
+    the one before. I don't know whether it is because I continued training and it will just be like that after too
+    many iterations, or if it is my change in training the discriminator extra number of times.
+    Trying to restart training from scratch and see if that causes the same problem after 2000 rounds. If it does (
+    I don't think it will), then change the setting back would help, although it would not solve the problem of
+    seemingly no direct link between the input and the output.
+
+    Well after 2000 rounds of training it still maintained enough diversity although I can see that all the anime
+    faces generated seemed to be concentrated at one place, like the training result at 5000 iterations.
+    Plan: I want to see the output when the input is the anime faces.
+    I did that by changing the source dir during eval. The result was surprising. The training dataset is even more
+    diversed than I thought but the model tend to oversimplify what it saw when it tries to regenerate them. The result
+    is blurry images. I think that is due to the fact that the network is too shallow. After comparing with the paper,
+    I found that my network is actually not shallow except for the classifier part. The generator and discriminator
+    part seemed fine. The feature extractor they used is for professional deep learning face detection and i can't find
+    that anywhere.
+
+    Plan: I also want to check whether the task of turning male faces into female ones can be done perfectly. If that cannot be done, then it's the network structure's problem, not the dataset.
+    command used:
+    python main_cat_wgan.py --mode=train --model_save_path=model_human_sex_32 --sample_save_path=sample_human_sex_32 --source_dir=human_32_male --target_dir=human_32_female
+    # NOTE that I did not pretrain a model on only males... and the pretraining dataset overlaps with training dataset.
+
+    I decided to switch to vgg face so I need 224 x 224 inputs. I need to :
+    convert datasets to 224x224,
+    test the model on the new datasets(hope they're not too slow)
+    COmmand: # Plan: not done converting 224 yet do not using this command. 224 is too large for pickel so 64 g memory can't handle it.
+    python main_cat_wgan.py --mode=train --model_save_path=model_human_sex_32_vgg --sample_save_path=sample_human_sex_32_vgg --source_dir=human_32_male --target_dir=human_32_female --batch_size=1 --hw=224
+
+
+    More papers/ideas:
+        Don't forget the idea about font style. it's important. Look it up when I have time.
+
+2017/02/25
+    Multi style
+    Training not yet done on the 8 extra images. I've shown before that it is working.
+    Done training. Training 9 more style images. The problem is, the output is pretty inconsistent with the slow
+    version. It has less artifacts than the slow one, but more blurry, less vivid, and less 'creative'.
+    I should probably start at least researching on font generation.
+    Plan: research font generation.
+
+    pix2pix
+    Done writing code for sketch loss. Now retraining sketch model because the variable scope changed..
+    Command used to train sketch gen:
+    python pix2pix_w_hint_512.py --mode train --output_dir pixiv_full_128_to_sketch_train --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/train --which_direction BtoA --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.002 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --train_sketch
+    Command used to train sketch coloring
+    python pix2pix_w_hint_512.py --mode train --output_dir pixiv_full_128_wgan_sketch_loss --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path pixiv_full_128_to_sketch_train
+    So far it is pretty successful. It showed vibrant colors in less than 2 epochs (around 4 hours) and sometimes I
+    would argue that the color choice of the network is even better than the ground truth. More training will do.
+    The only thing left to test is I guess larger network (by gradually increasing the depth and/or add dilation).
+    OH!! I see why the hint changes everything. Because the hint forces the network to use the color given, not just
+    black and white. Deeper network won't do, changing it to wgan won't do. But why my experiment before failed? ..
+    Tensorboard graph looks normal. Just more training.
+    Plan: maybe make the network a little deeper and compare the result.
+    Wrote a network with 3 more dilation layers after encode layer and before decode layer. The downside of this
+    network is that it sacrificed depth for more dilation. (because dilation is better when the input size is large
+    so that it can collect information at a distance.)
+    Wrote another one with each convolution layer half as deep followed by a dilation layer also half as deep, then
+    concatenate the two. This way i can get the concatenation without sacrificing the depth.
+    Also looking into recombinator networks--turned out that it is just unet.
+
+    WAIT! I forgot to turn on hint??? So the color did not come from the hint but from the sketch loss???? what?
+    Interesting... Plan: compare each change and see which one causes the model to be better/have more color etc.
+    ... Anyway restarted two experiments at the same time. One with unmodified structure one with modified.
+    Plan: check tomorrow which one is better.
+
+
+
+    Unsupervised cross-domain image generation
+    Turning man into woman is working better than any previous ones, but the output is still blurry and looked a little
+    homogenous. For example I can see it maps a smily man to a smily woman, but I can't see it mask say age or glasses.
+    The overall layout position is mapped correctly most of the time (if the face is on the left for source, then the
+    target will also have the face on the left). This showed the maximum capacity of the network. It has flaws but its
+    working reasonably well. I'm hoping to see better results with vgg.
+    Command used:
+    python main_cat_wgan.py --mode=train --model_save_path=model_human_sex_128_vgg --sample_save_path=sample_human_sex_128_vgg --source_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_male --target_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_female --batch_size=4 --hw=128 --lr=0.00003
+    I chose to use 128 because upscaling it should work on the vgg face and it makes training faster (and I don't have to modify the pickel code to generate 224 images)
+    One of my worry is since the batch size is only 1, the lr may be too large.
+    decreased lr by 10 fold while decreased batch size by 25.
+    Tensorboard graph looked a lot more unstable than before--natural given such a small batch size compared to before.
+
+    Better style transfer
+        Problem: the style transfer is not good enough. One of the biggest problem is that it relies on matching a
+        content image without making changes to the overall layout of objects. I would like the style transfer to also
+        learn the semantic meaning of objects and to be able to change their layouts as part of the style transfer.
+        My approach: In my mind, human break things into parts. Style is created by applying rules to those parts
+        (whether it is as small as brush strokes or as large as the whole face). The current network is not able to
+        accomplish that.... No easy solution found yet. All I think about is pretty fundamental so it's hard...
+
+
+2017/02/26
+    Multi style
+    Worked on combining trained fnn models. It works but the problem is that the combined version is not as good as the
+    not combined one. It is because I only took the shift and scale and did not combine the other conv weights and
+    biases. Maybe I should take the average or something... dunno. Or maybe i should not train on those conv weights
+    and biases anyway. Maybe I should create a mode where I fix the conv weights and just train the shift and scale...
+    Well this is for later.
+    Or maybe... it is not idea to only train on shift and scale afterall? I can check by training on a single image
+    and compare that result with training it with a bunch of other ones.
+    As I think of it, it would be stupid to average the three trained feed forward nn because how do you know they
+    have the same content in their features? feature 123 works equally well as feature321...
+    So the only solution it seems would be to only retrain the scale and offset while loading the weight and bias
+    from previously trained model and keep them constant... Or, just keep them separate. lol.
+
+    Also I think most of the time training on 1024 doesn't seem to give better results than 512 as far as I can see.
+
+    I thought of a way. MRF does an awesome job at transferring a style into another given the semantic masking right?
+    So we just need the right kind of feature extractor to give the semantic masking for the program. What would be the
+    network that both recognize a normal human face and a transformed one? the unsupervised cross domain image
+    generation paper of course. It trained the feature extractor to do exactly that. I am thinking that instead of
+    one generator, we can have multiple ones, like one generator per font or something. They might be able to share
+    the weight and bias and differ only in shift and scale (in batch norm)
+    The feature extractor will still be shared. The discriminator... we'll see if it can be shared. The loss can
+    draw inspiration from dtn
+
+    it also would be better to provide some locational information to the generator, otherwise the things it can
+    generate would be pretty limited. I can use the interconnected structure and let each generator improvise based on
+    the semantic information given. It is free to move the eyes to wherever it wants based on the style it is creating.
+
+    ha. That's something. TODO: think about this. I think it might work. It's not based off of nothing and I can work by small steps. and its potentiall.. if only I can get it good enough so that people are willing to label their style images to explain the semantic meaning.
+
+
+
+
+
+    Unsupervised cross-domain image generation
+    The output of vgg combined dtn is pretty blurry. I think it is weighed too heavily on the f consistency (oh because
+    the feature vector is way larger than it previously is). Changed the alpha and beta value to the one suggested
+    in the paper (although in the paper they used 256d feature extractor output vector and mine is 4096d, i don't know
+    the difference in magnitude.) and we'll see if the blurring gets better. As I think of it, this might also be
+    the problem in the other ones as well, like the blurry cat faces...gg
+    The f was huge at the very beginning... it should be around 20 at first but now it's 20000..
+    Yep the result of changing alpha and beta on was even worse. The output is all the same regardless of the input.
+
+    The difference between previous experiment and the current one;
+    previous experiment is able to capture some different eye positions and facial positions whereas this one is
+    all one style. Previous experiment did not train discriminator 5 extra times (and of course no 100 times every 100
+    iter). Previous experiment has a smaller pretrained feature extractor.
+    I will go back to the previous experiment's setting and abandon vgg for now. I want to see the effect of :
+        different alpha values
+            -- it is said in the paper that higher value will improve consistency at the cost of noise and distortion.
+        different beta values
+        training wgan discriminator 5 times more.
+        Let's first try alpha values.
+
+    Tried different alpha values on the feature extraction trained on MALE ONLY. It failed miserably no matter what
+    the alpha and beta values. I will try again with the feature extractor trained on both male and female.
+
+
+    OH!!!! Now I realize why all the generated images seem to have their eyes and mouths all at the same spot. It's
+    because the feature extractor's output is 1d!... fuck. Either the feature extractor learns to encode position
+    information or the generator has no option but to take the best position on average! Ah.... fuck.
+
+
+    pix2pix
+    After 50000 iterations, my modified model is worse than the original setting. Both of them is training fine but
+    mine had on average a higher loss (0.02 higher) than the original one. I will stop training on my model.
+    Tried using the larger generator model again... Maybe now with hint and with sketch loss it will get better results.
+    I was forced to reduce the batch size from 4 to 1 and lr from 0.0008 to 0.0002 accordingly because of the memory
+    limit. I will compare the result after it trains for a while. I am expecting to see color at a very early stage.
+    If it's not showing color then something is wrong and i will stop training immediately.
+    It is showing some color around the hints but there's not much... Maybe that network is not good at all... I
+    remembered the result I got a month ago. It was like that as well...
+
+    It's getting a little bit better, but I don't see any obvious merit over the original setting yet. I mean the
+    training is slow, I was forced to use a small batch size, and it doesn't seem to be better...
+    Yep it's not better. The majority of the outputs are black and white. So I guess that is the deathnell for that
+    network. I'll keep the with hint and sketch loss version training for a while, since the loss hasn't plateaued yet,
+    and see where that leads to. Plan: check result...
+
+    More paper:
+    Downloaded a pinterest paper.
+
+2017/02/27
+    Multi style
+    Plan: train one single style in feed forward mode and compare that with the multi style feed forward.
+    Oh shit my setting was that the one hot vector was None when there's only one style meaning that I cannot control
+    degree of stylization.. Oh well. Let's see the result before worring about fixing it... It is causing problems in
+    the server code. Let me fix it... It turns out I've already fixed the problem in the training code but forgot to
+    update it in the server code.
+
+    The conclusion so far is: given identical rounds of training (ie. the multi style feed forward network get to train
+    num_of_styles times more than the single style one), the single style is inferior to the multi style one,
+    understandably. There is no obvious advantage to using the single style since although its details could be better
+    the overall style is still the same as the multi style output. Both are different from the slow version.
+
+    Plan: write code for combining the dtn and the neural style. Start out simple with svhn + mnist feature extractor (take the middle layers) and see if that work.
+    But how could that beat the vgg? Or should I use that in addition to vgg as like additional domain specific
+    semantic information? That sounds like a better idea than retraining a whole feature extractor... (remember the
+    deep food experiment...) So the idea is to use mrf and use additional feature extractors... hum...Sounds like a plan...
+    So I think all I have to do now is to add some additional semantic information layers to the mrf supplied by
+    feature extractor neural networks?... I can recycle some code.
+
+
+
+    Unsupervised cross-domain image generation
+    Even main_cat failed. Rewinding to the version that worked... I thought some of the version did work.
+    I double checked the code and found that the gradient clipping step was not included during training... Maybe that
+    was why.
+    python main_cat_wgan_old.py --mode=train --model_save_path=model_human_sex_32_alpha_15 --sample_save_path=sample_human_sex_32_alpha_15 --source_dir=human_32_male --target_dir=human_32_female
+    python main_cat_wgan_old.py --mode=train --model_save_path=model_human_sex_32_alpha_1 --sample_save_path=sample_human_sex_32_alpha_1 --source_dir=human_32_male --target_dir=human_32_female --alpha=1.0
+    Now it looks a little bit normaler. no exploding d loss or g loss. Plan: check result.
+
+    pix2pix
+    128 images looks pretty good now and the loss has plateaued after 2 days of training. Going to train 512x512.
+    Plan: check result.
+    It's working a little bit better than I expected. I'm one step closer to the target... The next problem is to
+    completely solve the diversity problem. I can probably use the color bin technique. I have the code for it and I
+    know how and why it works.:)
+
+20170228
+    Multi-style
+    While I'm waiting for training to finish, I can code my idea up. Plan: code my idea.
+
+    Unsupervised cross-domain image generation
+    Finally some close to satisfactory result... The generated images are blurry but clearly the network has a
+    understanding over the age, position, and lighting information in the male image and it preserved them in the
+    female ones, which is superb. All I have to solve right now is to generate clearer images. I can think of making
+    beta larger... that will force the generator to at least adapt to the female images and make them as not blurry as
+    possible. If that does not work, I have to add a loss function that make the generated image "sharp"
+    I compared beta = 1 with beta = 45. Both of them are a little bit worse compared to beta = 15 so I'll keep it like
+    that. I guess one way to have cleaner image is to connect the output layers with the input ones, like unet.
+    Experimenting unet... Plan: check result tomorrow
+
+    pix2pix
+    The result is really good (given that I've tried this for the past 2 month...). I can make improvements
+    on the model's color in the mean time to make it even more colorful. TODO: make it more colorful. Priority.
+
+    Found a potential bug in sketch loss... It should've been discovered long time ago. What's going on with the current training?
+    ... basically I grabbed trainable variables for sketch generator instead of global variables... I don't know why the current training even worked.
+    ... One other suspicious thing is that the sketch loss can propagate through the bin_to_rgb process... I'm not
+    sure it will work like I intend it to... but we'll see.
+    Command I'm going to run:
+    python pix2pix_w_hint_512_more_color.py --mode train --output_dir pixiv_full_128_wgan_w_hint_sketch_loss_more_color --max_epochs 20 --input_dir /mnt/tf_drive/home/ubuntu/pixiv_full_128_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path pixiv_full_128_to_sketch_train --use_hint --use_bin
+
+    Neural style improvement:
+        What I need: a mrf-based  neural style program. a new feature extractor. combine two feature extractors...
+        the mrf loss is separate for eacy feature extractor layer, so in principle I can just create two feature
+        extractors, compute their mrf-losses for their middle layers, apply different weights to the loss, and that's
+        it...
+
+        It's working on my laptop Plan: try on gpu with trained feature extractor...
+
+
+2017/03/01
+    pix2pix
+    The color bin program produced NAN loss in the middle of the training. The lr is normal. everything looked normal
+    up to that point.
+    After waiting for 512 to train for quite a while, I think that maybe the network is not deep enough to handle the
+    complexity... but whenever i make the network deeper it will be bw again... maybe I should just try to increase number of channels instead?
+    Plan: check result and if it's not working, think about how to make network deeper without generating bw images.
+
+    Unsupervised cross-domain image generation
+    The output is still blurry after the unet. I can't say which one is better than the other.
+    Or i can just use the image superresolution... i can't think of a good way for now...
+    Plan: I can look it up online more later about why the output is blurry.
+
+    Let me try the cat.
+
+    The cat was a success, considering the dataset I have. Since all cats are facing forward, the best the network can
+    do is to find the cats that are the least "forward facing" and match them with the not-forward facing ones. It can
+    recognize expression, color, eyes, but it can't "create" smile or glasses. (cat's don't have them...)
+    Why success? by comparing with the original svhn to mnist code.... Plan: summarize why I succeeded.
+    The reason why this model succeeded was as follows:
+        1. I made all networks deeper (double depth) so that it is complicated enough for faces.
+        2. I changed gan to wgan, which helped the output to be more diversed.
+
+
+    # Plan: And by the way the cat image did not look so blurry (which could be because it's hard to tell whether cat hair is blurry or not)
+
+
+    The female to anime generation was a failure. the output was blurry and all the images tend to have their features
+    at the same spot. That could be explained two ways: one, the target dataset is too diversed, so
+    the network is unable to use the same feature extractor on generating the new images. Two: the network was
+    not trained properly. -- which is kind of wierd because this setting worked for other datasets. I think it is
+    the feature extraction network. Anime images are just too different from natural human images I guess. I can
+    train a network on recognizing both human and anime images I guess and see how that does on the generation task.
+    OR there might be just too few of them? The anime dataset has around 14000 images compared to 70000 of the human
+    dataset.
+    So far pretraining with anime dataset added seems to caused a 10% decrease in the test dataset accuracy (
+    80%->70% while the training dataset accuracy is just 1.0)
+    Plan: check the result of combining human and anime together to pretrain an extractor.
+
+
+    Neural style improvement:
+    command I'm using:
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/5-content-128.jpg --styles stylize_examples/5-style-128.jpg --width=128 --height=128 --content-weight=10.0 --style-weight=30.0 --use_new_features --new_features_save_path=model_pretrained_human_32 --use_mrf --output="output/sanity_check_use_mrf_use_new_features_128.jpg" --checkpoint-output="output_checkpoint/sanity_check_use_mrf_use_new_features_%s_128.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/5-content-128.jpg --styles stylize_examples/5-style-128.jpg --width=128 --height=128 --content-weight=10.0 --style-weight=30.0 --use_mrf --output="output/sanity_check_use_mrf_128.jpg" --checkpoint-output="output_checkpoint/sanity_check_use_mrf_%s_128.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/5-content-128.jpg --styles stylize_examples/5-style-128.jpg --width=128 --height=128 --content-weight=10.0 --style-weight=30.0 --use_new_features --new_features_save_path=model_pretrained_human_32 --output="output/sanity_check_use_new_features_128.jpg" --checkpoint-output="output_checkpoint/sanity_check_use_new_features_%s_128.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/5-content-128.jpg --styles stylize_examples/5-style-128.jpg --width=128 --height=128 --content-weight=10.0 --style-weight=30.0 --output="output/sanity_check_128.jpg" --checkpoint-output="output_checkpoint/sanity_check_%s_128.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/7-content.jpg --styles stylize_examples/7-style.jpg --width=32 --height=32 --content-weight=10.0 --style-weight=30.0 --use_new_features --new_features_save_path=model_pretrained_human_32 --use_mrf --output="output/sanity_check_use_mrf_use_new_features.jpg" --checkpoint-output="output_checkpoint/sanity_check_use_mrf_use_new_features_%s.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/7-content.jpg --styles stylize_examples/7-style.jpg --width=32 --height=32 --content-weight=10.0 --style-weight=30.0 --use_mrf --output="output/sanity_check_use_mrf.jpg" --checkpoint-output="output_checkpoint/sanity_check_use_mrf_%s.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/7-content.jpg --styles stylize_examples/7-style.jpg --width=32 --height=32 --content-weight=10.0 --style-weight=30.0 --use_new_features --new_features_save_path=model_pretrained_human_32 --output="output/sanity_check_use_new_features.jpg" --checkpoint-output="output_checkpoint/sanity_check_use_new_features_%s.jpg"
+    python neural_style.py --network=imagenet-vgg-verydeep-19.mat --content=stylize_examples/7-content.jpg --styles stylize_examples/7-style.jpg --width=32 --height=32 --content-weight=10.0 --style-weight=30.0 --output="output/sanity_check.jpg" --checkpoint-output="output_checkpoint/sanity_check_%s.jpg"
+
+    Well, the output for 128 was quite clear. the original version without mrf is the only one even close to a success.
+    Using mrf+new features gives the style image while using only new features gives a slightly worse-looking content
+    image. 32x32 gives quite different results from 128x128.
+    32x32 images were just too small to see... Wait. is that why the 32x32 images look so blurry? Because it is
+    enlarged for viewing purpose? but wait then the source image should be processed the same way and they didn't look
+    blurry so it's not possible.
+    TODO: I want to adjust the weights around and see what happens--to the 128x128 perhaps. 32x32 is just way too small...
+    TODO: also check the only mrf results.
+
+
+2017/03/02
+    pix2pix
+    the rgb color bin was working really well--until it became nan...
+    I still can't figure out why it's nan and I'm doing random guessing.. which is not good for debugging. i
+    need to reproduce the problem and find the cause. Plan: check result. hope it's not nan again and if it is at least it should be terminated before saving.
+
+    Unsupervised cross-domain image generation
+    By pretraining the classifier on both human and anime data, the generator got a lot better. Although all the
+    generated anime faces are still at the same spot, their features now somewhat corresponds to the human features.
+    The model mistakens the hair with the background of the generated anime images, but you can tell if the hair is
+    white, then either the background or the hair of the anime character is white. So the real problem is dataset I
+    guess. I need a huge dataset of anime characters labeled with their face regions and also other characteristics.
+
+    Plan: split the human dataset so that it is small enough to be fit into the memory. Then try to train 128x128
+    Command used:
+    python main_cat_wgan_old.py --mode=pretrain --model_save_path=model_male_to_female_128_alpha_1 --sample_save_path=sample_male_to_female_128_alpha_1 --source_dir=/mnt/data_drive/home/ubuntu/datasets/human_128 --target_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_female --alpha=1.0
+    cp -r model_male_to_female_128_alpha_1 model_pretrained_human_128
+    python main_cat_wgan_old.py --mode=train --model_save_path=model_male_to_female_128_alpha_1 --sample_save_path=sample_male_to_female_128_alpha_1 --source_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_male --target_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_female --alpha=1.0
+    python main_cat_wgan_old.py --mode=eval --model_save_path=model_male_to_female_128_alpha_1 --sample_save_path=sample_male_to_female_128_alpha_1 --source_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_male --target_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_female --alpha=1.0
+    # STOPPED the experiment because i wanted to run resnet... pretraining is done though.
+
+
+    TODO: Find dataset.
+    More face dataset:
+    https://data.vision.ee.ethz.ch/cvl/rrothe/imdb-wiki/
+    Face recognition network is a little bit hard to train. I can start with the simple way... using the existing
+    structure with the feature extractor swapped in.
+    Also I found an anime face detector that I might be able to run on my pixiv dataset. It's working pretty well.
+    There were some positives but it's ok. I can probably manually go through them... or not. But how do I know who
+    those characters are though? Or can I just make the classifier classify the tags of the source image from which the
+    images are cropped?
+    I thought of cropping the faces from the anime videos, that way at least I know the characters that's in there, but
+    the program still doesn't know which character it is... Unless I train another program (maybe active learning) that
+    learns to recognize the characters... somehow. This is an interesting problem by itself... After I have that
+    labeled dataset, I can do lots of things on it. This problem consist of several subproblems: object detection under
+    all kinds of environments, object tracking, pixel labeling... TODO: think about this potential idea.
+    I guess my adventure with Unsupervised cross-domain image generation has to be paused for the moment. The quickest
+    way to improve it is to get dataset and I don't have that. Wait a sec... If only I have a better trained human
+    face recognizer, it should be able to be used on other domains, given what the paper has demonstrated... So there
+    is something I can do for now: TODO: try to get a better face feature extractor.
+    Trying resnet on a gitrepo. It may work... I'd be surprised if it doesn't.
+
+
+2017/03/03
+    pix2pix
+    still training. No error yet so far.
+    TODO: transfer the sketch generator to pix2pix, so that i don't have to use a whole network to do the job... Or as a second thought maybe that's not worth it.
+
+    Unsupervised cross-domain image generation
+    It definitely knows the major features of human faces. For example it knows the location of eyes, faces, mouths,
+    and hair color. It can't recognize glasses though. The output is quite good in that sense, but it's blurry as hell.
+    This is true when the input is target images (ie. input female output female). The solution I can think of is
+    to introduce something like the sketch loss. The generated images' sketch must also pass the discriminator test.
+    The only thing is I don't know how to compute the sketch from tf directly (without training a network for it) yet.
+    Let me look into that...
+
+    Command used:
+    cp -r data/20170216-091149 model_male_to_female_128_resnet_sketch_loss_alpha_1
+    python main_cat_wgan_resnet_sketch_loss.py --mode=train --model_save_path=model_male_to_female_128_resnet_resnet_sketch_loss_alpha_1 --sample_save_path=sample_male_to_female_128_resnet_sketch_loss_alpha_1 --source_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_male --target_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_female --hw=128 --alpha=1.0
+    python main_cat_wgan_resnet_sketch_loss.py --mode=eval --model_save_path=model_male_to_female_128_resnet_resnet_sketch_loss_alpha_1 --sample_save_path=sample_male_to_female_128_resnet_sketch_loss_alpha_1 --source_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_male --target_dir=/mnt/data_drive/home/ubuntu/datasets/human_128_female --hw=128 --alpha=1.0
+
+
+    Neural style improvement:
+    Plan: Now that I have resnet, I can improve on what I have and try it on larger resolutions!
+    I think I need to implement color independent style transfer... Some of the images are just not in the right color,
+    especially food.
+    I found a bug which made my previous experiment invalid (the style loss was not using the new features for the
+    generated image.
+    Inception net doesn't seem to work very well with mrf... Oh is that because the patch size is larger than the
+    embedding size?
+    What should be the input to the inception net? I think it should be uint8 0~255 as far as I can see... yep. So my
+    input to it in the cross domain image generation was incorrect... TODO: fix that.. did that. then check the result, compare with before fix.
+    also forgot to change the content loss to incorporate the new featuers.
+    Finally done with getting things to almost work. The output of style loss only does not make sense,
+    so I think there's still things going wrong.
+
+
+2017/03/04
+    Unsupervised cross-domain image generation
+    The resnet made things worse. Again I'm pretty sure something is wrong with the way I'm using resnet.
+    While I figure that out, I will test the sketch loss (without resnet) to see if that brings any improvements.
+    Command I'm using:
+    cp -r model_pretrained_human_32 model_human_m2f_sketch_loss_32_alpha_1
+    python main_cat_wgan_sketch_loss.py --mode=train --model_save_path=model_human_m2f_sketch_loss_32_alpha_1 --sample_save_path=sample_human_m2f_sketch_loss_32_alpha_1 --source_dir=human_32_male --target_dir=human_32_female --alpha=1.0
+    python main_cat_wgan_sketch_loss.py --mode=eval --model_save_path=model_human_m2f_sketch_loss_32_alpha_1 --sample_save_path=sample_human_m2f_sketch_loss_32_alpha_1 --source_dir=human_32_male --target_dir=human_32_female --alpha=1.0
+
+    I thought that it was because I did not do pretraining on the dataset... but why would I... Unless the features
+    from other dataset cannot be used on mine?...Dunno. Also the trainable variable just was still there even when I
+    set the trainable argscope to false...
+    Anyway, I think I'm giving up on resnet... Using others code like this just doesn't work so well...
+
+    Probably I should just train my own... If I'm serious about this project. I do think it would be cool if I can turn everyones face automatically into anime or cat faces.
+    TODO: first do some research on the effect of not using vgg19 in stylization. If the difference is small or it doesn't work like what I thought, then I should just stop... It's not worth spending time to train a whole network to detect faces only to find out that it won't work and people have tried it later on.
+
+    So far the one with sketch loss looks promising...
+    Ok the result was not what I expected. It did get better, but it's in terms of semantics, not the blurriness.
+    The output is still blurry, but with sketch loss it also have some artifacts, which arguably makes it look less
+    blurry. Anyway... I guess I should keep the sketch loss for now...
+    I thought of one thing. maybe the blurriness is due to the network structure. For example, if the last layer comes
+    from deconv of a smaller size, then it should be blurry... (it would be wierd if it's not...) In this case, what if
+    I add one to two layers at the end that hopefully can make the output look better? This way because the last layer
+    now does not come from enlarged smaller image, it should look a little bit better?
+
+    pix2pix
+    I need to focus on this project to just get it done. It's almost there. My experiment on using color bins was a
+    failure. Or is it? Or is it because I used t = 1... Otherwise I can;t explain why the images are mostly black and
+    white because the purpose of color bins is to avoid averaging all the colors (which results in bw). When I lower
+    the t value, the results get a little bit more colorful looking, but not even close to the ones trained without
+    color bin. The color conprehension still stops at understanding which parts are human skins. BTW lowering t too
+    much (to like 0.1) will ruin the results.
+    Anyway, in conclusion I should probably abandon using color bins. It takes too much time to train and does not
+    get good results.
+
+    I also want to see the output of the 512 network.
+    The output of the 512 network without hint was actually not impressive at all. It likes pink a lot for some reason
+    and it rarely gives satisfactory colored results.. With hint is similar. It is a little better than without hint
+    but still far away from the actual output. I guess this is because it is overfitting the training data??? Dunno.
+    Also check the 128 network...
+
+    I know changing it to lab should improve the colorfulness-- in theory... I also know in theory that wgan has better
+    diversity than gan, althought it hasn't been seen in practice for this task (maybe I was training it wrong, because
+    in the dtn task it got better results without training extra rounds for the discriminator.)
+    I also know that more data is always better (although I don't know the quality of the images I scraped from pixiv.)
+    It might be better that I use the anime face detector on the dataset to clean it up, but before that I want to
+    train on the scraped pixiv dataset and compare that with pixiv-full dataset.
+
+    I am wondering why I failed... despite the fact that I have access to the source code (although incomplete).
+    I should think of this like a product... The users on twitter clearly wants to color humans more than anything else,
+    so my dataset should be mostly humans (which can be done through face recognition). The network he is using is
+    different from what I am using (his is deeper). He is also using a different color space.
+
+        -dataset
+            This is the life and blood for all machine learning tasks. I should have an excellent dataset.
+            The dataset should avoid containing bw images, images with little color or mostly one kind of color.
+            The dataset should contain a human (or at least a face) which can be recognized by the face detector.
+            The dataset should not have a wierd height-width ratio, or I have to use a different way to crop the input
+            image- like getting part of it.
+        -network
+            The author provided the network structure so I should use that.
+        -training strategy(aka losses)
+            Start from l2 loss and see if it can get at least bw images.
+            Then add GAN or WGAN and see if it can get some color
+            Finally add hints and see if the output is close to the actual image.
+        -general rule:
+            Avoid changing more than one thing at a time. Otherwise it will be confusing during analysis.
+            Always do sanity check before running code on larger dataset.
+            Always check manually the dataset you;re using.
+
+
+
+         I've done most of the stuff described in here. I'm lacking in the dataset part, so I should focus on that.
+
+
+        Plan: first filter out all images that does not contain anime character face.
+            I wrote a program that contructs a list of images that contains at least one face.
+                Number of images containing faces: 55211 out of 442701
+            I combined the color and sketch images to get a training set.
+            The output was much more colorful just by changing the training dataset... I should've paid more attention
+            to that... Anyway, If I need to download more dataset, I know how. Also if I need to do that, I should
+            figure out how to also save additional information about the image, not just the image and the author etc.
+            Maybe also the comments, the tags, etc.
+        Plan: Add wgan to the model. (do NOT use only WGAN because I tried and it did not work.), also don't train extra for the discriminator for now.
+            I did... the wgan loss was a little bit too high and since there is no log, there doesn't seem to have a limit for how much it can grow.
+            Yeah at the end the l1 loss just kept increasing instead...
+            I'm trying to decrease the gan weight from 1 to 0.01... Well that didn;t work.
+
+            Hum I changed the following code from :
+                with tf.control_dependencies(discrim_clips):
+                    discrim_train = discrim_min
+            to:
+                with tf.control_dependencies([discrim_min] + discrim_clips):
+                    discrim_train = tf.no_op("discrim_train")
+            and suddenly the loss looks normal... I think that is because the clipping must be placed behind the discrim training and before generator training..
+            This is the right way: the previous one mixs clipping and training randomly, which is not good...
+                with tf.control_dependencies([discrim_min]):
+                    discrim_train = tf.group(*discrim_clips)
+        Plan: add lab.
+            I did.
+        Plan:
+            Write a program that combines all the steps I took from the raw iamges scraped from pixiv to the
+            images I use for training. (Maybe up to color and line is enough for now)
+
+    Reading papers:
+        A Discriminative Feature Learning Approach for Deep Face Recognition
+        Generative Image Modeling using Style and Structure Adversarial Networks
+
+2017/03/05
+    pix2pix
+    The result for lab+wgan looks a lot more satisfactory than before. Although it still avoided giving too much
+    color for some reason, it clearly knows what parts are human skin. I have yet to run it on the test set but
+    training set results looks ok. Yeah the results are mostly black and white...
+
+    Interestingly without lab + wgan seems to give more color than the with version. I think I've seen this phenomena
+    before, where the wgan just refuses to put color on things... I'll not use wgan then... Wierd... What's causing it?
+    I know from previous experience that switching to lab does not affect coloring... Maybe the weight clip is too
+    small for the discriminator to do a good job?
+    TODO: test the two ideas: first try to relax  the weight clip to 1 and see what happens.
+    Running it on the sanity check and i think the clip mainly dictates how fast can the WGAN loss decrease.
+    maybe I should run the discriminator training multiple times... not sure. in the past that did not help though.
+    Ok relaxed the weight clip to 0.05 (1 is too large) and I saw some decent color! :0 I'll keep training it and
+    see what happens.
+
+    Anyway the one without lab and wgan is still training and I didn't see any sign of it reaching a plateau yet!
+    Also the output seems to have enough color... (Although I haven't tested with no hint input yet... so I don't know
+    for sure).
+    Some existing issues:
+        Blurriness
+        Color overflowing
+            I think the author tried to overcome this by adding the sketch loss.
+        Bad control over the use of light
+            Is there any classifier for use of light in images???...
+            Maybe it can be done by training on data built by 3d models like unity or something.
+        No uniform color over the same object sometimes (which ties into the three issues above)
+
+
+    What I've learned:
+        *** Dataset and preprocessing them is super super important to good output.
+    Plan:
+        Merge the 512 images... Done
+        Modify the pixiv downloader program and see what I can get out of it apart from images... Done
+        Download more images... Done,
+            still downloading. Got 60000 images in the last hour but only 6000 webpages... This is a little bit strange.
+        Write code to preprocess downloaded images.
+            I was hesitating whether to save the resized version of all images or just those that qualifies.
+            I finally decided to save only those that qualifies... to save time.
+
+        Think about how the issues above can be solved.
+
+    The result for 128x128 without lab or wgan was acceptable. It got the color right sometimes (like 20% of the time)
+    without hint. The rate was higher with hint (like 40~50% of the time). I'm training it on 512x512...
+
+
+    Unsupervised cross-domain image generation
+    Ok adding an additional layer definitely made things better. The images looked a lot clearer than previously. It
+    proved my hypothesis that the network needs some intermediate layer to generate clear final image (instead of
+    directly generating from deconv smaller images). I think the sketch loss is making thing worse semantically. By
+    comparing the sketch loss version and the non-sketch loss version, I found that the sketch loss version usually
+    comprehend less well spacial things like head tilt or head position. I don't know why sketch loss would cause that
+    but that's the result... I think it might be better to just take that off.
+    Hum... after 2000 iter I can see that the output is still blurry (not as clean as when I have the sketch loss).
+    Maybe I should just tune down the sketch loss weight.
+
+    Reading paper.
+        The two new papers I downloaded did not seem interesting...
+
+2017/03/06
+    Unsupervised cross-domain image generation
+    The experiment that ran a version with extra layer but no sketch loss generated blurry results as expected. The one
+    with sketch loss weighted less was a failure. It had generated lots of artifacts (probably due to the fact that
+    while I weighted the sketch loss differently, I did not also scale the threshold on the sketch loss GAN weights...)
+    The artifacts are affecting the output by a lot and the output looked mostly homogenous.
+    After comparing all version, I think the one with unet is the most successful one. It is a little bit clearer than
+    the other ones and was semantically equivalent to the first version.
+    I think this concludes this project until I can have more dataset.
+
+    pix2pix
+    Larger clipping value definitely gave the generator a much harder time, but the generator is getting better little
+    by little. When I was looking at the discriminator's per pixel judgement, I was surprised to find that it made most
+    of the judgement based on pixels near the edge of the image. This is pretty wierd. I mean the result looks nice,
+    (At least it is bearable) but the way discriminator was behaving was wierd... Unless there was something wrong with
+    the conversion process from not-capped values to image... That could be the reason... TODO: look into that.
+    The 512 result wasn't so satisfactory yet... Maybe it was a little bit too early to train 512x512... I should do
+    that only after I've solved everything else.
+    And I was right about not training 512 so soon, because the wgan + lab version is definitely better than the old
+    version! The color of the human skin was much more accurate and the color choice looks more natural. :) Finally I
+    can see some images that I really liked. I think it was both because of the lab and the wgan, but I don't know
+    which contributed more to the better result.
+
+    Anyway, since now I have a better dataset, it might be worth it to revisit the other attempts I've made. I
+    was especially puzzled by why having a larger network end up yielding bw images and why the rgb bin system did not
+    work. The rgb bin I can partially explain by its slow training speed (not really because the network should show a
+    decent amount of color by around 10000 iter, and if it hasn't by that time, it never will in the future. This is
+    just from my experience), but having a larger network resulted in bw image always always puzzled me. So I will
+    try both of them again, along with lab and wgan.
+
+    I started to think what can I do after this project. I will have a huge dataset of around 1TB of images along with
+    some related information. I can probably build a classifier that will automatically apply tags to images. I might
+    be able to generate comments for the images. I might be able to predict the number of bookmarks based on the
+    images and the tags (maybe I should not include the tags, or I can include the program generated ones).
+    Also, there seems to be a bug in the sketch generator network... It should be untrainable...
+        It was in the line:
+        sketch_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=SKETCH_VAR_SCOPE_PREFIX + "generator")
+        #: shouldn't the sketch network be fixed??? Shouldn't this reutrn empty list and we should use global variables instead?
+
+    I then found a bug, where I forgot to add a "trainable" to a batchnorm step in the generator function. I fixed it.
+    I decided not to run the 512x512 training yet. As I've mentioned before,
+    ***it is better not to spend time on training 512x512 when I still have room for improvements. I can do that after
+    I've found the best model I can make. I'm running the rgb bin model. Interestingly I found that the model is
+    already learning the skin color a little only after 1000 iterations. I didn't see any other colors yet but that's
+    a good sign (bie nai)... The training speed is also faster than I thought. TODO: I should come back and check tomorrow.
+    Or maybe it will not afterall. I still didn't see any color apart from bw and a faint skin color after 2000 iter.
+
+
+
+    Read papers
+    I read some papers on DRL (Deep Reinforcement Learning), which is used largely for game ai or other feedback-reward
+    systems. They're interesting but hard to understand... I'll read into them more, especially the
+    "Playing Atari with Deep Reinforcement Learning" paper.
+
+2017/03/07
+    pix2pix
+    I think the rgbbin does not work. Now it still outputs only black white and skin color most of the
+    time. It colors the eye sometimes... Also the loss is saturating too fast. I already can see that it began to
+    plateau very fast, so I don't think it will reach the quality users are asking for. One other thing that may
+    make matters worse is that the hint given is in rgb color space but the output is in rgbbin, so now the network
+    can't just take the hint and use it directly...
+    I still want to test the larger network again, because first of all taizan used that network, and second is that
+    if in the future I have more data, having a larger network helps in theory (but from what I've seen, it does not
+    help at all...) Hum... Maybe I can train that larger network along with the 512x512... So in case the larger
+    network gives bw images again, the time won't be totally wasted.
+    So I basically copied what I had before into the new code, then ran the sanity check. The sanity check failed
+    because wgan was unstable... I think the cap also needs to be adjusted with the network, which I didn't know
+    before. Why is that though? I changed it back to 0.01.
+    Training after 3000 iterations and I still didn't see too much color, which is a bad sign.
+    Yeah after 8000 it's still black and white. I'm stopping it. Hum so it has nothing to do with the training data...
+    Why both of them only produce bw? They're definitely capable of producing better ones... It's not the discriminator
+    because
+
+
+    I think I also need to start writing code for a pixiv tag classifier. Probably I should use vgg, cuz that is
+    already available to me. (but it will train for so long though...) well.
+    Preprocessing steps:
+        Get path to all image files
+        Extract information from txt.
+        Make a dictionary with key = image id and value = image info
+        Count number of times each tag appeared, then 1. either make a one hot vector for each tag 2. make a random
+        variable for each word in the tag, add them to form a vector for each tag... Wait that doesn't work when I
+        need to output more than 1 tag... I don't want to end up with a 100000-d one hot vector, but I want it to
+        output the correct tags... One option is to accept a second input and have a few more fully connected layers,
+        output 0 if the second input vector is a not a possible tag and 1 if it is a possible tag.
+        hum... I guess I'll have to check how many tags there are and then decide.
+
+2017/03/08
+    # Plan: finish up pipeline for loading pixiv data.
+    # Plan: test the sketcher with real sketch.
+        Failed. It didn't look as nice as the test set. Why? I think it is because of the way I "generate" sketches.
+        The network is only used to those generated sketches and not the real ones.. One solution is to pass the input
+        through those generators before feeding them in... Plan: Let me test that.
+        Generating the sketches based on the bw images using the chainer tool didn't give me any good results either.
+        Lemme try to generate some sketches using colored images.
+        Testing on rella's sketches did not give good results either. I can see that the hint is working properly and
+        the network is coloring things with the right color with hint. But no hint is just a mess...
+        Now what should I do? I mean the training images looks quite nice, and the test images for some reason looks
+        reasonably nice as well. It's just when I use real sketches, everything breaks. I am kind of suspecting that
+        the test images appeared in the training set but that shouldn't happen... I mean I created the test set twice,
+        once for 128 and once for 512. It can't be that both of them was wrong...
+        It's not the test set was included in the training set.
+        After careful comparison, i realized that the result from the current training wasn't "so good" either. It
+        was good when there's hint, but when there isn't, the result was not so good. Maybe the network is too
+        dependent on hints...  I can try once without hint.
+        I also realized that the difference comes from the input.  The input I was using was too complicated, but the
+        ones in the training data are pretty simple. (They tend to have a human taking up most of the space.) So when
+        I look at the one that looks similar to the layout in training set, the result was ok. So it's not I was doing
+        something wrong. That's just how things work I guess.
+
+        One more thing, I found an article where someone retrained PaintsChainer using a different dataset, which I
+        wasn't able to do very successfully. I might want to look into that.
+        http://qiita.com/ikeyasu/items/6c1ebed07b281281b1f6#_reference-1c2f00dca1ba5e029fe3
+        Hum it seems to also mentioned that the result wasn't so good when used on pixiv data. He used images from
+        anime, which is very different from pixiv images. That's probably the reason.
+        * Again that shows the importance of having a good clean dataset. It also shows that if the input is different
+        from the training data, don't expect it to get good results...
+
+        One side note regarding the on-going training. I found that the learning wasn't so stable so I increased the
+        batch size and decreased the lr. Well batch size 4 seems to be the max...
+
+    # Plan: figure out (again) how to set locale to utf8 on ec2.
+
+    More paper
+        SeqGAN had some great ideas that combine gan and reinforcement learning. I didn't see any sample text though...
+
+2017/03/09
+    I finished coding up functions to load the pixiv files. All is left is to resize them, then train.
+    Here's what I'd like to do while i'm waiting for more data:
+        1. Try with hint but no WGAN and with WGAN but no hint (lower priority).
+            Image with hint but without gan looks pretty dull. So now I'm 100% certain that it is WGAN or GAN that
+            causes the image to have colors.
+            Didn't try without hint but with wgan.
+        2. Try lowering the probability of having hint. It's too dependent on hint now I think.
+        (after examining without wgan. I don't want to have two changes at the same time.)
+        3. Look into PaintsChainer and try to train using that code.
+        	Difference from my code:
+        	I don't have weight decay (which I think should be easy to implement...)
+        	Their sketch weight is 10x mine. ( I should try to change that. High priority)
+        	    Doing that and training for nearly 2 epochs does not give good looking images. The color was just messy.
+        	    Maybe training longer could get some good results. I need to train 11 epochs to compare with weight = 1
+        	Their batch size = 16 and learning rate = 0.0001
+        4. Read more papers before actually running the tag prediction code. I feel that the current version may take
+        very long.
+            Found one paper unrelated to this but it's about text 2 image. It's pretty interesting so I'm going to read
+            that through. It is also related to my project because now I have more text data.
+
+            The paper "Recognizing Image Style" is quite good. It mentioned how to collect data, and how Flickr tags are
+            not so accurate and they used Flickr group instead. Pixiv does not have that so I'll have to find another
+            way...
+            Or I can make classification on author? or even group authors together? Dunno. Readon
+            It uses lots and lots of features... But this should be hugely helpful for my project. The learning task
+            is much simpler if I can learn one style, not like 10000 mixed together in the dataset.
+            Maybe I can cluster the images based on the tags they have... Then train one cluster at a time? but clustering binary vectors is a challenging problem of itself...
+            As I think of it, maybe PCA is good enough...
+
+        5 Figure out what's wrong with pycharm.. It can't save my notes.
+            Turns out the C drive is full due to ubuntu backups.
+        6. Working on changing the larger version to be almost exactly the same as chainer one.
+        	I found some huge differences in terms of the order of operation between my code and the chainer code. Maybe that's why
+        	it failed so many times before.
+        	Done modifying it. Double check before try to train it.
+        	It's working to identify and output skin color after 8500 iter, and training speed was compatible with the smaller version.
+        	I'm a little bit more hopeful about this one.
+
+        7. Figure out why the output summary was wrong..
+            The wierd thing is it looks normal in the "bigger" version. Not a huge deal for now...
+
+2017/03/10
+    If it fails again:
+        Compare with PaintsChainer. Try to get that code running and see if it produces the same output. If so, then
+        it's my data's problem.
+        If not, then it's my implementation. Actually I'd be quite happy if the chainer code produces good results...
+        Because I haven't seen it produce good results yet.
+
+        The result surprised me. Clearly the training has been not bad at least. The l2 loss was lower than the l2 loss
+        by the smaller network. It learns skin color pretty well and it is almost overfitting the training data. It
+        learns skin color well most of the time but it's having a hard time coloring other things. It is sucessful
+        sometimes at that task but fails other times. The generator and the discriminator trained till the
+        discriminator can no longer distinguish between the real and the fake (indicated by the loss). Combining that
+        information with the failure in coloring images from time to time, I conclude that the bug is in WGAN. I should
+        increase the threshold so that the discriminator can be better at its task. If I need to, I can also train
+        extra on the discriminator, but I don't see the need for that now.
+
+        Training with clip = 0.04. I don't see more colors yet after 6000 iter. Check later.
+            Yep definitely more colors (at least when it's epoch 5. I don't know if more epochs will make it have less
+            color. If so then there's something wrong with the code.
+            But... If it doesn't have the same vibrant color without hint, then I'm doomed. One possible thing that I'm
+            missing is that the number of hints is fixed. I can do some trick and have like 5 random variables
+            representing different level of hints. (instead of one variable representing number of hints, because then
+            the compiler will complain.)
+            After only 5 epochs the output with hint was awesome. Some of them was almost exactly the same as the
+            target. It is the first time that it shows it can fit/overfit on a large dataset. The output without hint/
+            was a little bit lack of color, but it had some good outputs and none of the outputs looked bad. (Which is
+            preetty impressive). The worst thing it can do is to not color things... :)
+            The model performed poor with real sketches, but it's ok... The most of the real images probably doesn't
+            look like training data.
+            It performed ok on the rella sketches. Again I see that if the image contain faces, then the result will be
+            way better than the ones without faces. And again, given hint it will perform better. I guess I'm finally
+            coming close... After soooo long, I ended up with a solution almost the same as the chainer one.....
+            except the dataset probably played a huge role in the improvement.
+
+        Now, before I dive into 512x512 training, check the chainer code again and see what they did. They had
+        different code for 128 compared to 512.
+            I still haven't fully tested setting sketch loss from 1 to 10 yet on the new code. - 1/2 a day
+            His 512 x 512 code did not have a discriminator.
+            His 512 code had a different batch size (4) compared to 128 (4), but the lr did not change. Showing that
+                this part did not really matter that much.
+            He resized 128 x 128 and fed that as the hint of 512x512, but he also mentioned during our meeting that it
+            was just an experiment.
+                I personally do think that having a smaller network along with a larger one with the same structure is
+                a waste.
+            His data feeder was slightly different. (And both his 128 and 512 data feeder was different from mine).
+                But wgan claimed that it removed the necessity of having such data manipulation during training.
+
+            Conclusion: I can probably go ahead and train 512x512. It is 11 times slower, but oh well.
+
+        #Plan: I need to figure out what the image summary of the real and fake is doing... It might have some bug.
+            Fixed that. It is because the discriminator no longer have the tanh function.
+
+    The utf8 is not working again... The default locale setting was still there. probably something to do with sh?
+        Oh that's just the screen. THe screen was created before the change...
+
+    Papers:
+
+
+    Clustering and preprocessing data.
+        PCA is the way to go. 10000 most popular tags. Covariance matrix. Just times the transpose. It will be huge
+        so look for existing algorithms in languages like C.
+        Done... sklearn has the related code I need.
+    Sketch generation
+        Input is crucial, so look into this.
+        I need a database of sketches... I want to see what real sketches are like first... So probably find the
+        corresponding tag
+
+    Preprocess currently have a bug that did not exist before. That was probably due to some change in software
+    packages... And how large should the cascade magnification be? I took the code directly which works fine, but I
+    probably should know more
+
+    Plan tomorrow:
+        0. Download more sketches. I need them to evaluate the network.
+        1. Check the result for 512x512... so far so good up to 5000 iter.
+        2. Check the result for downloading pixiv images
+        3. I now have two options after the pixiv images download is over:
+            one is to run the anime face classifier and get a dataset from that.
+                Downside is the face classifier can run for super super long on the whole millions of images
+                Upside is I know it's going to work
+            two is to create a database, form clusters, and resize only the ones in one chosen cluster.
+                Downside is I may need time to fine tune the clustering part, like how many tags I should keep and
+                how many clusters I should have
+                Upside is I may have a cleaner dataset.
+
+2017/03/11
+    0.
+    Now I remembered why I did not log onto pixiv and download more sketches--- I was afraid that by doing so I'll
+    kick myself out in the download program. I figured out how to log in with another account... Downloaded 10 or so
+    random sketches with different style. I noticed that 95% of the sketches are for human figures. The rest 5% are for
+    scenes and other stuff. That means I should probably keep using the face classifier.
+    Plan: convert them to the input format of pix2pix.
+    It kind of worries me by now... The real sketches does not look anything like the ones in the training data.
+    Yeah it confirmed my doubt... The result with real sketch input looked aweful. I should probably change the
+    way I'm generating or treating sketches. I should analyze the histogram of the sketches online...
+    Yeah the "real" sketches usually have almost all black or white pixels. There's a little overflow due to conversion
+    to jpg, but 99.9% of the pixels have value larger than 245. In comparison, the sketches generated by the sketch
+    generator network was unstable. It generate vastly different sketches depending on the size of the input image. It
+    also have a huge amount of pixels lying in between 0 and 255. This is unacceptable... Is there any way that I
+    can generate clean sketches?
+    I can of course just binarize the sketch, but that leaves a large amount of artifacts. This is my next major task...
+
+    I'm trying some traditional approach, but the result wasn't very good. People have tried this a lot of times in the
+    past using anime images. The results were not good. I am thinking if I can have a dataset where I have the sketch
+    and the colored image. Then I can just train a neural network to do the job....
+
+    There was a paper on cleaning up rough sketch (interestingly, the author who studied at waseda also published a
+    paper on automatically coloring black and white images...
+
+    * Tags on pixiv for sketches: 塗ってもいいのよ and 塗り絵. I need to clean up those of course by making sure they're
+    indeed bw and converting them to gray scale.
+
+    線画付き might have something good but it's not so popular. 塗ってみた is a good one, and also 塗らせていただきました
+    Let me download those two tags. I also need to download the senga version though. It should be referenced in the
+    description section.
+    Test using this image_id; 61691859
+    So my plan:
+            Download by the two tags: 塗ってみた and 塗らせていただきました
+        For each image downloaded, create a key-value pair where the key is the image_id of the colored image and
+        the value is the image-id of the sketch mentioned in the description section. If the description section
+        has more than 1 description, I should debug that situation, but if the description section does not
+        contain any url, then ignore that image. Then I should download the sketch mentioned as well by its image id.
+        Additionally, before we begin analyzing the image url, if the image is already in the database, then
+        get it's corresponding txt, and do the same thing without downloading the image again.
+
+        At the end, save the images as usual but also write to a file containing a list of the key-value pairs.
+        I have 24 hours to finish this, because after 24 hours the hard drive for the current pixiv downloading should
+        be full.
+
+        Overall pipeline:
+            For all images in the two tags:
+                If image in database:
+                    if the image is really there:
+                        pass
+                    else:
+                        treat it as if it's not in the database.
+
+                # Now the image is really in the database
+
+                check the txt file for the image caption (if from database) or directly get a list of urls.
+                    Analyze the image caption and get a list of the urls in the image caption.
+                If no url:
+                    continue
+                if one url:
+                    Get image id in the url. If no image id, continue
+                    Download the sketch image if necessary.
+                    Write to file a the (colored_image_id, colored_image_path, sketch_image_id, sketch_image_path) pair.
+                if multiple url:
+                    DEBUG this situation and see what's going on. Or I can ignore it.
+
+
+            Done. Output the number of pairs I have.
+
+        But again I'm a little bit worried. What if people with those tags draw differently from the popular tag ones?
+        They look quite different after all. Can the network be general enough to work for the other one?...
+        Well it'll be at least better than not having it I guess. The dataset is worth gathering. Also the dataset
+        might be good for learning the lighting and stuff.
+
+        Done... Faster than I thought.
+        Found a bug in my previous code that was referencing a temporary variable... Not too bad but more of this could
+        happen potentially and I'll never know....
+
+        Ah I probably shouldn't have coded the part where it bypasses the in-database check.  Now I cannot restart my
+        model because it will mean to revisit all the urls again. I can delete that part probably. TODO:delete that part.
+
+        I should change the preprocessing code so that it can deal with transparent background and turn them white.
+        I should also change it so that it can accept another sketch instead of generating its own sketch.. Done.
+
+
+
+    1.
+    There's no need to check the result for 512x512 any further, for one glance at the generator loss told me that
+    the training failed. the l2 loss did decrease overtime but the output is as if it did not have WGAN at all. The
+    generator loss was decreasing fine until 6000 iterations where it jumped back to where it had started at.
+    I think this is due to the lr being too large. I'll try again with a smaller lr.
+    Hum... it doesn;t seem more stable with a smaller lr, which is really strange.... But the color so far looks good.
+    No after 12000 iterations it became bw again... I think it might be that l2 loss's weight was too strong?
+    Another thing i noticed was that even after I've changed the lr, the learning pace still was pretty much the same..
+    This is also a little bit wierd.
+    After looking back on the 128x128 training result, I realized that it was like that in 128x128 as well.... so I
+    shouldn't have blamed 512x512 settings.... I should try with a lower l2 weight. Changed the l2 weight from default
+    100 to 20... The purpose of that was to encourage the wgan to produce more color when hint is not present. If that
+    doesn't do the job, then I can lower the probability of hint and see what happens. Or I can eliminate hint all
+    together and see what happens. Yeah if this doesn't work then I'll turn hint off and let it train for a long time.
+    If it cannot overfit the training set without the hint, then something's wrong. If it can fit the training set
+    but cannot generalize to test set, then I should try a different technique maybe... I don't think I can blame the
+    dataset on that depending on the actual output then.
+
+    With l1 weight = 20, the discriminator failed to distinguish between real and fake images very well, although they
+    are clearly different to a human. Wierdly the generator loss never decreased.... I guess I can try sketch loss = 10
+    at the same time... One of the motivation is that the sketch is leaky--- that is it also give some hints about
+    the color. lol. Shit..... Shit I just realized that when I feed the output and the target into the sketch
+    generator, I did not convert them to rgb before doing so.... shit. the sketch generator will probably behave funny
+    but it's looking fine so far... Oh fuck it let me just try to increase the sketch loss and see what happens...
+    Probably it won't be so different... I just realized that I can't train two models at the same time due to gpu limit
+    Plan: either use a different sketch loss or fix this.
+
+    A side note: I found a pattern that the more color the model has, the less realistic the colors
+    look... I imagine this is probably due to overfitting... If you overfit more, you'll have more colors but they may
+    not be accurate at all on the test set.
+
+
+    2.
+    pixiv images downloading will be done by today. After that creating a snapshot will take a while. And copying it
+    over will take a while. Not to mention all the preprocessing. I expect 2 days.
+    3.
+    I can first try and see how fast the face classifier is-- while I create a database and cluster them.
+    But now the other database is under way, I think it might be better to train a good image2sketch network first.
+    I have two options. One is pix2pix, and the other is dtn. I think pix2pix probably works better... I haven't seen
+    dtn work on larger ones and even if it does, first of all the output is blurry. second it is not using the
+    one-to-one or one-to-many relationship I have already. It is probably more suitable for dataset where there is no
+    such relation. Probably I can get such a dataset from my database by taking all the ones with "sketch" tags and
+    separate them from the ones without.
+
+    Papers:
+        facebook released pretrained fastText vectors. I'm curious how they did non-latin based ones...
+        https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md?utm_campaign=Revue%20newsletter&utm_medium=Newsletter&utm_source=revue
+        But anyway it may be useful for my future projects.
+
+    Tag prediction
+        As I think of it, it is probably better to use a structure that can be used as a discriminator in pix2pix?
+        I can take the intermediate layer, add some conv layer at the end, and train that as a discriminator?
+        I can try vgg first I guess.
+
+    TODO: spend a little time on my master thesis.
+        1. check the precision recall and compare with the previous ones.
+        2. Check the database and check if there's any
+
+
+2017/03/12
+    Setting l1 weight from 100 to 20 did not seem to do the job. It probably made matter even worse because now the
+    discriminator won't work properly. Setting sketch loss to 10 did not seem to make matter better either. The
+    training curve looked exactly the same as the one without change, but the difference is where the sketch loss = 1,
+    the generator loss actually gets better but here the generator loss stays stubbornly at the same level.
+    Regarding the pixiv download, I have 13000 pairs of sketch/colored images. I am creating a snapshot and preparing
+    to copy that over.
+    In the mean time. I don't have much to do so let me summarize what I've done...
+
+    neural style
+    I just realized how to solve a bug... TODO: I can have a "no style" default weight and every time I change the
+    style weight, I normalize that along with the default weight so that the gradient can still propagate through when
+    all weights are 0. Well... too lazy to make that change now.
+
+    After I got the dataset copied over, here are the steps that I'll do:
+        1. Create a dataset of human colored images versus sketches.
+            Currently I'm allowing resized image within a certain height/width ratio error range, but that might
+            cause some issues due to imperfect alignment between the colored version and its sketch.
+            Also there might be some issues with transparent png. I don't know if all pngs will have white in the first
+            three channels for the transparent pixels.
+        2. Train the pix2pix to convert colored images to sketches on that dataset without changing any settings or
+        enforcing that all pixels in the sketch should be either black or white. If that does not work, enforce
+        the constraint.
+        3. In the mean time, create a database of all images, and compute their clusters.
+            - Takes 2 hours to create the database, who know how long to create the clusters... I just hope the memory
+            can handle the task.
+        4. If all works well, do preprocessing on those clusters without face detection.
+        5.
+
+    I changed the size of the data disk and I also started downloading the rest of the pixiv images. It should take
+    another good 4 days.
+
+2017/03/13
+    Preprocessing of the colored and sketch images is done. At the end I only have 2933 out of the 13532 images that I
+    collected... But why do I end up having 17834 images in the output directory...
+    I can't start training the image to sketch dataset yet. Here's a list of potential problems...
+        1. Inversed sketch image so the sketch is white.
+        2. incorrect sketch image and/or corresponding colored image
+        3. Maybe padding is a little bit better than cropping
+        4. Sketch is not totally either 0 or 255 (if the author say scanned their sketch)
+        5. Sketch may have a little bit more than sketch -- that is the sketch might be colored a little or the sketch
+        might have shade indicators etc.
+        Plan: I'll need to download the dataset, write a program to manually go through all of them.
+        Went through like close to 1/2 of them.
+    Clustering 20 clusters was probably too little. It blended a bunch of styles together (most of them gay stuff
+    surprisingly, it was more than I've thought).
+    Clustering them into 100 was ok. I'll use Cluster 11(49831 images), or Cluster 88 (990 images), or Cluster 39(8214 images)
+
+    My priority is generating good sketch first. Without that I cannot do anything... And to do that, I need to clean
+    up the database.
+    Oh fuck the sketches....
+    There must be some smart way to clean up those sketc,whes............
+    running this anyway,..... It'll take a while
+    python preprocess.py --input_dir=/mnt/pixiv_drive/home/ubuntu/PycharmProjects/PixivUtil2/pixiv_downloaded/ --output_dir=/mnt/data_drive/home/ubuntu/pixiv_new_128/ --size=128 --resize_mode=reshape
+
+    I should write a faster preprocessing program that uses the tensorflow data loading pipeline. That should make
+    it a lot faster.Now it's estimated to take 100 hours, which is unacceptable. ... I stared at it for a while, and
+    there are just too many points that cannot be incorporated into the tensorflow pipeline. All those if clauses..
+
+    Wow... wait the output of the current framework used on the data clustered (not really working extremely well maybe)
+    was way better than I thought. It trained for 10 epochs, and the result on the training set seems pretty good...
+    I'll probably run the program on the previous pixiv dataset and see what happens...
+    Nah I don't see any reason why I should... It won't work on the sketches anyway... The system is too delicate in
+    some way...
+
+2017/03/14
+    While my network is slowing down.... I have to do something else. I can try to test without sketch loss and compare
+    that with the one with sketch loss (using the old dataset). I can also try to add my own sketch loss function
+    instead of relying on a whole neural network to do the job.
+
+    I think the answer by li rui on zhihu is right... sketch does not contain enough information to get good colored
+    result. It is better to go from sketch to sketch with shade information, then from that to colored version.
+    Also he mentioned that because the sketch in the training dataset is probably not "perfect", the extra shading
+    information is helpful and the network accidentally can do a better job using that extra info. This is interesting...
+    So maybe I don't need perfect sketches after all. Dunno.
+
+    Finally the dataset is complete... I've gone through everything twice so it should be good enough. One thing I'm a
+    little worried about was that the colored version of the sketch usually also adds lots of things to it, like
+    shading and background. The sketches are also not so uniform in their usage of shade. It is not even uniform in the
+    color they use for the sketch... I'll be pretty happy if the pix2pix can learn anything.
+
+    Without sketch loss the network was not so good at finding the boundary of coloring, (expectedly, because that's
+    what the sketch loss is there for).
+    Surprisingly after couple hours the effect of sketch loss was not so obvious. The problem that without hint the
+    color looks super bland is still there, not surprisingly. Still don't know how to solve that.
+    Anything I can do?... I know it is possible to go from bw to colored... But from sketch to bw... That is also
+    possible... I thought I had this idea before but it failed? I can test with preprocessing images and turning the
+    colored version to bw version, and see if the current network can color bw images... Maybe not... If not, then we
+    have a problem...
+
+    I'll train the colored to sketch network. This is the priority.
+        Command used: python pix2pix_w_hint_lab_wgan_larger.py --mode train --output_dir sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/sketch_colored_pair_128_combined_cleaned/sketch_colored_pair_128_combined/train/ --which_direction BtoA --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --lab_colorization --train_sketch
+    Then I should preprocess the colored image into bw and combine that with colored to form a bw->colored dataset.
+
+    The result of colored image to sketch was better than I thought. The network seems to learn which is the more
+    important part of the graph pretty well... I as a human probably can't distinguish between the two. I'm more than
+    happy about this result... I should probably generate the sketch based on this network now. I could do so in fact..
+    Training from sketch to colored on the 6000 hand picked images was not going well without hint and sketch loss,
+    which is not surprising I guess with such little training data, but not so little that it can be easily over-fitted.
+
+    I'm generating the new sketches.... but the problem is they're in the same folder, which means I probably have to
+    modify the combining program a little...
+
+    Generating sketches of the old dataset using the new algo should finish by tomorrow morning... In the mean time
+    I should probably try training without hint. I've shown before than without wgan the output is gray as hell, so
+    now I should see what happens when there's no hint.
+
+    Plan: check the no hint result
+    Plan: run the combinator for bw and color. Done.
+    Plan: run the combinator for new sketch and color.
+
+2017/03/15
+    Without hint, the network learned the color of a face pretty well, since they usually have the same color I guess.
+    But it did not learn other things... So both hint and wgan is crucial to having more vibrant color.
+    Trying (again) to do bw to colored image while I wait for the combinator.
+
+    Reading papers while I'm waiting for it to train. It seems that the task is way harder than the dataset generated
+    by the previous sketch generator due to a lack of shade info. But if it works at all....
+    Oh I forgot the way I'm training bw to color is wrong... I should only make it learn how to generate the ab layer
+    while taking the l layer from the input... Plan: make that change... (The discriminator should still take lab)
+    Plan: check result for bw to color and for new sketch to color. Done. The network learned a little bit of
+    color and how to use the hint a little after 2 epochs, but it's not so satisfactory. I'll check the output_ab
+    result where the generator only outputs two channels. The result was uh bw mostly... It's even worse than the
+    one with new sketch as input. the loss kept decreasing but the generator loss was increasing all the time...
+    I guess l1 loss takes the blame... Hum after checking a few more times, I think it does have color half of the time
+    but the other half it's just bw. Maybe it's the hint? I probably should also write the hint into the summary...
+    The bw to color network is good at skin color but was not good at other things, like the sketch2color... So I think
+    they share the same problem... I'm looking into the color bw papers again to get some inspiration...
+
+    THe new sketch to colored result was better than I expected... I thought it would fail to learn anything but it
+    succeeded in one output without hint, so that's good I guess.
+    After 5 epochs of training, the only color it learned is to color all hairs to blonde and also face color... With
+    hint it can do a little bit better but it's not going well. I've seen the same problem before, when my dataset was
+    not as good.
+
+
+    The paper on color distribution was interesting but maybe not so applicable to the current work. Maybe if I can
+    extract the color pattern and supply that as a hint? But I haven't even solved the light/shade problem yet.
+    "Do We Really Need to Collect Millions of Faces for Effective Face Recognition" was a good paper, but I guess it
+    failed to compare itself with other models using more data... Didn't read too deeply into it but it seems to use a
+    smarter technique to increase number of training images by manipulation on the 3d manifold.
+    Also reading into "Controllable Text Generation" and "Scribbler: Controlling Deep Image Synthesis with Sketch and Color"
+    The "Scribbler" paper is very related to the work I'm doing. It has a huge chunk of commonality with sketch
+    coloring. It also faces the problem of having not enough corresponding pairs of sketch and colored image. Notably,
+    it used not only one but five different ways to generate sketch to incorporate the complexity in real world
+    sketches. Maybe I can do so too! Why haven't I thought of it before... I always think that there is one type of
+    sketch that is "more real" and closer to what people will draw... but it never occurred to me that it may not be
+    the case, even though I've seen the variety with my own eyes when I label the sketch-colored dataset... There are
+    mainly three types of sketches: the one with only lines, the one with lines and a little bit black area
+    indicating color and/or shadows, and the one where the input is a bw image...
+    Plan: try combining the two sketch datasets and see what happens.
+    Anyway the paper did not have too much of a difference from my current implementation, except they don't have
+    sketch loss and instead have tv loss, and it uses dcgan and I use wgan. Oh and it also uses "feature loss", which
+    is just the difference between the relu2-2 layer of the vgg19 network with target versus output as input.
+
+
+    Another task that I should get my hands on is label prediction... I don't have the data yet but I should start
+    working on the pipeline. Plan: work on the label prediction pipeline...
+    Done. The lr required for it to work is tiny, and the batch size huge... The training was slow but it's at least
+    working a little by little on the sanity check set.
+    TODO: maybe swap the sketch loss network to the new one??? But it doesn't seem to affect things too much.
+
+    Plan: check the result of training on the joint dataset.
+    TODO: don't just do random experiments... Summarize what I've tried, what works and what not, what I've seen in the
+    papers, and decide next what to do. And don't do this when you're sleepy.
+
+    Plan: move the data to us region after copying is over.
+
+2017/03/16
+    Combining two sketch datasets was mostly a failure. The two dataset does not seem compatible to each other. The
+    program learned to color the old sketches pretty well but failed on the new ones completely. I can't even see a
+    a boundary for the new one. I can see that it vaguely have an identity function in place but other than that and
+    the occasional coloring of the face, I can't see anything else working with the new sketch when I train both at
+    the same time.
+    This sort of proved my previous thought, that with the new sketch the task became much much harder and the network
+    was unable to do as good of a job as when I train it on the old dataset. Therefore this time when I combine the two
+    the network chose the easier task and fitted the old sketch...
+    The bw output doesn't seem to be any better than the sketch. In fact it seems worse, only have learned the color of
+    the skin....
+    I think I'm close but there's just something I haven't tried before that might just work. I know that the WGAN loss
+    as well as adding the hint can result in more colorful images. I also know that sketch loss is helpful to make the
+    color more confined within its region, but it does not generate color by its own really. I haven't observed that
+    yet.
+    Now that I've seen no matter how hard I manipulated the training data, it does not seem to help too much.. The best
+    I can do is actually using the old sketch, but that does not give me good results when I apply them to actual
+    sketches online. That's why I was working so hard to get a good sketch generator, and now I have it. Although it
+    is not generating the right color on real sketches yet, at least it's not messing up the whole thing, like what
+    the network did when I train it with old sketches.
+    I think maybe if I increase the weight of WGAN loss, I can get more colorful images (at the cost of having less
+    accurate coloring). Of course if I have the tag classifier working that might also help, as demonstrated by the
+    "Scribbler" paper as well as the "Learning Representations for Automatic Colorization" paper.
+    I'm running the previous pipeline with 10 times more gan weight. If it's messing up things, I'll try to run that
+    by loading a checkpoint trained with normal gan weight. If it still messes things up that time, then I shouldn't
+    have such a high gan loss i guess, or my wgan setting is not working (very unlikely)
+
+    I thought of one thing... If an object have multiple possible colors, then why not generate multiple possible
+    outputs, calculate the loss for each of them, and take the max as the actual loss? Say output 3 possible answers,
+    and whichever that looks the most real will be the output... I can also enforce a distance function so that the
+    possible answers do no lie too close to each other. (maybe as a e^(-distance) format). Oh but then I can choose the
+    first possible color for the first object and the second possible color for the second object. That means the
+    possible answers must be chosen pixel-wise? I guess it doesn't have to because there are correlation between the
+    color of one object with the color of another... I can experiment with that if I have time... Hopefully this can
+    solve the problem of l1 loss forcing everything to look colorless. TODO: experiment with this?
+    When I tried this, I observed that there is essentially only one of the three possible outputs being trained.
+    This is understandable... But I want all three of them to be trained but all three of them should be diversed
+    enough from each other on some colors ONLY when they need to ...
+    # TODO: record the number of times each output is chosen. ALso the output chosen should be independent of batch. that is each batch can have different outputs... I don't thint the current version works like that.
+    Dunno. I should probably try training on the new dataset instead for now./
+
+
+
+    Plan: write code to take the cleaned sketches list and get the 512x512 version of that.
+
+    The sketch is a mess? what happened. Hum.... It seems like the sketch generator network is messed up.... I'm
+    switching to the simpler tf dilation sketch generator. It's much faster and the result is almost the same...
+    After the change the results look normal again. Can't believe I trained on the shitty sketch generator but
+    never realized it...
+
+    By the way I'm getting a wierd bug in training the classifier network. It says the string buffer cannot hold
+    my data basically. I googled it and found only one post. I can't fix it yet, so I can only fit 20000 out of 400000
+    items.
+    The classifier network stared to work for a little during the first epoch but then the accuracy suddenly decreased
+    after that for some reason... The loss stayed pretty much the same. This is quite strange... I'll start with a
+    smaller sanity check dataset.
+    It never occurred to me that I never read the vgg paper very carefully before I train such a classifier network...
+    I should. I don't know how to train such a network when there're so many categories. The network now is really
+    unstable even with a tiny learning rate. It tries to label everything as positive even though that increases the
+    loss dramatically.
+    I read the vgg paper. One thing to notice is that their number of classes is also 1000 and their dataset size
+    is similar in size to our dataset (1.3 M for training, 50k for validation, and 100k for testing)
+    Using vgg network didn't get things better... I think the lr may be too large, but it's basically the same problem
+    as before: the network seemed to have no choice but to put the same label on every input, the most probable ones.
+    TODO: Let me try gradual training if I have time.
+
+
+    The training with 10x wgan weight made the output look more colorful, but not necessarily better. The discriminator
+    was failing to distinguish between the real and the fake one... So I have two options, either increase the number
+    of features in the discriminator, or to increase the number of times to train the discriminator. I guess I can
+    start with the easier-to-implement one-- double the number of features.
+    Even after this change the generator still won after 1 epoch... So maybe I should train the discriminator
+    intensively every x rounds.. I did that. strangely this does not seem to have an effect??? The discriminator
+    is still slowly crushed by the generator... What's going on? I guess it did look a little bit more colorful but
+    the color themselves did not make sense. I can keep on training that if I have time. TODO: keep on training if I have time.
+
+    New dataset that passed hw test, bw test, and face test: /mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape
+    There's around 150000 images in that dataset (like 8% pass rate from the 2200000 downloaded images).
+    generating the sketches for that... Training on the dataset. So far it looks good. Hope it would be better than
+    the previous dataset. If more data does not make things better, then we have a problem...
+
+2017/03/17
+    Trained with more data, but nah it still is stuck at coloring only faces... I remembered taizan said the hint and
+    the gan have conflict.... I'm wondering if I turn the hint off (but leave the channels on), would it get better. Or
+    if I use two discriminator networks... It's the same idea. So I am trying to continue training from the previous
+    checkpoint but changed the hint probability to 0. I did so because I think the discirminator might can't handle
+    two types of inputs: one with hint and one without hint... This sounds stupid but I don't know if it can happen.
+    I think it did... The discriminator loss lowered and the generator loss rose after I changed the hint probability.
+
+    When I'm waiting, I also changed the tri code so that it no longer always choose the best output. It now have a
+    chance to choose a random one instead.. I'm doing sanity check on a dataset where there are 15 different outputs
+    for the same sketch. If it passes that test, then I'm more hopeful that it will work on the larger dataset. It'll
+    also be interesting to see how the original code work on that sanity check dataset. Nah it's not working. I think
+    it may be that the three outputs are not using the variables the same way, so the other two just looks aweful even
+    though they're trained the same number of times.
+
+    Color... Finally color... (At least for the ones in the training dataset, I tried the test set but it's
+    giving me wierd outputs for 90% of them and 10% was good. I guess that was because the checkpoint did not save the
+    latest one yet.) And the color looked real!... Most of them. So the key to color is not just hint nor GAN, it's
+    a combination of them, but just the combination isn't enough. It has to be GAN's discriminator first trained on
+    the outputs with hint, learns to discriminate color nuances really well, then trained on without hint... If
+    start out without hint, then it will focus on other things instead of color, but because the network can do really
+    well with hint, the discriminator was forced to focus on color differences...
+    I was thinking what happens if this fails... Well I have other plans ahead, but I did not expect this to succeed.
+    I hope it is really succeeding though...lol. I'm probably wrong and there's probably some bug or just some
+    other stuff that prevents it to be directly used on real sketches. lol. Who knows.
+
+    I need to repeat what I've done... Exact repeat.
+    The first one trained for 1 night (8 hours and 114 iterations on batch size 4 lr 0.0008).
+    The second one trained for 2h (30k iter on batch size 4 lr 0.0008)
+    The third one  trained for almost 3 h now ( on batch size 16 lr 0.0008, gan weight 5)
+    python pix2pix_w_hint_lab_wgan_larger.py --mode train --output_dir pixiv_new_128_w_hint_lab_wgan_larger --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.25 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path pixiv_full_128_to_sketch_train --use_hint --lab_colorization
+    python pix2pix_w_hint_lab_wgan_larger.py --mode train --output_dir pixiv_new_128_w_hint_lab_wgan_larger_cont_no_hint --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.25 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path pixiv_full_128_to_sketch_train --use_hint --lab_colorization --checkpoint=pixiv_new_128_w_hint_lab_wgan_larger --hint_prob=-1
+    python pix2pix_w_hint_lab_wgan_larger.py --mode train --output_dir pixiv_new_128_w_hint_lab_wgan_larger_cont_no_hint_gan_5 --max_epochs 20 --input_dir /mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/train --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.75 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path pixiv_full_128_to_sketch_train --use_hint --lab_colorization --checkpoint=pixiv_new_128_w_hint_lab_wgan_larger_cont_no_hint --hint_prob=-1 --gan_weight=5.0
+
+
+    It is kind of wierd why it still formed those glitches on the test set... It should've been saved a long time ago.
+    Maybe it is overfitting the training set? It can't be... It seems like it has something to do with the batch size...
+    uh.
+    It is still far from perfect, but I think after training for a few more epochs, it should generate good enough
+    outputs... It's still not working on the real sketches, which worries me a little bit...
+    Also the glitches... It's wierd. It appears either for all images in the same batch or do not appear at all.
+
+    There seems to be a bug in recording the images. Got it fixed. It was incorrect alignment when I was copying code.
+
+    # TODO: train the thing on all images (that passes bw test and hw test), instead of on the images with faces.
+        This one I'll have to wait until the preprocessing on the 512x512 finishes, then I turn them into 128x128...
+    One other thing also worries me. It seems like the improvement happened over a very short period of time - in 20
+    minutes the loss changed dramatically. generator loss went down, discriminator loss went up, and l1 loss went up.
+    What if this process didn't happen for other datasets? Or what happens if the network stopped improving and the
+    coloring stayed at the current level? There's much to do and too early to celebrate, but it is getting better,
+    I hope. I confirmed by doing the testing again after 2 hours. It is indeed better than the previous one.
+
+    TODO: I can read some more papers...
+
+
+2017/03/18
+    Combining the old dataset with 400k images should be done in 2h.
+    Continue training for a night did not yield too much of an improvement. There were some issues with leaking colors.
+    I think it is caused by the sketch generator. The sketch generator in place now, the naive one, does not ignore the
+    background like the nn sketch generator does. Therefore using l1 loss on the naive sketch generator does not make
+    sense, since the algorithm can never have guessed what the background can be, since the information is just not
+    there if I use the new sketch as input. One option is to feed it through the trained nn and take the output.
+    The disadvantage of that is it greately decreases the training speed. I'll make the change once I made sure that
+    using the new sketch to train will yield a better result in general than the old sketch. Previously I saw that
+    training on the old sketch is not general enough for the network to automatically extend it to human-drawn sketches.
+
+    I'll try to train the thing on the old pixiv_downloaded_sketches_lnet_128_combined dataset, which uses the old
+    sketches as input. I think I still have the pretrained version of that, so I'll just try to take away hint and add
+    the gan weight. This will test my hypothesis about why the latest training method sort of worked.
+
+    As to how to improve the model and make it be able to generate different styles, I think I need to use the tags,
+    separate out the cheerful ones from the sad ones, the bright ones from the dark ones, and the manga ones from the
+    colorful ones... Basically if I have the training data (maybe even provided by a classifier if possible), then I
+    should be able to just modify the batch normalization variables to get different styles, just like the
+    fast style transfer thing. Well. That is if everything works... lol I still don't think it will based on past
+    experiences.
+
+    Yep it works. The method works. The sudden drop in discriminator loss was observed after half an hour of training
+    and lasted for 30 minutes. Then it flats out at around -0.05, just like using the other sketch. What's different is
+    the generator loss decreased after 30min but then slowly increased again. It shouldn't matter as long as the
+    discriminator loss is the same. The difference matters more than the absolute value. The result was still bad on
+    real sketches, but the result on the old sketches test set was way better than the previous one. There was much
+    more color than the previous version and they look to some degree real.
+
+    One question came to me... Do I really understand the difference between different layer orders? conv batch relu
+    vs. conv relu batch for example? huh... After reading the batch norm paper again, it mentioned that the bias b
+    is no longer needed after adding batch norm because batch norm's shift essentially can cover the job for the bias.
+    That was probably why I did not have the bias in my neural style program for a long time. It should be added before
+    the non-linearlity. The reason for that is:
+    We could have also normalized the layer inputs u, but since u is likely
+    the output of another nonlinearity, the shape of its distri-
+    bution is likely to change during training, and constraining
+    its first and second moments would not eliminate the co-
+    variate shift. In contrast, W u + b is more likely to have
+    a symmetric, non-sparse distribution, that is “more Gaus-
+    sian” (Hyvärinen & Oja, 2000); normalizing it is likely to
+    produce activations with a stable distribution.
+    It's good to review this from time to time.
+
+
+    Before getting on plane tomorrow:
+    # Check tar status. It seems I have no choice but to use AWS Import/Export... School network is slow, and exporting
+    data through the internet costs money. I tried compressing the thing, but since a majority of them is in jpg, which
+    is already a compressed format, even using 7z only yielded a compression rate of around 5%. So it's not worth the
+    time.
+    https://aws.amazon.com/snowball/disk/
+    # Train sketch generation
+    python pix2pix_w_hint_lab_wgan_larger.py --mode train --output_dir sketch_colored_pair_cleaned_512_lab_wgan_larger_train_sketch --max_epochs 50 --input_dir /mnt/data_drive/home/ubuntu/sketch_colored_pair_cleaned_512_combined/train/ --which_direction BtoA --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.55 --scale_size=572 --crop_size=512 --lab_colorization --train_sketch
+    # Keep training on 400k dataset with new sketch loss weight 10
+
+    If I got bored on the plane, maybe I can work on the master thesis... I have the data.
+
+    Shit... The sketch generator was broken again. It must have something to do with loading variables and probably
+    those variables are initialized again after being loaded... So my training using a nn sketch generator all failed
+    for that reason.
+
+2017/03/19
+    Maybe on the plane I can write a faster preprocessing program now that I've found the decode_image in tensorflow1.0
+    I can also work on the classifier. I don't understand why the current configuration does not work. I don't know
+    how long it takes to train usually, but training overnight and still getting the kind of result where it labels
+    everything as the most possible output is unacceptable.
+    I found the inception net tutorial on tensorflow. It was awesome. It's probablye one of the best tutorials one can
+    find on training image recoginition systems. It talks about how to build the training set, how to setup the network
+    to do training from scratch or to just do training on the last layer. One thing I'm worried about that was, what am
+    I going to do with the network afterwards... So yeah I can predict the tags if I'm successful, but so what. My
+    ideal situation would be that I can separate all those different styles. Then with that I can train different
+    coloring networks to get different effects. But is that information already in the tags? I should find out about
+    that. (Because if it is not in the tag, then the inception net probably can't help very much, and if it is in the
+    tag, then what do we need the net for?) No the tags don't usually contain info about the style of the image. I have
+    to use some more conventional image analysis tools I guess. Maybe I can analyze the color choice and separate them
+    based on that? Think about how audio styles gets identified. There should be some similar trick...
+    Nah, there seem to be less well engineered features. I can perhaps use the vgg net or inception net, extract the
+    feature layers, compute the co-relation matrix of the feature layer (just like neural style) and maybe cluster on
+    that matrix (after the matrix is normalized with respect the the size of the image). But how to cluster a
+    say 64x64 matrix? I can flat it out (because it does not resemble the spacial positionining or the size of the
+    image, I could do that) and do the same thing like the tags?
+    Sounds like a plan... Tried it ... It made sense to a very small degree but it can just be random... Will it
+    work better on a larger scale? Dunno.
+    I found that the problem lies in my clustering method. PCA is not a clustering method... Plan: find another clustering method. M
+    aybe do pca to reduce dimensionality. sklearn.cluster.KMeans support sparse matrix though.
+
+    Anyway let me put the url to the inception net here: https://research.googleblog.com/2016/03/train-your-own-image-classifier-with.html
+
+    Surprisingly, using the correct sketch loss did not change things too much. Nor did the sketch weight change from
+    10 to 1. From the loss graph they all looked the same.
+
+    I trained the network for the whole day. The result didn't look much better than the small dataset. In fact I think
+    it actually looked worse during the first stage due to lots of averaging... I'm testing with 1% probability of
+    having hint so that the hint can still work, but the gan should work as well. I changed gan weight to 3 so that the
+    color can look a little bit more realistic at the cost of being a little bit bland.
+    Also I'm worried to see that it's still not working on the real sketches. Maybe I should have a bit more variation
+    in the sketches I use to train? But I tried to combine two types of sketch before, which was just a failure...
+
+
+
+    Maybe I can add a random shift in the image. Maybe I can apply a random kx function (mapping 0~1 to 0~k then
+    add a threshold at 1) for all the inputs... That should let the network be more flexible in terms of the sketch it
+    accepts as input.
+    Maybe I can also filter the images with manga tags.
+    plan: fix sketch generator in sketch loss
+
+2017/03/20
+    The network behaved pretty different on the new setting where I changed the hint prob from 0 to 0.05 and the gan
+    weight from 5 to 3. The discrim network never just went close to 0. The sudden increase in discrim loss is mainly
+    caused by the hint probability going from 0.5 in the previous training to 0.05. It's not caused by the generator
+    network doing a great job at crushing the discriminator...
+    The output on real sketches still failed. The output on old sketches didn't work so well. The output on new
+    sketches worked a little bit better than on the old one but not as good as the previous version, where I trained
+    the network pixiv_downloaded_128_w_hint_lab_wgan_larger_cont_no_hint_gan_5 (this is a little bit better than
+    pixiv_new_128_w_hint_lab_wgan_larger_cont_no_hint_gan_5, but it trains on the old sketches, not on the new ones.).
+    I think I'll try two things: train on the large dataset using the previous setting, and training using random shift
+    in the input sketches.
+
+
+    For the experiment using the old setting, the jump was observed only after 6 minutes and lasted for less than 3
+    minutes. After 3 hours of training, I think the previous result still wins, that is, the result I got
+    from training on a small dataset with face detection. The current one also have face detection, but it's just not
+    working as well. The color is a little bit too much... Tricky. Yeah got more color but the color looked wierd.
+    For the random shift, ... I can't really tell until the whole thing finished training after like 1-2 days.
+    I tried to test it on the sketch_combined dataset. The result looked different from all other ones I've seen so far.
+    I can't really make any judgement at this point.
+
+    Fixed the sketch generator. That was because the supervisor auto-initializes everything when it gets called...
+    Fixed the clustering method... ah pca cannot do clustering... I still found it surprising. I'm using kmeans now.
+    After thinking about it for awhile it made sense why pca can't do clustering. Just imagine 10 clusters on 2d plane.
+    PCA can only output 2 features since it's 2d. Even if there's only 2 clusters, imagine pca's output. It won't be
+    the two clusters at all! It would just be the two axis that has the most variance... Anyway I was dumb. I'm looking
+    forward to see the result from the k-means clustering. It's been running for 30 minutes now.
+    The clustering worked. :) Now I have a hundred different themes that I can use, each on average containing 10k~20k
+    images. I can do lots of interesting things with it...
+    Note that these doesn't necessaily correspond to "style" of the image. It's more about content most of the time.
+
+    btw, preprocessing on the 512 is done.
+    Number of images preprocessed in total: 2245207. In which 1918286 passed hw ratio check,
+    1164396 passed black-and-white test and 1164396 passed face test and was saved.
+    I did not generate the sketches yet because I want to train the sketch generator on 512 first. Another option is
+    to just use the naive generator, but then I don't need to explicitly output the sketch again. I can just generate
+    that during training. I'm surprised that only half of them passed the bw test...
+    Maybe I can improve the preprocessing speed? if I have time... But I don't see the point. I've done most of the
+    preprocessing already...
+
+    As for the "tri" experiment, I think the problem is caused by outputs sharing too many variables. I should maybe
+    make them only share the conv weights, but not batch_norm vars. I finished the modification, but strangely all
+    three of them is giving me the same input no matter what I put in... A different output is chosen each time but why
+    do all of them look the same?? I tested by changing the onehot vector and the result looked different after that.
+    So I guess it was natural that all of them looked mostly the same at the beginning because the scale and offset was
+    not fully trained to resemble their different distribution yet. I guess the thing is ready... Maybe I can add a
+    counter for the number of times each output is chosen but I'm lazy now... I'll have to create three separate
+    scalars to do that...
+    The tri experiment worked to some extent on the sanity check. One of the possible output has a dark background
+    while the other two had bright background. All other parts looked pretty much the same. I'm trying to raise the
+    probability to choose the best output over a random one.
+    I still have to separate out the batches if I want to use this for training.
+    It works. After raising the probability to 0.9, it can separate out three types of output. So all I have to do is
+    to allow different instances in the same batch to make different choices.
+
+    Experiments :
+    1. Run the new sketch loss. (running)
+    2. Run the tri (running)
+    3. Run the second half of the shift. (running)
+    4. (Low priority) continue training on the huge dataset and just hope it can get a little less wierd.
+    5. Do something with the clustered data.
+    6. Train the sketch extractor for 512x512
+
+2017/03/21
+    Thoughts last night:
+    compare between resize then gen sketch and gen sketch them resize
+    because the sketch combined is mostly from the latter. i think that is the reason to difference in performance.
+    the unrealistic color is caused by two things. one is the dataset. If the dataset is easy then the quality will go
+    up. on the other hand, the more fundamental reason is the discriminator is doing a poor job. I think i ve tried
+    increasing the number of features. check that. then i can try to increase the number of layers. i can t think of
+    anything else that can help the discriminator at the moment... it is wierd that the discriminator might be working
+    differently for with hint and without hint.
+
+    unless i change the architecture of the discriminator? pix2pix has a different architecture...
+    dunno
+
+    Results from running the following three experiments:
+    1. Run the new sketch loss.
+        Didn't seem to change too much. It's working properly I guess. Have to do the second part.
+
+    2. Run the tri
+        The three possible results were separated into basically three types of background color. This shows that first
+        the method works to some extent, second the background is there part where the information is lacking the most.
+        When the background is gray (vs dark or bright), the characters tend to have the most skin color...
+        Have to do the second part.
+
+    3. Run the second half of the shift.
+        It was disappointing to see that adding random shifts did not improve the result on sketch combined dataset.
+        It also did not work so well on the new sketches dataset. I guess adding random shift made the task harder???
+        Or maybe I have to change the settings a little. I'm not sure yet why it had failed.
+        Interestingly the result on old sketch was a little better than both of the outputs above. The coloring looked
+        wierd but it did not have too many glitches.
+        The failure in training may also be caused by me changing the batch size and the lr. ( from 16 to 4 and from
+        0.0008 to 0.0002)
 

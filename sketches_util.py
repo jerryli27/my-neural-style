@@ -14,9 +14,15 @@ from scipy.stats import threshold
 import colorful_img_network_util
 from general_util import *
 
+neiborhood8 = np.array([[1, 1, 1],
+                            [1, 1, 1],
+                            [1, 1, 1]],
+                            np.uint8)
 
 def image_to_sketch(img):
     """
+    Ideas are from http://qiita.com/khsk/items/6cf4bae0166e4b12b942 and
+    http://qiita.com/taizan/items/cf77fd37ec3a0bef5d9d
     :param image: An image represented in numpy array with shape (height, width, 3) or (batch, height, width, 3)
     :return: A sketch of the image with shape (height, width) or (batch, height, width)
     """
@@ -33,13 +39,17 @@ def image_to_sketch(img):
     elif len(img.shape) == 3:
         assert img.dtype == np.float32  # Otherwise the conversion does not work properly.
 
-        kernel = np.ones((5, 5), np.uint8)
-        img_dilation = cv2.dilate(img, kernel, iterations=1)
+        # kernel = np.ones((5, 5), np.uint8)
+        # img_dilation = cv2.dilate(img, kernel, iterations=1)
+        # img_diff_dilation = np.abs(np.subtract(img, img_dilation))
+        # img_diff_dilation_gray = cv2.cvtColor(img_diff_dilation, cv2.COLOR_RGB2GRAY)
 
-        img_diff_dilation = np.abs(np.subtract(img, img_dilation))
-        img_diff_dilation_gray = cv2.cvtColor(img_diff_dilation, cv2.COLOR_RGB2GRAY)
+        img_dilate = cv2.dilate(img, neiborhood8, iterations=1)
+        img_diff = cv2.absdiff(img, img_dilate)
+        img_diff_dilation_gray = cv2.cvtColor(img_diff, cv2.COLOR_RGB2GRAY)
 
         img_diff_dilation_gray_thresholded = threshold(img_diff_dilation_gray,threshmin=SKETCH_LOWEST_BRIGHTNESS)
+        # img_diff_dilation_gray_thresholded = img_diff_dilation_gray_thresholded.astype(np.bool).astype(np.float32) * 255
         # Usually Sketches are represented by dark lines on white background, so I need to invert.
         img_diff_dilation_gray_inverted = 255-img_diff_dilation_gray_thresholded
 
