@@ -3655,3 +3655,371 @@ Plan:
         The failure in training may also be caused by me changing the batch size and the lr. ( from 16 to 4 and from
         0.0008 to 0.0002)
 
+2017/03/22
+    I checked the result for the two experiments, which ran for around 40 hours. The results are pretty good.
+    The change in sketch generator improved things a little, but that could also be due to extra training. The result
+    was still not yet comparable to using the old sketch, but the old sketch cannot work with the real sketches whereas
+    the new sketch can sometimes work with the old one.
+    The wierd glitch still appears from time to time... I haven't figured out why is that yet, because I've never seen
+    them during training. But I'll look into that...
+    The tri experiment was less successful. The three different modes basically was mainly working on the background,
+    creating three different types of background for each image. From time to time the color of other objects changes
+    as well, like the color of hair etc, but overall it just looked less natural than the other one, and there are a
+    lot more glitches. One curious observation is that the glitches can appear on say only one to two out of the three
+    outputs.
+
+    I combined the tri and the sketch, running the tri with 16 outputs and see what happens. If the change is still
+    limited to background, then I'm pretty disappointed.
+    But yeah the sketch version worked pretty well. The only disappointments are the glitches and that it doesn't work
+    so well most of the time. There are few that are particularly well, but other than that, most of it does not seem
+    too impressive. TODO: I need to improve the overall quality by a little bit more...
+    TODO: I also need to think about how to use the clustered data, and or how to cluster based on style, not tags.
+    for style I think adding more layers might help.
+    I'm hesitant to make machine predict human ratings because it just has too many factors...
+
+2017/03/22
+    Shit found a bug... I was still running output = 3... Well at least I can compare the results between tri and tri
+    with new sketch loss I guess.
+    So I compared among tri, tri+sketch, and sketch. Among the three, the most successful one seems to be tri+sketch in
+    terms of l1 loss. The tri by itself was good as well, but it didn't train for enough rounds for some reason. Let me
+    compare their actual outputs without hint.
+
+    I'm going to do two experiments... Because now I don't know what affected the output's color. It could be either
+    decreasing hint probability, or it could be increasing the gan weight, or it could be both.
+    So in one experiment, I'll try to decrease the hint probability but leave everything else the same. In another
+    I will try to increase the gan weight but keep the hint probability.
+    I also need to run with the original setting with tri and sketch combined version, but that can be pushed till
+    later.
+
+    In the mean time, I need to work on clustering based on style, and I also need to look into chainer code. I
+    was uncertain whether their discriminator has the same structure as mine...
+
+    Ok, by comparing the result from the three different settings, I now know that it is the gan weight that made the
+    output colorful. Furthermore, it seems to be actually worse when I take away the hint. After careful comparison, it
+    became hard to tell which one is actually better. The one without hint seems more colorful, but sometimes less
+    realistic, while the one with hint seems less colorful but sometimes more realistic. It's hard to tell which one is
+    more realisitic than the other.
+
+    I'll train the num_output = 16 remotely while I train the network with a slightly lower gan weight locally (without
+    the tri)
+
+2017/03/23
+    I summarized what I've done so far. I can't believe that I spent soo much time on this project but accomplished so
+    little. It is hard working on project like this, where there are just so many possibilities where things can go
+    wrong.
+
+    Plan: make a network that works on both old and new sketch (run mix, check pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix)
+    TODO: find the right training parameters where the color is just enough to be pleasing but not too much so that
+    it looks unnatural. (pixiv_new_128_w_hint_lab_wgan_larger_sketch_w_10_cont_gan_1_l1_50)
+    Plan: get rid of the manga in the training set. (Done, but not perfect, 10% are manga.)
+    Plan: If I have time, test the multiple possible outputs. pixiv_new_128_w_hint_lab_wgan_larger_tri_sketch_sketch_w_10_o_16_no_hint
+    TODO: check result of pixiv_new_128_w_hint_lab_wgan_larger_sketch_w_10_cont_gan_3
+
+2017/03/24
+    Both the "mix" experiment and the "l1_50" experiment were successful. In the mix experiment, although it did not
+    produce too much color, it successfully worked on the sketch_combined dataset, which consists of several different
+    styles of sketches. In the l1_50 experiment, the coloring looked a little bit more realistic than the gan_5 version.
+    It is definitely more realistic than the gan_3 version trained for like 6 hours.
+    Maybe I can increase the l1 weight by a little, like to 75 or something.
+    I'll try to run the second half of the l1_50 experiment with l1 weight 75.
+    The multiple possible output experiment was a failure. After 12 hours of training, it is still unable to produce
+    outputs that had enough color. The difference was still mainly in the background. I think after reading the paper
+    on real-time style transfer of any style, I am lacking a fundamental understanding of why instance normalization
+    works, and it is not strange that the method did not work in the current setting. TODO: re-read that paper. It is
+    pretty inspiring to see someone of my age publishing good papers like this.
+
+    After reading the real-time style transfer paper I realized that I was not doing instance norm for the "tri"
+    experiment. I was using batch norm. You never realize this kind of thing until you re-read the papers and examine
+    your code again.
+    What if we use instance norm instead of batch norm? (Not just in tri but in other programs as well) In theory the
+    instance norm will learn to normalize the "style" of each input sketch, instead of normalizing all input sketches.
+    And in theory this sounds like it will improve things.
+
+    I fixed the test settings in sketch_mix file. Maybe that was causing the glitches, because I did not set the
+    hint_prob to 0. I changed it so that when user specifies a user_hint, the hint prob is 1, otherwise it is 0.
+
+    By the way the l1 weight = 75 is working pretty well for the old sketches, but not for the new ones (comparatively).
+    The old one sometimes generate almost perfect results. i want to find more sketches to test with.
+    It failed on real sketches... Why... Is that because I generated the sketches after resize?... I don't know...
+    It's also not doing so well on the old sketches generated from real colored images
+
+    And there were the glitches again... why. Maybe that is because the gpu ran out of memory??? Yeah that seems to be
+    the cause. It occurs randomly whenever the gpu runs out of memory.
+
+    NOTE: currently the mix condition does sketch g                 eneration BEFORE the image is resized. That was the reason why it
+    did not work on the full sized version of the colored images I collected! Could that be the reason why it did not
+    work on the resized real sketches? That seems like a plausible explaination. The sketches would be way too
+    complicated for sketches generated from a 128x128 image.... Unless I train it with sketches generated on full sized
+    images and then resized to 128x128. Ah... fuck.
+    I was right. After using the old sketch algorithm on the sketches I've collected (I know it sounds
+    counter-intuitive, why would anyone generate sketch based on sketches), it got a little better. And after I use the
+    resized the collected sketches first (outside of the algorithm), it got even better. Now that's pretty wierd. Why
+    would resizing inside the algorithm versus outside make a difference. TODO: look into this.
+    That's all because I did resizing before I generate the sketches!... Or is that really the cause?
+
+
+    I should try to write a program that takes unresize images and train on old sketches.
+    Modified the current program (sketch_mix version) so that the flag single_input combined with train mode and
+    mix_prob = 1 can take any image as input, first convert it to sketch using dilation, then train on the cropped
+    version.
+    I also modified the decode_image function so that now it can decode using the extension from the file name
+    instead. I'm still a little bit worried about corrupted image files stopping the whole training process though.
+    I don't want to add a big try clause outside, because if I do that, then I am having the risk of not discovering
+    some bug that affects the training.
+
+    I would imagine that sketch before resize would perform worse than sketch after resize, because all the training
+    images are first resized, then the old sketches extraction method was applied with 0.5 prob. (But curiously, as I
+    think of it, all the training data for the new sketch generator was trained on resized sketch images -- equivalent
+    to first generate sketch then resize both sketch and colored. so the two sketches are generated in a different
+    order, the newer one sketch first, and the older one resize first).
+    And my experiment proved that. Generating the old sketch after resizing had way better results than generating
+    the sketch before resizing. So, I guess in order to work with real world sketches where it is equivalent to
+    first generate sketch then resize (which results in more details in the sketch generated), I have to have
+    the training data configured accordingly.
+
+2017/03/25
+    Refactored the preprocessing code. It should be more efficient now. I also wrote the test cases for the bw
+    detection code. I am going to take a look at the code overall to see if there's any other bugs/room for improvement.
+
+    What happens if the current sketch (generated before resizing) does not work?
+    In that case, I'll look into why exactly does resizing change things that much. Specifically why does resizing
+    first to 128 then inside the program to a square different from just resizing from the original image directly to
+    a square. Plan: I should look into this no matter what.
+
+    Nah I dont think it is working on the current dataset... Maybe I can try to use the current sketch extractor on the
+    full sized image? I think it will fail, but who knows.
+    Plan:support new sketch with single_input option. -- I stopped training the old sketch's second half (l1=75) and
+    instead started to train the new sketch with single input.  I did that because I don't think the old sketch result
+    was good enough. The old sketch was way too messy. But wait then the sketch is generated after resize...
+    So I wrote a program that can take arbitrary image shape, generate the sketch, and then resize it. But it turns out
+    that some images are just too large to handle, so I have to resize them to like 1024 x 1024 or something before I
+    can generate the sketches. So I thought it's even better to just generate a bunch of 512x512 sketches and use the
+    old pipeline. That's easier. But I'm still not sure whether the sketch generator will extend to 512x512 easily.
+    So far it seems like it does...
+
+    The problem with the previous experiment was that the sketches were way too detailed for a 128x128 image. Maybe I
+    should start with 512x512, resize it to 128x128, then train on that? Is the bug really caused by real sketches being
+    too detailed after resizing? ... Or is it because I was training on datasets that was passed through the face
+    detector, which limits the variety of the dataset?. Plan: really think about this before you proceed.
+
+2017/03/26
+    After looking back on the test results, I think actually adding "mix" where both old and new sketches are used
+    might not be a good thing in terms of the quality of the result on real sketches. There was still a trade off
+    between vivid color and being realistic, but I think no matter how colorful or not-colorful it is, it will
+    always color things wrong when it don't know what do color. For example, if it's sure something is human skin,
+    then the color will look fine no matter how vivid it is. But if it is not sure, then the non-vivid version will
+    just leave the area grayish while the vivid version will color it either randomly or according to the preference
+    color of the network.
+
+    The latest result is I think the best one I've seen so far.
+
+    I think the reason why resizing in python and resizing using "convert" command is different is because they use
+    different algorithms for resizing. The convert tool results in outputs that are a little bit more blurry than the
+    resizing function in the program. As to why that results in results that looked a little bit better, I don't know.
+    I guess that is because the training sketches are blurry as well so the network learned to work with that kind of
+    data.
+    *A little bit blurry sketches give better result.
+    Isn't it kind of bad that such things can yield vastly different results? Now what about the brightness/darkness of
+    the sketches?.... TODO: test that
+
+    I tried using crop instead of changing height width ratio and the result was much better. So height width ratio
+    is important... The convolutional network will probably take much more effort to remember the same object with
+    different height width ratio.
+
+    TODO: run the command to turn of hint during training to see the effect of that.
+    TODO: add weight_decay by switching to slim. (MAYBE with weight decay I do not need to do clipping. I've seen such
+    results in some blog: http://musyoku.github.io/2017/02/06/Wasserstein-GAN/)
+    I;ve found a bug (maybe) in the slim code. The conv2d_tranpose's bias's trainable argument is not set. So i
+    made two generator networks, one for sketch and one for the actual output. (I was close to making another bug but
+    discovered it 30 mintues after training started. I forgot to modify the discriminator as well.)
+
+    The slim version with only weight decay did not work. The discriminator loss just kept increasing. I added back the
+    clip but increased the clip value. we'll see if the clip together with weight decay will work.
+    On the other hand, setting hint prob to 0 and using l1 loss = 75 did not work. It only colored skins and faces.
+    I'm trying to set the l1 loss to 50 and compare that with the same l1 loss weight but with hint turned on.
+    TODO: examine code. double check everything.
+
+2017/03/27
+    I'll call the current result "working" to some extent. The results are good enough, although it is having a
+    hard time coloring the background. The hint is not working, but hey the result looks pretty good. I'll turn on
+    the hint again and see what happens. If everything goes well, then all the better. If not, then I have to change
+    the code so that it only trains the gan when there is no hint.
+
+    Here's a record of the list of command I used to train. It took quite a few steps and I was not sure whether they
+    are all necessary, but I think it should be sucessful to reproduce the same result on 512x512 data.
+
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.26 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75 --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.6 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --l1_weight=75.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75_no_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=-1 --l1_weight=75.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x2_l1_50_no_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=-1 --l1_weight=50.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75_no_hint
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x3_l1_40_no_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=-1 --l1_weight=40.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x2_l1_50_no_hint
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x4_l1_40_with_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=0.5 --l1_weight=40.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x3_l1_40_no_hint
+
+    I guess now is time for me to:
+    1. train on 512x512
+    2. clean up the code
+    3. support input of any dimension for testing
+    4. Find solution for getting the background color look nicer.
+    5. Think about future directions: like whether I can have multiple styles, whether I can also somehow encode the
+    shadowing information, and what should I do with the dataset I currently have.
+
+    Plan： compare training with and without hint. Then decide whether I should take the GAN off for ones with hint.
+    After comparing the two results, I think without hint is definitely better (of course when hint is not present).
+    So I'll go ahead and write the program for taking GAN off when hint is on.
+    The results of taking GAN off when hint is onwas not so satisfying. It did seem to do better by a little on
+    the real sketches but it did worse on the test set.
+
+    Found a bug in preprocessing. It was caused by using the same variable name twice. Had to resize it again...
+
+    I looked at paintschainer again. I am now sure that it uses some kind of trick or database that makes the coloring
+    biased to the skin color. So even if it goes wrong, the result did not too bad. What I don't understand is why it
+    just worked on the real sketches, even though its training data did not look anything like the real sketches.
+
+2017/03/28
+    The new sketch with hint was not coloring things so well... If I use the old sketch, then it just doesn't work on
+    real sketches at all.
+    (Preprocessing resizing works really bad on sketches by the way. The lines become discontinued after resizing by
+    preprocessing.py)
+    I know the current model works pretty well on old sketches. It works decently well when trained using new sketches
+    on real sketch without hint. Is there any way to supply extra information and turn the real sketches into the
+    old sketches (created by dilation), with all the information on shade and stuff?
+    I can use a neural net to turn one into another I guess.
+    I tried that. Apparently the discriminator is not good enough to tell the difference between the new sketch and
+    the old one. The optimal result for l1 loss is to have a slightly darker background - also a sign of failing to
+    recognize anything meaningful in the data provided.
+    In the mean time I'm also trying to increase the depth of the network.
+    I thought I was so close to succeeding.
+
+    I don't know why Taizan successfully trained with inputs completely different from real sketch and still got
+    good results.
+
+
+    PS. Think about writing a software that can speak like a seiyuu. There are some training data (sort of), there
+    are methods to realize my plan, and there will be interest in that. I thought about this when I was reading the
+    manga and I thought it would be easier to understand if it was read out loud for me.
+    After researching into that a little, I found that wavenet result was not really real yet and baidu's deep voice
+    was not published yet (understandable, because they did a lot of hardware level optimization.)
+
+    Maybe I can try the newest rnn for image recognition.
+
+2017/03/29
+    I tried to run the mix again with larger network. Did not work. The training seemed smoother, but without hint
+    result on real sketches are just a mess.
+    What I learned from experiments in the past two days:
+    1. Only using old sketch is guaranteed to fail on real sketches
+    2. Using hint seems to be incompatible with GAN, what I mean by that is it seems like you can't train the two on
+    the same network. (Which is a little bit different from what taizan was using, he was using the same network with
+    shared parameters for both with and without hint, but he did mention the incompatibility between the two.).
+
+    I'm trying to turn off both hint and mix and see what happens.
+
+    During the training, I saw the discrim loss spiked a few times, and each time that happens, the output became much
+    more coloful until the loss falls back. So I thought it might be super easy for the generator to get colorful
+    results... It usually takes only 5~20 minutes for the discrim loss to spike from min to like 0.5 or 0.2 or
+    something. So maybe... Well I don't know why my tri experiment did not work yet (maybe that was because I did not
+    use instance norm correctly?). Is there any way I can avoid falling into the statiscal average solution?
+    I can avoid that by not using l1 loss. But then the discriminator became too weak and too easily exploited by the
+    generator. I need to research what to do in that case, when the generator crushes the discriminator.
+    Tips: https://github.com/soumith/ganhacks Some of them looks like voodo.
+    Hum I haven't tried adding random noise as part of the input right? I could try that.
+    Also try switching to leaky relu instead of relu
+    Add back the dropout: according to the pix2pix paper it functions as a noise vector, but it also admits that how to
+    capture the full spetrum of possibilities is an open question.
+    (https://arxiv.org/pdf/1611.07004v1.pdf)
+
+    By the way something completely unrelated: I read this blog http://distill.pub/2017/research-debt/ and it's quite
+    interesting about the price to pay to explain things.
+
+    It is interesting to see how the current experiment setting makes the GAN loss oscillate. It's like the Generator
+    is trying to break free but then lose in the competition with discriminator and l1 loss. It happens after some
+    training for both freshly trained model and model loaded from other checkpoints.
+
+    The problem is just how to let the generator work without crushing the discriminator too much that the coloring
+    looks unnatural. I'll try two things. One is to use a larger batch size coupled with smaller learning rate and
+    slightly smaller l1 weight to get the discriminator loss slowly decreasing.
+    The other thing I want to try is to take off the l1 weight entirely, but from past experiences I think the
+    generator might just exploit the discriminator and generate images with artifacts. Nah that's probably a bad idea.
+    lol
+
+    The new sketch sort of works on some of the real sketches but it can only do skin color. I'm finding a way to
+    train the model so that the discriminator loss can stably increase (meaning that the generator is doing a better
+    job at generating realistic images and fooling the discriminator). So far I failed to control that.
+
+    Some random thoughts:
+
+        I think the best repo might be this one
+        https://github.com/endernewton/tf-faster-rcnn
+
+        The training data requires images as well as labeling 20 categories of objects as well as providing the bounding boxes in each image. In total there are 9,963 images, containing 24,640 annotated objects. It would be very time consuming to do the same thing for anime. The best I can hope for is to use some video analysis technique to extract the different layers in anime videos.
+
+        Object tracking things:
+        An overview of algorithms used in opencv:
+        https://www.learnopencv.com/object-tracking-using-opencv-cpp-python/
+        It is also available in aftereffect. It seems to be pretty mature technology, at least for real life images.
+
+        I also looked into using 3d simulators to train neural nets. Currently there has been a lack of effort being put in that area. I saw one paper using data extracted from gta5 by gathering info in graphic cards. They've shown that by doing that they can train a successful car detector for the real world. But a lot has to be done if I want some well annotated 3d simulated objects for object detection training... There is just no framework currently that supports the task. I thought it would be as easy as changing the texture of the model but I didn't get too far in that direction because I don't know too much about 3d softwares. I don't want to spend too much time gathering raw data again... So let's stick with what I have now.
+
+        I thought of image captioning, so I looked into the "Show and tell" model's corresponding github code. It mentioned that the whole training will take a month on a single gpu, that's a no... The biggest problem I have with this plan is two-fold. One is I do not have a pretrained classifier for anime images. Two is I do not have really "image descriptions" but rather comments on the image. The comment is very likely to be not so related to the details of the image at all. It might just say "oh it's beautiful" or something along that line.
+
+        So it might be better for me to predict ratings. I don't know how good that will turn out... I think the ratings are related to too many things and not just the image. But it seems to be a more feasible task than generating comments for pixiv images...
+        So what should be the structure? Just some simple deconv layers followed by fc layers and output a single number at the end? ... I don't think that kind of naive approach will work, unless I initialize the network with some kind of pretrained feature extractor. Even then it is likely that the network will just output the statistical average score. A better approach would be to separate the scores into buckets, and let the program predict which score bucket does the image belong to. That way it can share the same code as predicting which cluster does the images' tag belong to.
+
+
+        Another thing I can do is: I can extract the sketch for all images, and try to find all groups of images that are near duplicates of each other. That would be quite time consuming as I think of it... (remember my summer internship project). And the result would just be the images that has been repainted by others... Probably not worth the time.
+
+        What if I can cluster images based on their color histograms? Oh that sounds like a better plan. If I can cluster them based on their color patterns it would be super helpful for my sketch to color project. Ah and the distance function between two color distributions would be something like earth moving distance or kl distance or something.
+        I can look into that. Automatic color pallete extraction or just google "cluster images based on color scheme"
+
+        Oh then i can use condition gan to provide that extra coloring information to the network!
+
+        I tried the object tracking thing. It will not work on anime. There are just too many switches between scenes
+        that appears to be evident to human but not at all to a program. It will only abe able to track things over
+        several frames. Tracking does not work on anime...
+
+
+2017/03/30
+    I think the current setting is promising.
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix_cond_refactored_dilation_deeper.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_refactored_dilation_deeper_contx2_no_h_no_m_no_l1_75 --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 32 --lr 0.0008 --gpu_percentage 0.7 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --l1_weight=90 --hint_prob=-1 --mix_prob=-1 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_refactored_dilation_deeper_cont_no_h_no_m
+
+    I don't think training from a checkpoint is necessary because the learning curve will eventually look the same
+    regardless of your starting point.
+    I think I should keep training because the learning curve has not plateaued yet. I think it is getting better.
+    I am hopeful. Even if I have to sacrifice the hint, I shall make the no-hint part work. It is not yet as colorful
+    as the previous versions, (because I did not tune up the gan weight, but if I want to, I know how.) but it seems
+    to be getting better. Plus this is the best version I've seen so far without any glithches. It is resistant to
+    all kinds of sketch inputs.
+
+    Also in the future version the training data should probably not be resized. I should only use crop...
+    I don't know how important is keeping the height width ratio. The reason I chose not to crop it in the past is
+    because it will crop away say part of the face or something that will make it hard to tell what it is. The reason
+    I am supporting it now is I saw PaintsChainer seems to use crop.
+
+    Training more with hint and mix off doesn't seem to help too much although it seems like from l1 loss it is having
+    a steady decrease. The color actually got less overtime. I tried taking off l1 loss and increased the sketch loss
+    from 10 to 50 briefly but that seemed to generate greenish lines around the sketch, probably the network learned to
+    minimize the sketch loss that way. Now I'm trying to only take off the l1 loss. That is actually not as bad as I
+    thought it would be. The color looks wierd but it's not having serious problems like artifacts or overflowing or
+    things like that. I'll try to train discriminator more by setting a big chance where the gen loss is set to 0 so it
+    cannot train the generator.
+
+    TODO: think about how to cluster palatte. It's not as simple as I thought it would be.
+    TODO: I really like the result when the discriminator is half on the way of being crushed. (so loss around -0.6
+    when before it was -2.5) If there is some way to prove that at that point the result is what I wanted,
+    then I can find a way to hold it there.
+    Yeah it seems to get bad around -0.1, or maybe it's just random chance, cuz I saw some good ones again later.
+
+2017/03/31
+    I trained the network with l1 weight = 10 for a whole night. The result is ok, but it could be more colorful.
+    I noticed that in the training set output, the network was colorful at one point (420k) but slowly lost its charm
+    afterwards, when the l1 weight dominated again and the discriminator was not able to discover the difference.
+    The output is still not robust, the coloring changes a lot when some processing is done on the input.
+    Also I noticed that the network is overfitting the training data. When I did the experiment where I set the l1
+    weight to 0, the output of training data was awesome but test data was a mess.
+    I want to try to train it briefly on the Pixiv_year dataset.
+
+    # TODO: the preprocessing resize code has bug. The resize does not work very well
+
+    Two projects using the color palatte data:
+    one is to modify the current code to take in additional palatte data for each input image. It will be fed in as
+    additional layers
+    Another is to cluster the palatte data (but how to cluster palatte?)
