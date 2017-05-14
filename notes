@@ -4023,3 +4023,425 @@ Plan:
     one is to modify the current code to take in additional palatte data for each input image. It will be fed in as
     additional layers
     Another is to cluster the palatte data (but how to cluster palatte?)
+
+    I have another thought, since the color palette should not affect the semantic understanding of the sketch,
+    why don't I append it at the end of the conv layers instead of appending it to the input?
+
+    It's probably too late, but I realized that method leading to more color does not lead to natural looking color.
+
+2017/04/01
+    The best result I had was: pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_cont_x4_l1_40_with_hint
+    the second best was either pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75 or
+    pixiv_new_128_w_hint_lab_wgan_larger_cont_no_hint_gan_5
+
+    A common characteristic of them was: the relative GAN weight was increased to produce more color, and the
+    improvement came only after the jump in GAN loss.
+    Hint can be used. It is also ok to mix with sketches from other source. Acutally I think it is better to use
+    hint and use sketches from other source. It seems to be so far impossible to control the jump in GAN loss, and
+    it is not guaranteed that with enough training the discriminator will reach the optimal solution, or to even
+    tell apart real images from some shitty looking outputs.
+    Larger batch size seems to increase training speed in terms of the number of images it goes through per second, but
+    I cannot increase the learning rate because it will make the GAN loss saturate too fast. (Even if I decrease the
+    GAN weight, which only affects generator training. So it might be that the discriminator failed to train when I
+    increase the learning rate.) The effect of switching from nn-backed sketch loss to simple dilation sketch loss
+    was unknown, since there was no direct comparison between the two. The result of having a deeper network was also
+    unknown. Conditioning the GAN on whether hint was used seemed to make the images without hint a little better.
+
+    So here are my tasks:
+    1. Test the effect of using the dilation sketch loss. (Completed. Worse.)
+    2. Test the effect of using a deeper network, with dilation sketch loss. (Completed. Worse.)
+        So far it looks like with the same training time (5.5h), the deeper network result was worse, with speed
+        decrease at around 20%.
+    3. Generate another kind of "sketch". (Failed)
+        There doesn't seem to be other very satisfying colored-to-sketch methods other than what I currently have
+        and style transfer. I am worried that style transfer on anime images will not work, because the network
+        was not trained for anime images, but as a second thought it works with paintings, so it might work with
+        anime images as well.
+    4. Play with palette model. It's too slow now.
+    5. Test increasing the overall learning rate but keep the learning rate of discriminator synced with that of
+    the generator. I think the discriminator might be unstable.
+    6. Fix the preprocessor.
+    7. Other future experiments, like palette clustering, like incenption net feature vector extraction.
+    8. I realized that the tri experiment, maybe I should not co-relate the weights of the generator networks, but
+    first I should try to switch to instance norm (real instance norm). Then I should try to disentangle the
+    weights and the rest of the training should be the same. I believe it should work. There is no reason why three
+    separate networks cannot learn three separate patterns. First test it on the sanity check to see if it can learn
+    three completely different patterns, not just in the background or the overall color.
+    (Because the overall color change can be learnt simply by changing the last layer's scale, so that it
+    can become darker/brighter etc. That is too easy.) (Failure, no improvement over previous ver)
+
+    Comparing new sketch loss vs old sketch loss vs old sketch loss + deeper net.
+    With same amount of iterations, new sketch loss had the lowest l1 loss, followed by old sketch loss with difference
+    0.1. The difference bewteen deeper net and no deeper net is 0.6.
+    Maybe simply with more training, the network will get better.
+    But for now I want to test how the previous setting work on old sketch loss (with or without + deeper net)
+
+2017/04/02
+    The first two tasks are done. The method works but tends to overfit and produce artifacts . Deeper network
+    looks a little bit worse than the non-deep version and it has lots of artifacts. I would actually call it a
+    failed training because it seems to ovefit the training data too much without generalizing to other images.
+    It is interesting that the discriminator never gets crushed during the training. It's loss is slowly decreasing.
+    This is unexpected, as I thought the discriminator now has to do more work telling apart all sorts of possible
+    outputs. But it seems that it does better in that environment. Both of them did worse than the
+    pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_cont_x4_l1_40_with_hint
+    This might be caused by 1. difference in training method. 2. Difference in the sketch loss I used. Maybe dilation
+    sketch loss is not good enough.
+
+    What are the artifacts..... I still don't get why they always appears in batches. There should be something that I
+    should have turned off for test but did not that is causing the problems. The artifacts appear on the same
+    image if I repeat the run, so it's not entirely random. Yeah the artifacts are probably caused by overfitting.
+
+
+    Trying to train directly from l1 weight 100 checkpoint to l1 weight 40 checkpoint and compare that with
+    the 4 step training... (PS. both nn sketch loss and dilation sketch loss stopped at around 160k iterations for
+    their first stage of training. I compared the two but there does not seem to be too much of a difference between
+    the two sketch loss. )
+
+    I am also trying to create new sketches using style transfer. nah it's not gonna work... after 10k iterations
+    the result was barely recognizable.
+    I downloaded the arbitrary style transfer repo. The result was amazingly good for normal style transfer, with
+    super fast speed and decent results. Unfortunately, the style transfer does not work on anime images, as expected.
+    I tried a few sketches and then I realized that it was the content iamge that was affecting the result mostly. If
+    the network cannot recognize an eye, it will not be able to retain the sketch when it does style transfer.
+    So I cannot generate more training sketches from style transfer. It's a shame. The arbitrary style transfer
+    works so well though. I tried the reverse--using sketches as content and colored as styles--failed of course.
+
+    Modified the tri code so that now all generator weights are multiplied by the one hot vector. Now I'm worried that
+    after 500 epochs on the sanity check, it still cannot learn the output perfectly and the loss plateaued. I
+    think that was caused by the inherit ambiguity in the 15 possible outputs. The outputs can't cover them all.
+    But one thing that worries me more is the inherent flaw in the design. Let's say network A generates red hair,
+    and network B generates blonde ones. Now I have a character with blonde hair and green eyes and another character
+    with blonde hair and red eyes. How can the model learn them both? Now let's say we have 100 pairs of possible
+    hair color - eye color. How would the 3 possible outcomes using nearest neighbor capture all of them? The
+    answer is it can't. It would be better off than just one possible outcome of course but at the cost
+    of triple training time. But how better off would it be? (Consider 1 million possible output color
+    combinations instead of 100)
+
+2017/04/03
+    The training was slow. Not only does it have to compute 2 times more than the standard version, each one of the
+    three outputs get to train 1/3 of the time, so that makes training 9 times slower. l1 loss decreased to 0.14 at
+    30k, which is usually the value achieved at 10k for the normal version. There should be an easier way than this.
+    Some way to make it share the same weights but have different coloring.
+    So far the output is just the same as previous versions of the tri experiment -- different overall color but
+    the coloring is uniform. that is if the output is dark, it will be dark for every output. I'll call this version
+    a failure.
+
+    I was working on the palette experiment and I found that the palette extraction code can be used to detect
+    mono-colored images! I didn't expect that because I thought it would always output x colors.
+
+    The result was good on not-real sketches. For both the old sketch and the new sketch, it works really well,
+    almost as good as using hints. The problem is for some reason it's not working on real sketches. It's just
+    not recognizing the semantic meaning behind these real sketches. The non-palette versions definitely is
+    capable of recognizing some of them. I don't know why in this version it can't. Maybe that is because I
+    took away the concatenation of the last and second to last conv layer? I'll let it train for a night.
+
+    Reading the CycleGan paper by Alexei (Alyosha) Efros. He seems to be pretty well known in the field that
+    I'm currently doing. He's the one behind pix2pix and colorful image colorization and
+    "Generative Visual Manipulation on the Natural Image Manifold" He has been doing texture transfer since 2000s.
+
+2017/04/04
+    After 15 hours of training, the palette network was getting better on test sets, but not on real sketches.
+    It seems like maybe it is exploiting the details in generated sketches that does not exist in real sketches.
+
+    TODO: replace batch norm with instance norm
+    TODO: try to generate more sketches if possible. (Using the trained pix2pix network)
+
+2017/04/05
+    I compared the result of training with mix 0 and mix 1 for a whole night. The l1 loss of mix 1 is lower, expectedly.
+    The result of mix 0 looks a little bit better because it has less artifacts - or that it is less colorful than mix
+    1. Not that that is a good thing, because the coloring of mix 1 is pretty much all wrong. It colors the face red
+    for some reason.
+    BTW the training speed of mix 1 is 2.5 times slower than mix 0.
+
+2017/04/05
+    The instance norm version is less colorful than the previous version for some reason... TODO: review the
+    difference between batch and instance norm mentioned in the arbitrary style transfer paper.
+
+    i realized why there was artifacts!!!!! It was because of the batch norm! I remember in some paper it says that
+    when in testing, the batch norm statistics is replaced by an estimate of the training set instead of calculating
+    the stats from the test data. But I didn't do that in my network! Oh... I can prove that by changing
+    batch size to one and run the test again. It should not have artifacts and even if it does, that should not
+    affect other images in the same batch.
+
+    I also found out that during the last two training for the instance norm version, I did not set the l1 weight
+    although I thought I did. That was why the output looked so bland. I'll try without mix and train with l1 weight
+    equals 40 again. Yeah that was it. Plan: I need to read the batch norm and instance norm paper again.
+    I also need to check other git repos to see what others did.
+
+    I didn't see any artifacts in the instance norm version. The problem with instance norm is that
+    it is doing ok on with hint version but without hint it's doing pretty bad. Maybe that has to do with the
+    instance norm -- Although it does not normalize the input, it normalizes the first layer after the input on
+    the height and width direction. (DOUBLE check)
+    Yeah I never knew that batch norm works that way. * Master the basics.
+
+    In the first paper that proposes instance norm by Ulyanov, it says " Intuitively,
+    the normalization process allows to remove instance-specific contrast information from the content
+    image, which simplifies generation.". But in subsequent paper by Huang, it points out that the normalization
+    happens in the feature space instead of color space, so it should be normalizing the features in some way instead
+    of the contrast of the image.
+    So I should modify the batch norm test step. I need to calculate the statistics for each layer.
+    Or not... The tensorflow's tf.contrib.layers.batch_norm does that for me when I set is_training to True/False.
+
+    Continue training pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_refactored_ins_contx3_l1_40_no_mix if I have
+    time. I want to retrain batch norm version first.
+
+    One small note: I found that the test set's images actually appeared in the training set for some reason, at least
+    one of them did.
+
+    I was worried to find that the sanity check failed.
+    I think that is because the scale is different for training and test. I could do random resizing in addition
+    to random cropping...
+    But then i found out by re-enabling flipping and cropping for testing that the output still looks less colorful
+    for some reason. I found that it is because of the is_training setting. (by manually setting that to True).
+    I think it is fine. I've seen people say that it takes a while for batch norm to warm up. I will test that
+    hypothesis by training sanity check for a long time. After training for 20000 epochs, it proved my hypothesis.
+
+    And the training got 3 times faster for some reason after I switched to slim. That's wierd...
+    It's not because of slim. I finally figured out how to do batch norm during test time with some hacky way.
+    I'm trying dilation sketch input and sketch loss. The output was ok after I train it for 20 rounds, but still
+    not good enough sometimes. I was doubting that the generated new sketches were not good enough and that was
+    affecting the results in some way.
+    I don't know why the training is three times faster for pix2pix_w_hint_lab_wgan_larger_sketch_mix_cond_refactored_bn
+    It's wierd. There is no difference between them apart from the sketch generator for sketch loss.
+
+    I need to implement validation during training. That is I use a dataset outside the training set, ideally
+    real sketches I collected along with the colored version. After x iterations, it evaluate the validation set,
+    calculate the losses, and output the results. It should make it clearer how training progresses. But it's not
+    so crucial. Do it if I have time.
+
+    TODO: figure out why the previous code was significantly faster than this version...
+    No not only it's the previous code. I found that the current code is also pretty fast -- if you run it as a
+    second instance... (so start one instance and the second is 2 times faster than the first one)
+
+04/07
+    The result was still not so good for the real sketches. Maybe I can try to generate another type of sketches
+    by training a little bit less so that the background is still in the sketch.
+    Or maybe I can set a threshold, and any pixel above the threshold will become 0.
+    Actually, why do I think that it's the fault of the input sketch? Or that it is because the input sketch does not
+    match the real sketches? I never tested changing the intensity of the sketch... So maybe I should.
+    TODO: make a dataset where the intensity of the input sketch changes over 5 levels and see what happens.
+
+    I tried to retrain two sketch generators. Using the sketches they generated, the results looks good. But
+    if I use the real sketches, the result was aweful. So I'm thinking maybe there is a way to turn one type of
+    sketch into another...
+
+    PS. I can't directly use the 128x128 sketch generator on 512x512. Too many artifacts.
+    Plan: after sketch conversion training is done, convert the sketches, and use them as the input.
+    sketch converting worked... lol. The output was a little bit homogenous but it's better than I've seen in the
+    past. it always produces red eyes and blonde hair, even with previously trained model. It improves stability.
+    The best result is still from pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_cont_x4_l1_40_with_hint
+
+    I'm wondering if I can achieve the same result not using one extra neural net but through something like
+    back propagation or something. Because I know that the result will be better if I modify the input a little.
+
+    The training commands for the best result so far were:
+
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 4 --lr 0.0008 --gpu_percentage 0.26 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75 --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.6 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --l1_weight=75.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75_no_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=-1 --l1_weight=75.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x2_l1_50_no_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=-1 --l1_weight=50.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_l1_75_no_hint
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x3_l1_40_no_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.45 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=-1 --l1_weight=40.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x2_l1_50_no_hint
+    /usr/bin/python pix2pix_w_hint_lab_wgan_larger_sketch_mix_cond.py --mode train --output_dir checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cond_cont_x4_l1_40_with_hint --max_epochs 20 --input_dir /mnt/06CAF857CAF84489/datasets/mnt/data_drive/home/ubuntu/pixiv_new_128_w_face_reshape_combined/non_manga_images.txt --which_direction AtoB --display_freq=1000 --gray_input_a --batch_size 16 --lr 0.0008 --gpu_percentage 0.40 --scale_size=143 --crop_size=128 --use_sketch_loss --pretrained_sketch_net_path checkpoints/sketch_colored_pair_cleaned_128_w_hint_lab_wgan_larger_train_sketch --use_hint --lab_colorization --sketch_weight=10.0 --hint_prob=0.5 --l1_weight=40.0 --checkpoint=checkpoints/pixiv_new_128_w_hint_lab_wgan_larger_sketch_mix_cont_x3_l1_40_no_hint
+
+    I don't know how many iterations did each one train. All I know is it trained for 160 iterations on the first step.
+    The last step was 300k iterations.
+
+    Things I need to do remotely:
+    1. Crop and resize all pixiv images I've downloaded (two drives)
+    2. Download both the resized and the original colored_sketch dataset.
+    3.
+04/08
+    A few things I'd like to re-mention. I think I'm kind of stuck now. The results is ok, but it's not nearly as
+    good as the official paintschainer version. I'd like to rerun my dataset on the paintschainer code and see
+    if it is still doing poorly. If so, then it's the problem of either the training parameters, or the dataset.
+
+    Secondly, I noticed that the output is very different given slight changes in the input. As a result, the coloring
+    looks pretty inconsistent. Therefore I was thinking three ways to combat this. One is to add a variance loss (diff
+    between neighboring pixels). Another is to use back propagation and allow the network to modify the input so
+    that it can get the best possible result in the eyes of the discriminator, while making sure that the sketch loss
+    is low. The third way is to add noise to the input and force it to have the same input regardless of the noise.
+    ( I just realized that paintschainer code added random noise to both the coloring and the sketch... I did not do
+    that in my code because I read the wgan paper and it mentioned that by adding wgan it no longer needs to add
+    noise to the input. I should try to add noise. I noticed in paintschainer the adversarial network loss is set to be
+    the same as the l1 loss, and sketch loss 10 times that. The lr was 0.0001. So maybe I should try that setting.
+    But notice that the l1 loss is for 0~255, so I should time that weight by 255/2. sketch generated is 0~1 I think.
+    I don't know. Maybe my setting was about right afterall.
+
+    I had to admit that I did not have enough courage to look at paintschainer code. It reminds me how bad I am at
+    deep learning and how I failed and am still failing.
+
+    I found one more thing in the paintschainer code. There is a piece of code where it randomly loads other sources
+    of sketches. There are a total of 3 sources used. One is called cnn and one is called b2r. According to
+    https://github.com/pfnet/PaintsChainer/issues/88 that is historical code used for data augmentation. Taizan seemed
+    to have tried using inputs of different line widths.
+
+    TODO: retrain paintschainer (In progress)
+    TODO: test adding random noise (In progress, needs to start training)
+    TODO: test using back prop
+    TODO: Test adding variance loss.
+    TODO: Test adding weight decay using slim.
+
+04/09
+    Paints chainer training did not give me a good result yet after training for 3 epochs (30k iter with batch size 16)
+    The whole training will take 2 days, so do that when I have time.
+    I want to start testing on adding random noise and varying the sketch width.
+    Ah I trained for too few rounds. The result wasn't clear enough. Also I should probably start with lower batch size
+    (or higher lr?) The result is still unclear. One thing that I found is that after I added the noise, the new
+    sketch may become too dim -- the sketch is not really clear. The problem shouldn't occur with the old sketch
+    because they're usually pretty clear - much clearer compared to new sketch. Let me test with the old sketches.
+
+04/10
+    I accidentally ran only three epochs, but I can see that adding noise might work - it works a little bit better
+    than changing the width of the sketch lines.
+
+04/11
+    I ran the program on old sketches with the two settings: adding noise and changing the width of the sketch
+    lines. The result wasn't so good and I suspect that was because I was not using the nn generated sketches.
+    The problem with nn generated sketches is that it is not as clear as dilation generated sketches. So
+    to compensate for that I added a different noise level for each type of sketch (dilation sketch has more noise).
+    I also combined that with changing the width of the sketch, but I decreased the max width from 8 to 6. 8 is probably
+    too much for 128x128 images. I also added a feature to decrease the l1 weight after each epoch. Because I found
+    that most successful runs comes from manually decreasing l1 weight after training for a few rounds. Hopefully
+    this current setting will work.
+    Lastly, I double checked the instance norm,  because I thought it makes more sense to normalize each image since
+    each image has different "contrast level". (Although this is not what the real time style transfer paper suggested
+    the instance norm layer was doing.) Also I thought for some reason that the instance norm did not work. I looked
+    back on the results and found that sometimes it works, so it might be the way I'm training it or something.
+    I also need to test the weight decay but I don't think that will change the output by a whole lot.
+
+    I'm kind of worried that the correct batch norm does not work properly with hint. Because batch norm test time
+    uses moving average of the scales and standard deviation of each layer, but the input can either contain hint
+    or does not, so how batch norm deals with that is kind of hard to say. The moving average would be the average of
+    with and without hint, but the input can only be either with or without hint, not in the middle.
+    The output after 100k iterations contained lots of artifacts. The ones without artifact
+    was ok, but not the best I've seen. I was thinking to switch to instance norm.
+
+04/12
+    The result of instance norm without hint was bad. It was almost without any color. I'm trying to train only
+    on without hint ones, but maybe the whole idea of normalizing the "features" does not make sense for generating
+    colors. Maybe I should only use instance norm on down convolution? TODO: try that if I have time.
+    Also trying to train by replacing relu with lrelu.
+    If that still doesn't work, try weight decay... And if that still doesn't work, try clustering training set
+    on its palette and select ones with similar palette to form a smaller training set...
+
+04/12
+    lrelu results in less artifacts but less color as well. Or maybe that was because of a bug in decreasing the
+    l1 weight. Yeah. The l1 weight was only decreased to 81 while it should decrease to 50 a long time ago. The
+    should() function has some bug. The frequency is always three times lower for some reason. I think that's because
+    the slim.learning.create_train_op automatically grabbed the global step. LOL.
+    Now I found out why all of a sudden training seems to be faster after I switched to slim. It's just triple
+    counted the number of steps.
+
+    The result of the last training was good. no artifacts, vibrant colors although a little bit unreal sometimes.
+    I think the key is really decreasing l1 weight overtime. I think one paper mentioned that the discriminator was
+    not so good at the beginning, so they did some trick or something. Other papers also mentioned decreasing learning
+    rate overtime. My modification serves the same purpose.
+    I'm planning to add on the weight decay, hoping to force the model to be more general.
+
+04/13
+    After I added a tiny weight decay, the model only learned to output black and white. I double checked by
+    setting weight decay to 0 and it looks normal, so it's not caused by changing to using slim.
+    Maybe the weight decay was too large, but that didn't look large to me and it was the setting used by
+    paintschainer. Anyway I will decrease it further.
+
+04/16
+    Even with l2 regularizer term = 1e-8, the generator still cannot beat the discriminator. It can finally
+    learn the skin color but there were lots of artifacts. It is pretty wierd why the term needs to be
+    so small.
+
+4/18
+    I was summarizing the pix2pix paper and then I realized that maybe I should not use the patch based
+    GAN network, because it makes such an assumption: "Such a discriminator effectively models the image as a
+    Markov random field, assuming independence between pixels separated by more than a patch diameter."
+    Maybe I should try a different discriminator.
+
+    I also fixed the preprocessing bug. The bicubic resize method was not working well so I'm using Area isntead.
+
+4/21
+    Changing the discriminator is not solving any existing issues. I'm waiting for the larger dataset.
+
+4/23
+    I tried using mix=  1 on the larger dataset. It turns out that it still does not work on the real
+    sketches, not surprisingly.
+    It will take me a while to combine the datasets into one final version, which will probably contain around
+    800000 colored images. One serious problem though is that some of the images are mono-colored. I might
+    need to get rid of those as well. TODO: write program to detect mono-colored images.
+    According to https://www.quora.com/What-is-the-most-reliable-algorithm-to-detect-if-an-RGB-Image-is-monochrome
+    it can be done by transforming images to hsl, getting rid of the ones where l are close to min/max, and
+    detect whether all h falls within the same range(probably by calculating average h and do l2 distance from that).
+    If so, then the image is monochromatic.
+
+4/24
+Maybe I should try the began, which is supposed to work even better for one-to-many mapping...
+
+Maybe I should try turning the GAN back on for the instances that are provided with hint... I think so because
+it will make the discriminator trying harder to tell apart the colors, thus hopefully produce more
+colorful images. Now it's biased towards one type of color.
+
+4/27
+Another problem I realized when I was doing sanity check on multiple possible outputs. How does the model
+decide which one to output? Afterall the current model is deterministic. Unless the model can be conditioned
+on something... I don't know. How does other gan model solve this?
+
+Plan: FIRST PRIORITY: I really need to add a validation set to detect overfitting during training.
+Finished this. There is a huge gap between test and train data loss.
+
+TODO: implement back propagation on the input sketch. See what happens.
+I tried that. The result is what I expected. Very noisy outputs with lots of colors but the colors don't
+make sense. Maybe the discriminator is not good enough structual-wise.
+
+4/28
+I am double checking current code. Didn't see any bugs.
+TODO: try modifying encoder decoder network
+There are a bunch of networks here https://github.com/igul222/improved_wgan_training/blob/master/gan_64x64.py
+TODO: try taking away the conditional gan (I tried that, it did not work that well so that means this will
+not change the output by a whole lot.
+
+In the scribbler paper, it mentioned that conditioning on input image tend to destablize training. They also did
+not have fully connected layer and did not use batch norms.
+
+I just realized that in scribbler, there are also two stages... The first stage gan weight is 0 and the second stage
+pixel loss is 0. How come I did not notice that. My god.
+
+TODO: rerun the PaintsChainer code on my dataset.
+TODO:re-read the two papers at least twice.
+
+I just realized that in my code the discriminator loss is not linked to gan weight... I won't change it
+for now because it will save me time trying to train the discriminator after I finished the first stage...
+BUt maybe I need to change that later on.
+The huge gap between training and validation dataset also worries me.
+
+5/2
+Other experiments I;ve done: training paintschainer did not yield good results. Training on new sketch works
+better than paintschainer generated sketch.
+Conditioning on noise did not help, I suspect because there is already hint.
+
+Changing to other discriminator didnt work probably because of my hyperparameter settings.
+
+What is my last resort? My last resort is to turn sketches into formats similar to the dilation sketch.
+What do you mean by format? I mean texture? or local statistical patterns. Anything that makes a generated
+sketch looks different from the real one.
+How? Maybe through style transfer... Maybe through other techniques, more classical ones. But first I
+want to quantify the difference.
+
+Thoughts:TODO: what if we use the humanface to dog face project's idea. That is: we generate the sketch
+from black and white images, and that's our source. Then we have the target. Then we train two functions simultaneously
+using the Unsupervised cross-domain image generation loss function? That'll be a little slow but maybe the
+generated sketch will look closer to real sketches.
+
+2017/05/05
+I thought what if I use the validation dataset to train the slim batch norm's shift and scale? That way the
+normalization will be done using the actual sketch data. .. Let me try this.
+
+2017/05/10
+I spent most of the past few days converting 512x512 sketches and downloading new sketches from pixiv.
+I think this will be my last attempt. If I can't convert one sketch into another, then even though the
+training works well on the training data, it can't work in real life and therefore has no use.
+
+Oh, and I need to take out the monochrome images. TODO: not working really well yet. Try to make it better.
+
+I am still very puzzled about why
+
+2017/05/13
+Experiment that tries to convert normal sketches to dilation sketches did not work very well. There is not
+much positive change seen after using the conversion.
